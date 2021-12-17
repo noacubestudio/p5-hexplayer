@@ -347,6 +347,7 @@ function preload() {
 
 function setup() {
   canvas = createCanvas(1366, 890);
+  canvas.parent('canvasContainer');
   strokeWeight(2);
 
   textAlign(CENTER, CENTER);
@@ -420,8 +421,8 @@ function touchStarted() {
     sampler.triggerAttackRelease("C2", "8n");
     readyForSound = true;
   }
-  fullscreen(true);
-  print(fullscreen())
+  //fullscreen(true);
+  //print(fullscreen())
 }
 
 function draw() {
@@ -680,7 +681,13 @@ function detectTouch() {
       touchesOnHex++;
       
       //crosshair matches
-      crosshaircolor = hexNoteColor(touchHexes[touchesOnHex], "light");
+      //hexagons.forEach((h) => {
+      //  if (h.name === touchHexes[touchesOnHex].name) {
+      //    crosshaircolor = hexNoteColor(h.name, "light");
+      //  }
+      //});
+      
+      //broken!
       
     }
     else {
@@ -2113,7 +2120,7 @@ document.addEventListener('gesturestart', function(e) {
 });
 
 function mousePressed() {
-  fullscreen(true);
+  //fullscreen(true);
   if (touches.length <= 0) {
     mouseUsed = true;
     mouseDown = true;
