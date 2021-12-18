@@ -88,7 +88,7 @@ const rControlNames = [
     "/11 Undec",
     "/11 Snow",
     "Mode 12",
-    "+",
+    "Simple",
     "+",
     "+",
     "Piano",
@@ -109,7 +109,7 @@ const intervalNames = [
     "1", "m2", "2", "m3", "3", "4", "TT", "5", "m6", "6", "m7", "7",
 ];
 
-let tuneMode = "12tet";
+let tuneMode = "simple";
 const baseFrequency = 32.70 //C1
 let activeFreqs = [];
 let activePlayFreqs = [];
@@ -128,85 +128,100 @@ const tuning12tet = [
     2 ** (11/12)
 ];
 const tuningNovemdecimal = [
-    1,
-    20/19,
-    43/38,
-    23/19,
-    24/19,
-    51/38,
-    27/19,
-    3/2,
-    61/38,
-    32/19,
-    34/19,
-    36/19
+    "1",
+    "20/19",
+    "43/38",
+    "23/19",
+    "24/19",
+    "51/38",
+    "27/19",
+    "3/2",
+    "61/38",
+    "32/19",
+    "34/19",
+    "36/19"
 ];
 const tuningUndecimal = [
-    1,
-    23/22,
-    25/22,
-    13/11,
-    14/11,
-    15/11,
-    31/22,
-    3/2,
-    35/22,
-    37/22,
-    39/22,
-    21/11
+    "1",
+    "23/22",
+    "25/22",
+    "13/11",
+    "14/11",
+    "15/11",
+    "31/22",
+    "3/2",
+    "35/22",
+    "37/22",
+    "39/22",
+    "21/11"
 ];
 const tuning11neji = [ //snowfall
-    1,
-    12/11,
-    25/22,
-    13/11,
-    14/11,
-    15/11,
-    16/11,
-    17/11,
-    18/11,
-    19/11,
-    20/11,
-    21/11,
+    "1",
+    "12/11",
+    "25/22",
+    "13/11",
+    "14/11",
+    "15/11",
+    "16/11",
+    "17/11",
+    "18/11",
+    "19/11",
+    "20/11",
+    "21/11"
 ];
 const tuning16neji = [ //16:17:18:19:20:21:23:24:25:27:29:30:32
-    1,
-    17/16,
-    18/16,
-    19/16,
-    20/16,
-    21/16,
-    23/16,
-    24/16,
-    25/16,
-    27/16,
-    29/16,
-    30/16
+    "1",
+    "17/16",
+    "9/8",
+    "19/16",
+    "5/4",
+    "21/16",
+    "11/8",
+    "3/2",
+    "25/16",
+    "27/16",
+    "29/16",
+    "15/8"
 ];
 const tuningHarmonic = [
-    1,
-    13/12,
-    14/12,
-    15/12,
-    16/12,
-    17/12,
-    18/12,
-    19/12,
-    20/12,
-    21/12,
-    22/12,
-    23/12,
-]
+    "1",
+    "13/12",
+    "7/6",
+    "5/4",
+    "4/3",
+    "17/12",
+    "3/2",
+    "19/12",
+    "5/3",
+    "7/4",
+    "11/6",
+    "23/12"
+];
+const tuningSimple = [
+    //https://www.huygens-fokker.org/docs/intervals.html
+    "1",
+    "15/14", //semitone 16/15
+    "9/8", //whole tone 8/7
+    "6/5", //minor 3rd 7/6
+    "5/4", //major 3rd
+    "4/3", //p 4th
+    "7/5", //tritone
+    "3/2", //p 5th
+    "8/5", //minor 6th
+    "5/3", //major 6th
+    "7/4", //harmonic 7th, minor 7th
+    "15/8" //major 7th 17/9
+];
 
-let currentTuning = tuning12tet;
+let currentTuning = tuningSimple;
 
 const scaleMajor = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1];
 const scaleMinor = [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0];
 const scaleChromatic = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
 const layoutColorsThirds = [0, 7, 7, 11, 1, 7, 10, 7, 2, 9, 7, 7];
-const layoutColorsIntervals = [1, 10, 1, 10, 1, 1, 10, 1, 10, 1, 10, 1];
-const layoutColorsIntervals2 = [2, 7, 2, 7, 2, 2, 7, 2, 7, 2, 7, 2];
+const layoutColorsMajor = [1, 10, 1, 10, 1, 1, 10, 1, 10, 1, 10, 1];
+const layoutColorsMajor2 = [2, 7, 2, 7, 2, 2, 7, 2, 7, 2, 7, 2];
 //const layoutColorsIntervals = [0, 8, 5, 8, 5, 2, 10, 2, 8, 5, 8, 5];
 //const layoutColorsIntervals2 = [1, 9, 6, 9, 6,3, 11, 3, 9, 6, 9, 6];
 const layoutColorsFifths = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
@@ -222,7 +237,7 @@ document.bgColor = backgroundColor;
 
 let scaleMode = "chromatic";
 let circleMode = false;
-let colorMode = "fifths";
+let colorMode = "major";
 
 let currentScale = scaleChromatic.slice();
 let scaleCustom = currentScale.slice(); //generate with toggle tool
@@ -436,46 +451,46 @@ function draw() {
     if (touches.length > 0 && touches[0].x < 72 && touches[0].y < 72)
     {
         // WHEN CONTROLS ARE SHOWN
-            showButtons = true;
+        showButtons = true;
 
-            if (mouseUsed === false) {
-                detectButtonTouch()
+        if (mouseUsed === false) {
+            detectButtonTouch()
+        }
+
+        // Render all hexagons + variants
+        hexagons.forEach((h) => {
+            if (h.countdown > 0) {
+                h.countdown--;
             }
+            h.render(h.findHexVariant);
+        });
 
-            // Render all hexagons + variants
-            hexagons.forEach((h) => {
-                if (h.countdown > 0) {
-                    h.countdown--;
-                }
-                h.render(h.findHexVariant);
-            });
+        // Render lines between hexagons
+        renderDrawLines();
 
-            // Render lines between hexagons
-            renderDrawLines();
+        // Render all hexagon text
+        hexagons.forEach((h) => {
+            h.renderText(h.findHexVariant);
+        });
 
-            // Render all hexagon text
-            hexagons.forEach((h) => {
-                h.renderText(h.findHexVariant);
-            });
+        let optionsBG = color(backgroundColor);
+        optionsBG.setAlpha(230);
+        fill(optionsBG);
+        rect(220, 405, 200, 340, 20);
+        optionsBG.setAlpha(30);
+        background(optionsBG);
 
-            let optionsBG = color(backgroundColor);
-            optionsBG.setAlpha(230);
-            fill(optionsBG);
-            rect(220, 405, 200, 340, 20);
-            optionsBG.setAlpha(30);
-            background(optionsBG);
+        buttons.forEach((b) => {
+            if (b.countdown > 0) {
+                b.countdown--;
+            }
+            b.drawButtonVariant();
+        });
 
-            buttons.forEach((b) => {
-                if (b.countdown > 0) {
-                    b.countdown--;
-                }
-                b.drawButtonVariant();
-            });
-
-            // Render extra glow
-            buttons.forEach((b) => {
-                b.drawButtonGlow();
-            });
+        // Render extra glow
+        buttons.forEach((b) => {
+            b.drawButtonGlow();
+        });
     }
     else
     {
@@ -506,6 +521,20 @@ function draw() {
         hexagons.forEach((h) => {
             h.renderText(h.findHexVariant);
         });
+
+        //draw crosshair
+        // const fadeout = 35;
+        // push();
+        // let crosshaircolor = color('#FFFFFF02');
+        // stroke(crosshaircolor);
+
+        // for (let i = 0; i < touches.length; i++) {
+        //     for (let f = 1; f <= 16; f++) {
+        //         line(touches[i].x, touches[i].y - fadeout * f, touches[i].x, touches[i].y + fadeout * f);
+        //         line(touches[i].x - fadeout * f, touches[i].y, touches[i].x + fadeout * f, touches[i].y);
+        //     }
+        // }
+        // pop();
     }
 
     //lines at the top showing scale;
@@ -666,45 +695,14 @@ function detectTouch() {
     let touchesOnHex = 0;
 
     for (let i = 0; i < touches.length; i++) {
-        let crosshaircolor = color('#FFFFFF02');
         if (findNearestHex(touches[i]) !== undefined) {
             touchHexes.push(findNearestHex(touches[i]));
 
             //pass the latest x and y values of that touch to the hex
-
             touchHexes[touchesOnHex].touchDragX = touches[i].x;
             touchHexes[touchesOnHex].touchDragY = touches[i].y;
             touchesOnHex++;
-
-            //crosshair matches
-            //hexagons.forEach((h) => {
-            //    if (h.name === touchHexes[touchesOnHex].name) {
-            //        crosshaircolor = hexNoteColor(h.name, "light");
-            //    }
-            //});
-
-            //broken!
-
         }
-        else {
-            //basic crosshair
-            //do something, wip
-        }
-
-        //draw crosshair
-        const fadeout = 35;
-        push();
-        stroke(crosshaircolor);
-
-        if (showButtons == false) {
-            for (let f = 1; f <= 16; f++) {
-                line(touches[i].x, touches[i].y - fadeout * f,
-                         touches[i].x, touches[i].y + fadeout * f);
-                line(touches[i].x - fadeout * f, touches[i].y,
-                         touches[i].x + fadeout * f, touches[i].y);
-            }
-        }
-        pop();
     }
 
     //check if apple pencil or touch was used
@@ -966,7 +964,7 @@ function playChord(arp) {
 
         activeChord.forEach((c) => {
             const pOctave = c.octave + currentPlayOctave
-            const freq = currentTuning[c.midiName % 12];
+            const freq = eval(currentTuning[c.midiName % 12]);
             const pPitch = baseFrequency * freq * 2 ** (pOctave -1);
             activeFreqs.push(freq);
             playPitches.push(pPitch);
@@ -997,7 +995,7 @@ function playKey(h, mode) {
     lastPlayedHex = h;
 
     const pOctave = h.octave + currentPlayOctave
-    const freq = currentTuning[h.midiName % 12];
+    const freq = eval(currentTuning[h.midiName % 12]);
     const pPitch = baseFrequency * freq * 2 ** (pOctave -1);
 
     activeFreqs.push(freq);
@@ -1154,9 +1152,9 @@ function buttonPressed(b) {
         break;
         case 17:
             print("Changed color theme!");
-            if (colorMode === "fifths") {colorMode = "intervals";}
-            else if (colorMode === "intervals") {colorMode = "chromatic";}
-            else {colorMode = "fifths";}
+            if (colorMode === "fifths") {colorMode = "major";}
+            else if (colorMode === "major") {colorMode = "fifths";}
+            //else {colorMode = "chromatic";}
         break;
         case 18:
             print("Switched to different midi to grid XY layout");
@@ -1211,6 +1209,11 @@ function buttonPressed(b) {
             print("Switched to 12 tone Harmonic series segment");
             tuneMode = "harmonic";
             currentTuning = tuningHarmonic;
+        break;
+        case 25:
+            print("Switched to simple 12 tone tuning");
+            tuneMode = "simple";
+            currentTuning = tuningSimple;
         break;
         case 28:
             print("Switched to piano!");
@@ -1337,11 +1340,11 @@ function hexNoteColor(h, style) {
         {
             cTable = layoutColorsThirds.slice()
         }
-        else if (colorMode === "intervals")
+        else if (colorMode === "major")
         {
-            cTable = layoutColorsIntervals.slice()
+            cTable = layoutColorsMajor.slice()
             if ((h.octave + currentPlayOctave + 1) % 2 == 0) {
-                cTable = layoutColorsIntervals2.slice()
+                cTable = layoutColorsMajor2.slice()
             }
         }
         else if (colorMode === "fifths")
@@ -1386,109 +1389,6 @@ function hexNoteColor(h, style) {
     }
 }
 
-function pickHexText(h) {
-    if (labelStyle === "notes")
-    {
-        if (h.pitchName == currentKey) {
-            text(h.pitchName + (h.octave + currentPlayOctave), h.x, h.y);
-        }
-        else {
-            text(h.pitchName, h.x, h.y);
-        }
-    }
-    else if (labelStyle === "midi") {
-        text(h.midiName + 12 * currentPlayOctave, h.x, h.y);
-    }
-    else if (labelStyle === "intervals") {
-        const offset = noteNames.indexOf(currentKey);
-        const intervalName = intervalNames[(h.midiName - offset) % 12];
-        text(intervalName, h.x, h.y);
-    }
-
-    //extra text above
-    push();
-
-    textSize(12);
-
-    const offset = noteNames.indexOf(currentKey);
-    const intervalName = currentTuning[(h.midiName - offset) % 12];
-
-    const topText = +intervalName.toFixed(2);
-    text(topText, h.x, h.y - 30);
-
-    pop();
-}
-
-function hexDragOffsetIndicator(h) {
-    //extra control text
-    push();
-    //textSize(12);
-
-    //let above = "";
-    //let below = "";
-    let xMapped = 0;
-    let yMapped = 0;
-
-    if (h.touchStartX >= 0 &&
-            h.touchStartY >= 0 &&
-            h.touchDragX >= 0 &&
-            h.touchDragY >= 0)
-    {
-        xMapped = hexDragOffset(h.x, h.touchStartX, h.touchDragX, 5, 40);
-        yMapped = hexDragOffset(h.y, h.touchStartY, h.touchDragY, 5, 40) * -1;
-
-        above = xMapped;
-        below = yMapped;
-
-        if (xMapped !== 0) {
-            //retune(h, xMapped);
-        }
-        if (yMapped !== 0) {
-            //sampler.volume.value = map(xMapped, -1, 1, -20, 20);
-        }
-    }
-
-    //text(above, h.x, h.y - 30);
-    //text(below, h.x, h.y + 30);
-
-    pop();
-}
-
-function hexDragOffset(center, start, drag, min, max) {
-    if (drag > start) {
-        return map(drag, start + min, center + max, 0, 1, true);
-    }
-    else {
-        return map(drag, center - max, start - min, -1, 0, true);
-    }
-}
-
-function pickControlText(b) {
-    push();
-    noStroke();
-    fill("#AA6EF5");
-
-    if (b.isToggledOn) {
-        fill("#D5B9F2");
-    }
-
-    const imageX = b.x - 0.52 * b.r;
-    const imageY = b.y - 0.54 * b.r;
-    const size = 52;
-
-    //for (let i = 9; i <= 17; i++) {
-    //    if (b.name === -i) {
-    //        image(icons[i - 9], imageX, imageY, size, size);
-    //        pop();
-    //        return;
-    //    }
-    //}
-
-    textSize(19);
-    text(b.label, b.x, b.y);
-    pop();
-}
-
 function drawPointConnector(x1, y1, x2, y2, c1, c2) {
     const steps = 20;
 
@@ -1502,7 +1402,6 @@ function drawPointConnector(x1, y1, x2, y2, c1, c2) {
         fill(mixColor);
         ellipse(mixX, mixY, size);
     }
-
 }
 
 function drawScaleLines() {
@@ -1533,7 +1432,7 @@ function drawScaleLines() {
     }
 
     for (let i = 0; i < octLength; i++) {
-        let freq = currentTuning[i] - 1;
+        let freq = eval(currentTuning[i]) - 1;
 
         let size = 7;
         push();
@@ -1550,7 +1449,7 @@ function drawScaleLines() {
             (t.midiName % 12) === ((i+offset) % 12));
 
         if (inKlickedHexes == undefined) {
-            let cTable = layoutColorsIntervals;
+            let cTable = layoutColorsMajor2;
 
             if (colorMode === "thirds") {cTable = layoutColorsThirds;}
             else if (colorMode === "fifths") {cTable = layoutColorsFifths;}
@@ -1757,7 +1656,7 @@ class Hexagon {
                     controlShape(this.x, this.y, this.r * 1.7);
                 break;
             }
-            pickControlText(this);
+            this.pickControlText();
         }
         pop();
     }
@@ -1772,11 +1671,15 @@ class Hexagon {
         stroke("#00000050");
         strokeJoin(ROUND);
         fill("#00000050");
-        pickHexText(this);
+        this.pickHexText();
 
         noStroke();
-        if (state === "hover") { fill("white"); }
-        else if (this.pitchName === currentKey) { fill(rootColor); }
+        if (state === "hover") {
+            fill("white");
+        }
+        else if (this.pitchName === currentKey) { 
+            fill(rootColor); 
+        }
         else {
             fill(hexNoteColor(this, "light"));
 
@@ -1788,8 +1691,8 @@ class Hexagon {
             }
         }
 
-        pickHexText(this);
-        hexDragOffsetIndicator(this);
+        this.pickHexText();
+        this.hexDragOffsetIndicator();
         pop();
     }
 
@@ -1884,6 +1787,7 @@ class Hexagon {
             this.name === -22 && tuneMode === 'undecimal' ||
             this.name === -23 && tuneMode === '11neji'||
             this.name === -24 && tuneMode === 'harmonic' ||
+            this.name === -25 && tuneMode === 'simple' ||
             this.name === -28 && currentSampler === 'Piano'||
             this.name === -29 && currentSampler === 'Rhodes' ||
             this.name === -30 && currentSampler === 'Organ'||
@@ -1933,10 +1837,116 @@ class Hexagon {
             return desc;
         }
     }
+
+    pickControlText() {
+        push();
+        noStroke();
+        fill("#AA6EF5");
+
+        if (this.isToggledOn) {
+            fill("#D5B9F2");
+        }
+
+        textSize(19);
+        text(this.label, this.x, this.y);
+        pop();
+
+        //const imageX = this.x - 0.52 * this.r;
+        //const imageY = this.y - 0.54 * this.r;
+        //const size = 52;
+
+        //for (let i = 9; i <= 17; i++) {
+        //    if (this.name === -i) {
+        //        image(icons[i - 9], imageX, imageY, size, size);
+        //        pop();
+        //        return;
+        //    }
+        //}
+
+    }
+
+    pickHexText() {
+        if (labelStyle === "notes")
+        {
+            if (this.pitchName == currentKey) {
+                text(this.pitchName + (this.octave + currentPlayOctave), this.x, this.y);
+            }
+            else {
+                text(this.pitchName, this.x, this.y);
+            }
+        }
+        else if (labelStyle === "midi") {
+            text(this.midiName + 12 * currentPlayOctave, this.x, this.y);
+        }
+        else if (labelStyle === "intervals") {
+            const offset = noteNames.indexOf(currentKey);
+            const intervalName = intervalNames[(this.midiName - offset) % 12];
+            text(intervalName, this.x, this.y);
+        }
+
+        //extra text above
+        push();
+        textSize(11);
+        fill(hexNoteColor(this, "dark"));
+
+        if (currentTuning != tuning12tet) {
+            const offset = noteNames.indexOf(currentKey);
+            const intervalName = currentTuning[(this.midiName - offset) % 12];
+
+            let topText = intervalName;
+            if (topText == 1) {
+                topText = "";
+            }
+            text(topText, this.x, this.y - 25);
+        }
+        pop();
+    }
+
+    hexDragOffsetIndicator() {
+        //extra control text
+        push();
+        //textSize(12);
+
+        let xMapped = 0;
+        let yMapped = 0;
+
+        if (this.touchStartX >= 0 && this.touchStartY >= 0 && this.touchDragX >= 0 && this.touchDragY >= 0)
+        {
+            xMapped = dragDistanceMap(this.x, this.touchStartX, this.touchDragX, 5, 40);
+            yMapped = dragDistanceMap(this.y, this.touchStartY, this.touchDragY, 5, 40);
+
+            // if (xMapped !== 0) {
+            //     retune(this, xMapped);
+            // }
+            // if (yMapped !== 0) {
+            //     sampler.volume.value = map(xMapped, -1, 1, -20, 20);
+            // }
+
+            let circleColor = color(hexNoteColor(this, "light"));
+            circleColor.setAlpha(60);
+            fill(circleColor);
+
+            const distance = dist(this.x, this.y, this.touchDragX, this.touchDragY)
+            ellipse(this.touchDragX, this.touchDragY, 30 + distance * 1.5);
+        }
+
+        //text(xMapped, this.x, this.y - 30);
+        //text(yMapped, this.x, this.y + 30);
+
+        pop();
+    }
+}
+
+function dragDistanceMap(center, start, drag, min, max) {
+    if (drag > start) {
+        return map(drag, start + min, center + max, 0, 1, true);
+    }
+    else {
+        return map(drag, center - max, start - min, -1, 0, true);
+    }
 }
 
 function findNearestHex(touch) {
-
 
     let arr = [...hexagons];
     if (showButtons) {
