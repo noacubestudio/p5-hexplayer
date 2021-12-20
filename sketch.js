@@ -247,22 +247,23 @@ let labelStyle = "intervals";
 
 // base hexagons
 let r, s;
-let hexagons = [];
-let buttons = [];
+let hexagons = new Array;
+let buttons = new Array;
 
 //special sets of hexagons
 let hoverHex;
-let activeChord = [];
-let dragOrder = [];
-let prevChord = [];
+let activeChord = new Array;
+let dragOrder = new Array;
+let prevChord = new Array;
 
 // for touch/mouse control
-let touchHexes = [];
-let lastTouchHexes = [];
+let ongoingTouches = new Array;
+let touchHexes = new Array;
+let lastTouchHexes = new Array;
 let mouseUsed = false;
 let mouseDown = false;
 
-let pressure = 0;
+let penPressure = 0;
 let penDragStartHex;
 let penDragEndHex;
 let hexPairs = new Set();
@@ -371,16 +372,6 @@ function setup() {
     textStyle(BOLD);
     rectMode(RADIUS);
 
-    // Using WEB API for touchstart because p5 Touch objects don't include force
-    // https://developer.mozilla.org/en-US/docs/Web/API/Touch/force
-    // Listen for touchstart events on the canvas
-    canvas.elt.addEventListener("touchstart", measureForce, false);
-
-    //for (let x = 0; x <= 8; x++) {
-    //    icons.push(icons_image.get(x * 128, 0, 128, 128));
-    //}
-    //print("icons " + icons.length);
-
     //hexagons
     r = 50;
     s = sqrt((3 * pow(r, 2)) / 4);
@@ -422,23 +413,118 @@ function setup() {
         pages[i] = []; //create nested array
     }
 
-    var style = document.createElement('style');
+    let style = document.createElement('style');
     document.head.appendChild(style);
-    style.innerHTML = `canvas{-webkit-touch-callout:none;-webkit-user-select:none;-khtml-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;outline:0;-webkit-tap-highlight-color:rgba(255,255,255,0)}body{-webkit-touch-callout:none;-webkit-user-select:none;-khtml-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;outline:0}`;
+    style.innerHTML = `
+        canvas{
+        -webkit-touch-callout:none;
+        -webkit-user-select:none;
+        -khtml-user-select:none;
+        -moz-user-select:none;
+        -ms-user-select:none;
+        user-select:none;
+        outline:0;
+        -webkit-tap-highlight-color:rgba(255,255,255,0)}
+        body{
+        -webkit-touch-callout:none;
+        -webkit-user-select:none;
+        -khtml-user-select:none;
+        -moz-user-select:none;
+        -ms-user-select:none;
+        user-select:none;outline:0}`;
+
+    const el = document.body;
+    el.addEventListener("touchstart", handleStart, false);
+    el.addEventListener("touchend", handleEnd, false);
+    el.addEventListener("touchleave", handleEnd, false);
+    el.addEventListener("touchmove", handleMove, false);
+    el.addEventListener("touchcancel", handleCancel, false);
 }
 
-function touchStarted() {
+function handleStart(evt) {
+    const newTouches = evt.changedTouches;
+
+    for (let i = 0; i < newTouches.length; i++) {
+        evt.preventDefault();
+        print("touchstart: " + i);
+        ongoingTouches.push(copyTouch(newTouches[i]));
+    }
+
+    // get combined pen pressure from new touches
+    let force = 0;
+    for (let t = 0; t < newTouches.length; t++) {
+        force += newTouches[t].force;
+    }
+    penPressure = force;
+
     //first tone to start audio on safari
     if (readyForSound === false) {
         sampler.triggerAttackRelease("C2", "8n");
         readyForSound = true;
     }
-    //fullscreen(true);
+}
+
+function handleMove(evt) {
+    const newTouches = evt.changedTouches;
+
+    for (let i = 0; i < newTouches.length; i++) {
+        evt.preventDefault();
+        const idx = ongoingTouchIndexById(newTouches[i].identifier);
+
+        if (idx >= 0) {
+            print("continuing touch " + idx);
+            ongoingTouches.splice(idx, 1, copyTouch(newTouches[i])); // swap in the new touch record
+        }
+    }
+}
+
+function handleEnd(evt) {
+    const newTouches = evt.changedTouches;
+
+    for (let i = 0; i < newTouches.length; i++) {
+        evt.preventDefault();
+        const idx = ongoingTouchIndexById(newTouches[i].identifier);
+        
+        if (idx >= 0) {
+            print("removing touch " + idx);
+            ongoingTouches.splice(idx, 1);
+        }
+    }
+}
+
+function handleCancel(evt) {
+    evt.preventDefault();
+    print("touch cancel.");
+    const newTouches = evt.changedTouches;
+    
+    for (var i = 0; i < newTouches.length; i++) {
+      ongoingTouches.splice(i, 1); // remove it; we're done
+    }
+}
+
+function copyTouch(touch) {
+    return {
+        identifier: touch.identifier,
+        clientX: touch.clientX,
+        clientY: touch.clientY, 
+        force: touch.force};
+}
+
+function ongoingTouchIndexById(idToFind) {
+    for (let i = 0; i < ongoingTouches.length; i++) {
+        let id = ongoingTouches[i].identifier;
+
+        if (id == idToFind) {
+            return i;
+        }
+    }
+    return -1; // not found
 }
 
 function draw() {
     background(backgroundColor);
 
+    //top left and right corner icons
     push();
     strokeWeight(6)
     stroke(color('#5027A9'));
@@ -447,17 +533,17 @@ function draw() {
     ellipse(width-36, 36, 30);
     pop();
 
-    // Render buttons on the left
-    if (touches.length > 0 && touches[0].x < 72 && touches[0].y < 72)
+    // Render buttons when left icon pressed
+    if (ongoingTouches.length > 0 && ongoingTouches[0].clientX < 72 && ongoingTouches[0].clientY < 72)
     {
-        // WHEN CONTROLS ARE SHOWN
+        // show controls on the left
         showButtons = true;
 
         if (mouseUsed === false) {
             detectButtonTouch()
         }
 
-        // Render all hexagons + variants
+        // Render all hexagons + variants below
         hexagons.forEach((h) => {
             if (h.countdown > 0) {
                 h.countdown--;
@@ -494,7 +580,7 @@ function draw() {
     }
     else
     {
-        //WHEN CONTROLS ARE NOT SHOWN
+        //don't show the controls
         showButtons = false;
 
         if (mouseUsed === false) {
@@ -521,20 +607,6 @@ function draw() {
         hexagons.forEach((h) => {
             h.renderText(h.findHexVariant);
         });
-
-        //draw crosshair
-        // const fadeout = 35;
-        // push();
-        // let crosshaircolor = color('#FFFFFF02');
-        // stroke(crosshaircolor);
-
-        // for (let i = 0; i < touches.length; i++) {
-        //     for (let f = 1; f <= 16; f++) {
-        //         line(touches[i].x, touches[i].y - fadeout * f, touches[i].x, touches[i].y + fadeout * f);
-        //         line(touches[i].x - fadeout * f, touches[i].y, touches[i].x + fadeout * f, touches[i].y);
-        //     }
-        // }
-        // pop();
     }
 
     //lines at the top showing scale;
@@ -663,9 +735,11 @@ function detectButtonTouch() {
     lastTouchHexes = touchHexes.slice();
     touchHexes = [];
 
-    for (let i = 0; i < touches.length; i++) {
-        if (findNearestHex(touches[i]) !== undefined) {
-            touchHexes.push(findNearestHex(touches[i]));
+    for (let i = 0; i < ongoingTouches.length; i++) {
+
+        nearestHex = findNearestHex(ongoingTouches[i]);
+        if (nearestHex !== undefined) {
+            touchHexes.push(nearestHex);
         }
     }
 
@@ -694,26 +768,28 @@ function detectTouch() {
 
     let touchesOnHex = 0;
 
-    for (let i = 0; i < touches.length; i++) {
-        if (findNearestHex(touches[i]) !== undefined) {
-            touchHexes.push(findNearestHex(touches[i]));
+    for (let i = 0; i < ongoingTouches.length; i++) {
+
+        nearestHex = findNearestHex(ongoingTouches[i])
+        if (nearestHex !== undefined) {
+            touchHexes.push(nearestHex);
 
             //pass the latest x and y values of that touch to the hex
-            touchHexes[touchesOnHex].touchDragX = touches[i].x;
-            touchHexes[touchesOnHex].touchDragY = touches[i].y;
+            touchHexes[touchesOnHex].touchDragX = ongoingTouches[i].clientX;
+            touchHexes[touchesOnHex].touchDragY = ongoingTouches[i].clientY;
             touchesOnHex++;
         }
     }
 
     //check if apple pencil or touch was used
-    if (pressure > 0.0) {
+    if (penPressure > 0.0) {
         reactToPen();
     }
     else {
         reactToTouch();
     }
 
-    if (touches.length === 0) {
+    if (ongoingTouches.length === 0) {
 
         //add new line hexes to set, then remove the live line
         if (penDragStartHex !== undefined && penDragEndHex !== undefined) {
@@ -745,20 +821,6 @@ function detectTouch() {
         penDragStartHex = undefined;
         penDragEndHex = undefined;
     }
-}
-
-
-function measureForce(e) {
-    // Measure force of touch
-
-    // Get array of touches
-    let touches = e.touches;
-    // Add up force of each finger
-    let force = 0;
-    for(let t = 0; t < touches.length; t++) {
-        force += touches[t].force;
-    }
-    pressure = force;
 }
 
 function detectMouse() {
@@ -1772,7 +1834,7 @@ class Hexagon {
 
     distanceToTouch(touch) {
         if (touch !== undefined) {
-             return dist(touch.x, touch.y, this.x, this.y);
+             return dist(touch.clientX, touch.clientY, this.x, this.y);
         }
     }
 
@@ -1948,22 +2010,22 @@ function dragDistanceMap(center, start, drag, min, max) {
 
 function findNearestHex(touch) {
 
-    let arr = [...hexagons];
-    if (showButtons) {
-        arr = [...buttons];
-    }
+    let arr = showButtons ? [...buttons] : [...hexagons];
+
     let arrNearest = arr[0];
     let inDistance = false;
-    const minDistance = r * 0.8;
+    const minDistance = r * 0.85;
 
     //do for just one touch
     if (!mouseUsed) {
 
         arr.forEach((h) => {
-            if (h.distanceToTouch(touch) < minDistance) {
+
+            const hexDistance = h.distanceToTouch(touch);
+            if (hexDistance < minDistance) {
                 inDistance = true;
 
-                if (h.distanceToTouch(touch) < arrNearest.distanceToTouch(touch)) {
+                if (hexDistance < arrNearest.distanceToTouch(touch)) {
                     arrNearest = h;
                 }
             }
@@ -2140,7 +2202,7 @@ document.addEventListener('gesturestart', function(e) {
 
 function mousePressed() {
     //fullscreen(true);
-    if (touches.length <= 0) {
+    if (ongoingTouches.length <= 0) {
         mouseUsed = true;
         mouseDown = true;
         readyForSound = true;
@@ -2157,7 +2219,7 @@ function scaleFreqToCents(freq) {
 
 function mouseDragged() {
     // there was no touch, an actual mouse was dragged;
-    if (touches.length <= 0) {
+    if (ongoingTouches.length <= 0) {
         mouseUsed = true;
         mouseDown = true;
         readyForSound = true;
@@ -2169,7 +2231,7 @@ function mouseDragged() {
 }
 
 function mouseReleased() {
-    if (touches.length <= 0) {
+    if (ongoingTouches.length <= 0) {
         mouseDown = false;
         dragOrder = [];
     }

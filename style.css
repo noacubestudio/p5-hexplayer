@@ -13,11 +13,6 @@ body {
   -webkit-user-select: none;
   user-select: none;
   /* prevent copy paste, to allow, change 'none' to 'text' */
-
-  touch-action: none;
 }
 
-
-#canvasContainer {
-  touch-action: none;
-}
+*{touch-action: none;}
