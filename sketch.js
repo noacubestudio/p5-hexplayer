@@ -1,6 +1,7 @@
 let canvas;
 let cooldownFrames = 3; // this animation time also blocks double taps
 let readyForSound = false; //only play sound when ready
+let drawMinDuration = 20; //
 
 let gridBaseMidi = 24;
 let gridWidth = 17;
@@ -73,8 +74,6 @@ const darkerHexColors = [
 const rootColor = "#FFD0B6";
 
 const rControlNames = [
-    "Clear",
-    "Paste",
     "Move Key",
     "Toggle",
     "Scales",
@@ -82,23 +81,25 @@ const rControlNames = [
     "Labels",
     "Color",
     "GridXY",
-    "12-TET",
+    "+",
+    "+",
+    "EDO 12",
+    "JI 12",
+    "Mode 12",
     "/19 Novem",
     "/16 NEJI",
     "/11 Undec",
     "/11 Snow",
-    "Mode 12",
-    "Simple",
     "+",
     "+",
     "Piano",
     "Rhodes",
     "Organ",
     "Harp",
-    "+",
-    "+",
-    "+",
-    "+",
+    "Sawtooth",
+    "Square",
+    "Triangle",
+    "Sine",
     "+",
 ];
 
@@ -213,8 +214,6 @@ const tuningSimple = [
     "15/8" //major 7th 17/9
 ];
 
-let currentTuning = tuningSimple;
-
 const scaleMajor = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1];
 const scaleMinor = [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0];
 const scaleChromatic = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
@@ -222,11 +221,9 @@ const scaleChromatic = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 const layoutColorsThirds = [0, 7, 7, 11, 1, 7, 10, 7, 2, 9, 7, 7];
 const layoutColorsMajor = [1, 10, 1, 10, 1, 1, 10, 1, 10, 1, 10, 1];
 const layoutColorsMajor2 = [2, 7, 2, 7, 2, 2, 7, 2, 7, 2, 7, 2];
-//const layoutColorsIntervals = [0, 8, 5, 8, 5, 2, 10, 2, 8, 5, 8, 5];
-//const layoutColorsIntervals2 = [1, 9, 6, 9, 6,3, 11, 3, 9, 6, 9, 6];
 const layoutColorsFifths = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
 
-const backgroundColor = "#050314"//"#000000";//"#3F346D";
+const backgroundColor = "#050314";
 const outColor = "#56459A";
 const darkOutColor = "#493C94";
 const lightOutColor = "#E8D1FF";
@@ -236,71 +233,54 @@ const darkStrokeColor = "#190E43A0";
 document.bgColor = backgroundColor;
 
 let scaleMode = "chromatic";
-let circleMode = false;
+let circleMode = true;
 let colorMode = "major";
+
+let currentTuning = tuningSimple;
 
 let currentScale = scaleChromatic.slice();
 let scaleCustom = currentScale.slice(); //generate with toggle tool
+
 let currentKey = "C";
-let currentPlayOctave = 0;
+let currentOctave = 0;
 let labelStyle = "intervals";
 
-// base hexagons
-let r, s;
-let hexagons = new Array;
-let buttons = new Array;
+// permanent key grid
+let gridSizeX, gridSizeY;
+let keyArr = new Array;
+let controlsArr = new Array;
 
-//special sets of hexagons
-let activeChord = new Array;
-let dragOrder = new Array;
-let prevChord = new Array;
+// detect playing
+let interactionMode = "play";
+let menuIsOpen = false;
 
-// for touch/mouse control
 let ongoingTouches = new Array;
 let pressedButtons = new Array;
 let lastPressedButtons = new Array;
+
+//mouse
 let mouseUsed = false;
 let mouseDown = false;
 
+//bridges drawn with pencil
 let penPressure = 0;
-let penDragStartHex;
-let penDragEndHex;
-let hexPairs = new Set();
-
-//in readable format
-let lastPlayedNote = "";
-
-let lastPlayedHex;
-
-//pages for chords
-let pages = [];
-let activePage = -1;
-let previousPage = -1;
-
-let interactionMode = "play";
-
-//images
-let icons_image;
-let icons = [];
+let penDragStartKey;
+let penDragEndKey;
+let bridgeKeyPairs = new Set();
 
 //tonejs
 let synth;
-let sampler;
-let currentOscType = 'sawtooth';
-
 let pianoSampler;
 let rhodesSampler;
 let organSampler;
 let harpSampler;
-let currentSampler = 'Piano';
+
+let instrument;
+let currentInstrument = "piano";
 
 //const pitchShift = new Tone.PitchShift().toDestination();
 
-let showButtons = false;
-
 function preload() {
-    icons_image = loadImage("assets/icons_v2.png");
-
     synth = new Tone.PolySynth({
     "volume": -10,
     "envelope": {
@@ -311,7 +291,7 @@ function preload() {
         }
     }).toDestination();
 
-    synth.set({"oscillator": {"type": currentOscType}});
+    synth.set({"oscillator": {"type": "sawtooth"}});
 
     pianoSampler = new Tone.Sampler({
         urls: {
@@ -357,14 +337,14 @@ function preload() {
         baseUrl: "sounds/",
     }).toDestination();
 
-    sampler = pianoSampler;
+    instrument = pianoSampler;
 }
 
 
 
 function setup() {
     canvas = createCanvas(1366, 890);
-    canvas.parent('canvasContainer');
+    canvas.parent("canvasContainer");
     strokeWeight(2);
 
     textAlign(CENTER, CENTER);
@@ -373,48 +353,32 @@ function setup() {
     textStyle(BOLD);
     rectMode(RADIUS);
 
-    //hexagons
-    r = 52;
-    s = sqrt((3 * pow(r, 2)) / 4);
+    //store the hexagon keys with the correct coordinates and ID
+    gridSizeX = 52;
+    gridSizeY = sqrt((3 * pow(gridSizeX, 2)) / 4);
+    hStartX = 1.1 * gridSizeX;
+    let id = 0;
 
-    hStartX = 1.1 * r;
-
-    // create hexagons
-    let counter = 0;
-    for (let y = 17 * s; y > 0; y -= 2 * s) {
-        for (let x = 0; x < 26 * r; x += 3 * r) {
-            hexagons.push(new Hexagon(
-                x + hStartX, y + 1.8 * s, r, "note", counter++, 0)
-            );
-            if (x < 24 * r)
-            {
-                hexagons.push(new Hexagon(
-                    x + hStartX + 1.5 * r, y + 0.8 * s, r, "note", counter++, 0)
-                );
+    for (let y = 17 * gridSizeY; y > 0; y -= 2 * gridSizeY) {
+        for (let x = 0; x < 26 * gridSizeX; x += 3 * gridSizeX) {
+            //even rows
+            keyArr.push(new ButtonObj(x + hStartX, y + 1.8 * gridSizeY, gridSizeX, "note", id++));
+            //odd rows
+            if (x < 24 * gridSizeX) {
+                keyArr.push(new ButtonObj(x + hStartX + 1.5 * gridSizeX, y + 0.8 * gridSizeY, gridSizeX, "note", id++));
             }
         }
     }
-    //create buttons
-    for (let b = 0; b < 9; b++) {
-        buttons.push(new Hexagon(
-            r*-5.5, 2.5 * s + b * s * 1.7, r, "control", -(b + 1), 0)
-        );
-        buttons.push(new Hexagon(
-            r*2, 2.5 * s + b * s * 1.7, r, "control", -(b + 10), 0)
-        );
-        buttons.push(new Hexagon(
-            r*4.5, 2.5 * s + b * s * 1.7, r, "control", -(b + 19), 0)
-        );
-        buttons.push(new Hexagon(
-            r*7, 2.5 * s + b * s * 1.7, r, "control", -(b + 28), 0)
-        );
-    }
-    //create pages
-    for (let i = 0; i < 8; i++) {
-        pages[i] = []; //create nested array
+
+    //create buttons with negative IDs
+    const rows = 9;
+    for (let b = 0; b < rows; b++) {
+        controlsArr.push(new ButtonObj(gridSizeX*2.0, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1)));
+        controlsArr.push(new ButtonObj(gridSizeX*4.5, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1 + rows)));
+        controlsArr.push(new ButtonObj(gridSizeX*7.0, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1 + rows*2)));
     }
 
-    let style = document.createElement('style');
+    let style = document.createElement("style");
     document.head.appendChild(style);
     style.innerHTML = `
         canvas{
@@ -441,6 +405,10 @@ function setup() {
     el.addEventListener("touchmove", handleMove, false);
     el.addEventListener("touchcancel", handleCancel, false);
     el.addEventListener("gesturestart", function(e) {e.preventDefault();});
+
+    //run once to show starting screen
+    noLoop();
+    draw();
 }
 
 
@@ -462,15 +430,10 @@ function handleStart(evt) {
 
     //first tone to start audio on safari
     if (readyForSound === false) {
-        sampler.triggerAttackRelease("C2", "8n");
+        instrument.triggerAttackRelease("C2", "8n");
         readyForSound = true;
     }
-
-    if (newTouches[0].clientX > width - 72 && newTouches[0].clientY < 72) {
-        pressedButtons = [];
-        activeChord = [];
-        reactToTouch();
-    }
+    loop();
 }
 
 function handleMove(evt) {
@@ -485,6 +448,7 @@ function handleMove(evt) {
             ongoingTouches.splice(idx, 1, copyTouch(newTouches[i])); // swap in the new touch record
         }
     }
+    loop();
 }
 
 function handleEnd(evt) {
@@ -499,6 +463,23 @@ function handleEnd(evt) {
             ongoingTouches.splice(idx, 1);
         }
     }
+
+    //clear and stop everything when tap in top right
+    if (newTouches[0].clientX > width - 72 && newTouches[0].clientY < 72) {
+        pressedButtons = [];
+        lastPressedButtons = [];
+        activeFreqs = [];
+        ongoingTouches = [];
+        //wip, this still isn't quite working
+        keyArr.forEach((h) => {
+            playKey(h, "release");
+            h.touchStartX = -1;
+            h.touchStartY = -1;
+            h.touchDragX = -1;
+            h.touchDragY = -1;
+        });
+    }
+    loop();
 }
 
 function handleCancel(evt) {
@@ -507,8 +488,9 @@ function handleCancel(evt) {
     const newTouches = evt.changedTouches;
     
     for (var i = 0; i < newTouches.length; i++) {
-      ongoingTouches.splice(i, 1); // remove it; we're done
+      ongoingTouches.splice(i, 1); // remove it; we"re done
     }
+    loop();
 }
 
 function copyTouch(touch) {
@@ -530,14 +512,24 @@ function ongoingTouchIndexById(idToFind) {
     return -1; // not found
 }
 
-
 function draw() {
+    runKeys();
+
+    if (drawMinDuration > 0) {
+        drawMinDuration--;
+    } else {
+        noLoop();
+        drawMinDuration = 20;
+    }
+}
+
+function runKeys() {
     background(backgroundColor);
 
     //top left and right corner icons
     push();
     strokeWeight(6)
-    stroke(color('#5027A9'));
+    stroke(color("#5027A9"));
     noFill();
     ellipse(36, 36, 30);
     ellipse(width-36, 36, 30);
@@ -547,25 +539,25 @@ function draw() {
     if (ongoingTouches.length > 0 && ongoingTouches[0].clientX < 72 && ongoingTouches[0].clientY < 72)
     {
         // show controls on the left
-        showButtons = true;
+        menuIsOpen = true;
 
         if (mouseUsed === false) {
-            detectButtonTouch()
+            reactToPressedControls()
         }
 
         // Render all hexagons + variants below
-        hexagons.forEach((h) => {
+        keyArr.forEach((h) => {
             if (h.countdown > 0) {
                 h.countdown--;
             }
-            h.render(h.findHexVariant);
+            h.renderKeyType(h.findHexVariant);
         });
 
         // Render lines between hexagons
         renderKeyBridges();
 
         // Render all hexagon text
-        hexagons.forEach((h) => {
+        keyArr.forEach((h) => {
             h.renderText(h.findHexVariant);
         });
 
@@ -576,7 +568,7 @@ function draw() {
         optionsBG.setAlpha(50);
         background(optionsBG);
 
-        buttons.forEach((b) => {
+        controlsArr.forEach((b) => {
             if (b.countdown > 0) {
                 b.countdown--;
             }
@@ -584,37 +576,37 @@ function draw() {
         });
 
         // Render extra glow
-        buttons.forEach((b) => {
-            b.drawButtonGlow();
+        controlsArr.forEach((b) => {
+            b.drawControlGlow();
         });
     }
     else
     {
-        //don't show the controls
-        showButtons = false;
+        //don"t show the controls
+        menuIsOpen = false;
 
         if (mouseUsed === false) {
-            detectKeyTouch()
+            reactToPressedKeys()
         }
 
         // Render all hexagons + variants
-        hexagons.forEach((h) => {
+        keyArr.forEach((h) => {
             if (h.countdown > 0) {
                 h.countdown--;
             }
-            h.render(h.findHexVariant);
+            h.renderKeyType(h.findHexVariant);
         });
 
         // Render extra glow
-        hexagons.forEach((g) => {
-            g.drawGlow();
+        keyArr.forEach((g) => {
+            g.drawKeyGlow();
         });
 
         // Render lines between hexagons
         renderKeyBridges();
 
         // Render all hexagon text
-        hexagons.forEach((h) => {
+        keyArr.forEach((h) => {
             h.renderText(h.findHexVariant);
         });
     }
@@ -622,17 +614,15 @@ function draw() {
     //lines at the top showing scale;
     drawScaleLines();
 
-    // text about the pages
+    //text info in corners
     push();
 
     textFont("Switzer");
     textStyle(NORMAL);
-    fill(color('#5027A9'));
+    fill(color("#5027A9"));
     noStroke();
-    pagesText();
-    scaleText();
-    playText();
-    synthText();
+
+    cornerText();
 
     pop();
 }
@@ -642,21 +632,21 @@ function renderKeyBridges() {
     push();
     noStroke();
     //lines between pressedButtons
-    if (penDragStartHex !== undefined && penDragEndHex !== undefined) {
+    if (penDragStartKey !== undefined && penDragEndKey !== undefined) {
         drawPointConnector(
-            penDragStartHex.x, penDragStartHex.y,
-            penDragEndHex.x, penDragEndHex.y,
-            color(keyColorFromPalette(penDragStartHex, "dark")),
-            color(keyColorFromPalette(penDragEndHex, "dark")));
+            penDragStartKey.x, penDragStartKey.y,
+            penDragEndKey.x, penDragEndKey.y,
+            color(keyColorFromPalette(penDragStartKey, "dark")),
+            color(keyColorFromPalette(penDragEndKey, "dark")));
     }
-    if (hexPairs.size > 0) {
-        hexPairs.forEach((hexpair) => {
+    if (bridgeKeyPairs.size > 0) {
+        bridgeKeyPairs.forEach((hexpair) => {
             const nameArray = hexpair.split(" ");
             let hexArray = [];
             print (nameArray);
 
             //go through hexagons to find matching ones
-            hexagons.forEach((h) => {
+            keyArr.forEach((h) => {
                 if (nameArray[0] == h.name) {
                     hexArray[0] = h;
                 }
@@ -679,77 +669,14 @@ function renderKeyBridges() {
     pop();
 }
 
-// function findNoteShape(selectedHexes) {
 
-//     // go through all hexes with same midiName
-//     // to find the locations for each midiName in chord
-//     let options = [];
-
-//     if (selectedHexes.length > 0) {
-
-
-//         print("Selected " + selectedHexes.length);
-//         selectedHexes.forEach((s) => {
-
-//             // make slot for 2d array
-//             options.push([]);
-
-//             hexagons.forEach((h) => {
-//                 if (s.midiName === h.midiName) {
-//                     //add matching hexagon to that slot
-//                     options[options.length-1].push(h);
-//                 }
-//             });
-//         });
-
-//         // go through every combination
-//         let combo = [];
-
-//         optionCheck(combo, options, 0);
-//     }
-// }
-
-// function optionCheck(combo, options, n) {
-
-//     if (options.length > n) {
-//         options[n].forEach((optionHex) => {
-
-//             combo.push(optionHex);
-//             const nextOption = optionCheck(combo, options, n++)
-//             if (nextOption) {
-//                 combo.push(nextOption);
-//             }
-
-//             return combo;
-//         });
-//     }
-//     else {
-//         tryCombo(c);
-//         combo.pop();
-//         return;
-//     }
-// }
-
-
-// function tryCombo (combo) {
-//     let printList = ""
-//     combo.forEach((c) => {
-//         printList += c.pitchName + "-" + c.name + " ";
-//     });
-//     print("pot. X: " + printList);
-// }
-
-
-function detectButtonTouch() {
-    //only when controls are shown
-
+function reactToPressedControls() {
     //update which buttons are hovered over/ pressed
     lastPressedButtons = pressedButtons.slice();
     pressedButtons = [];
 
     for (let i = 0; i < ongoingTouches.length; i++) {
-
-        nearestHex = findNearestHex(ongoingTouches[i]);
+        nearestHex = findNearestButton(ongoingTouches[i], controlsArr);
         if (nearestHex !== undefined) {
             pressedButtons.push(nearestHex);
         }
@@ -761,7 +688,7 @@ function detectButtonTouch() {
     if (attackedKeys.length > 0)
     {
         // see if a button is hovered closest
-        buttons.forEach((b) => {
+        controlsArr.forEach((b) => {
             if (b.name === pressedButtons[0].name) {
                 controlPressed(b);
                 //b.countdown = cooldownFrames;
@@ -771,9 +698,7 @@ function detectButtonTouch() {
 }
 
 
-function detectKeyTouch() {
-    //only when hexagons are shown
-
+function reactToPressedKeys() {
     //update which buttons are hovered over/ pressed
     lastPressedButtons = pressedButtons.slice();
     pressedButtons = [];
@@ -782,7 +707,7 @@ function detectKeyTouch() {
 
     for (let i = 0; i < ongoingTouches.length; i++) {
 
-        nearestHex = findNearestHex(ongoingTouches[i])
+        nearestHex = findNearestButton(ongoingTouches[i], keyArr)
         if (nearestHex !== undefined) {
             pressedButtons.push(nearestHex);
 
@@ -804,46 +729,40 @@ function detectKeyTouch() {
     if (ongoingTouches.length === 0) {
 
         //add new line hexes to set, then remove the live line
-        if (penDragStartHex !== undefined && penDragEndHex !== undefined) {
+        if (penDragStartKey !== undefined && penDragEndKey !== undefined) {
 
-            const startName = penDragStartHex.name;
-            const endName = penDragEndHex.name;
+            const startName = penDragStartKey.name;
+            const endName = penDragEndKey.name;
             const newNamePair = startName + " " + endName;
             const reverseNamePair = endName + " " + startName;
-            if (hexPairs.has(newNamePair)) {
+            if (bridgeKeyPairs.has(newNamePair)) {
                 //remove
-                hexPairs.delete(newNamePair);
-                print(hexPairs.size);
+                bridgeKeyPairs.delete(newNamePair);
+                print(bridgeKeyPairs.size);
                 print("Removed " + newNamePair);
             }
-            else if (hexPairs.has(reverseNamePair)) {
+            else if (bridgeKeyPairs.has(reverseNamePair)) {
                 //remove
-                hexPairs.delete(reverseNamePair);
-                print(hexPairs.size);
+                bridgeKeyPairs.delete(reverseNamePair);
+                print(bridgeKeyPairs.size);
                 print("Removed " + reverseNamePair);
             }
             else {
                 //add
-                hexPairs.add(newNamePair);
-                print(hexPairs.size);
+                bridgeKeyPairs.add(newNamePair);
+                print(bridgeKeyPairs.size);
                 print("Added " + newNamePair);
             }
         }
 
-        penDragStartHex = undefined;
-        penDragEndHex = undefined;
+        penDragStartKey = undefined;
+        penDragEndKey = undefined;
     }
 }
 
 
 function detectMouse() {
-
-    //update which buttons are dragged over/ pressed
-    //lastPressedButtons = pressedButtons.slice();
-    //pressedButtons = [];
-    //if (findNearestHex !== undefined) {
-    //    pressedButtons.push(findNearestHex);
-    //}
+    //write new later
 }
 
 function reactToPen() {
@@ -857,15 +776,14 @@ function reactToPen() {
 
     if (unique.length > 0 && attackedKeys.length == 1) {
 
-        hexagons.forEach((h) => {
+        keyArr.forEach((h) => {
             if (h.name === attackedKeys[0].name) {
-
-                if (penDragStartHex == undefined) {
-                    penDragStartHex = h;
+                if (penDragStartKey == undefined) {
+                    penDragStartKey = h;
                 }
                 else {
-                    //there's a start hex already, update the end one instead
-                    penDragEndHex = h;
+                    //there is a start hex already, update the end one instead
+                    penDragEndKey = h;
                 }
             }
         });
@@ -876,14 +794,17 @@ function reactToPen() {
 function reactToTouch() {
     //only when hexagons are shown
 
+    //cleaning up duplicates?
+    //then it should only be possible for there to be one pressed button with a certain name,
+    //or at least all the ones after need to properly work with their own touchdrag and start
+
     //clean up duplicates and sort
     pressedButtons = [...new Set(pressedButtons)];
     pressedButtons.sort((a, b) => a.name - b.name);
 
     //give continuous drag values
-    hexagons.forEach((h) => {
+    keyArr.forEach((h) => {
         pressedButtons.forEach((t) => {
-
             if (t.name === h.name && t.touchDragX != -1) {
                 h.touchDragX = t.touchDragX;
                 h.touchDragY = t.touchDragY;
@@ -894,156 +815,39 @@ function reactToTouch() {
     //find unique items in each
     let attackedKeys = pressedButtons.filter((o) => lastPressedButtons.indexOf(o) === -1);
     let releasedKeys = lastPressedButtons.filter((o) => pressedButtons.indexOf(o) === -1);
-    const unique = attackedKeys.concat(releasedKeys);
 
-    if (unique.length > 0) {
-
-        //if there have been additions and deletions at once,
-        //toggle both in the chord
-        if (activePage >= 0 && attackedKeys.length > 0 && releasedKeys.length > 0) {
-            for (var moveAdd = 0; moveAdd < attackedKeys.length; moveAdd++) {
-                //added notes
-                const moveAddHex = attackedKeys[moveAdd];
-
-                hexagons.forEach((h) => {
-                    if (h.name === moveAddHex.name) {
-                        keypressed(h);
-                        h.touchStartX = moveAddHex.touchDragX;
-                        h.touchStartY = moveAddHex.touchDragY;
-                    }
-                });
+    //find key and press
+    for (var play = 0; play < attackedKeys.length; play++) {
+        const playHex = attackedKeys[play];
+        keyArr.forEach((h) => {
+            if (h.name === playHex.name) {
+                keypressed(h);
+                h.touchStartX = playHex.touchDragX;
+                h.touchStartY = playHex.touchDragY;
             }
-
-            for (var remAdd = 0; remAdd < releasedKeys.length; remAdd++) {
-                //new removed notes
-                const moveRemHex = releasedKeys[remAdd];
-
-                hexagons.forEach((h) => {
-                    if (h.name === moveRemHex.name) {
-                        keypressed(h);
-                        h.touchStartX = -1;
-                        h.touchStartY = -1;
-                        h.touchDragX = -1;
-                        h.touchDragY = -1;
-                    }
-                });
-            }
-        }
-        else {
-            //just additions or just deletions, or nothing
-
-            //if there have been additions, play those
-            //or toggle them in the chord
-            for (var play = 0; play < attackedKeys.length; play++) {
-
-                const playHex = attackedKeys[play];
-
-
-                    // see if a note is hovered closest and do stuff
-                    hexagons.forEach((h) => {
-                        if (h.name === playHex.name) {
-                            keypressed(h);
-                            h.touchStartX = playHex.touchDragX;
-                            h.touchStartY = playHex.touchDragY;
-                        }
-                    });
-            }
-
-            //stop playing deleted notes
-            //this only has an effect for normal played notes
-            for (var endplay = 0; endplay < releasedKeys.length; endplay++) {
-
-                const removedHex = releasedKeys[endplay];
-
-                //if it's a note
-                hexagons.forEach((h) => {
-                    if (h.name === removedHex.name) {
-                        keyReleased(h);
-                        h.touchStartX = -1;
-                        h.touchStartY = -1;
-                        h.touchDragX = -1;
-                        h.touchDragY = -1;
-                    }
-                });
-
-            }
-        }
-    }
-}
-
-
-//function reChord(h) {
-//    //WIP - CURRENTLY UNUSED
-//    let index = -1;
-//
-//    activeChord.forEach((a) => {
-//        if (a.midiName === h.midiName) {
-//            //midi value is already in chord
-//            index = activeChord.indexOf(a);
-//        }
-//    });
-//
-//    //if the note is in the chord already
-//    if (index > -1) {
-//        activeChord.splice(index, 1);
-//    } else {
-//        activeChord.push(h);
-//    }
-//
-//    //reorder from lowest to highest!
-//    activeChord.sort((a, b) => a.midiName - b.midiName);
-//
-//    pageIs(activePage);
-//    playChord();
-//}
-
-
-function synthSetOsc(oscType) {
-    //sine, square, sawtooth, triangle
-    currentOscType = oscType;
-    synth.set({"oscillator": {"type": oscType}});
-}
-
-
-function playChord(arp) {
-    if (activeChord.length > 0) {
-
-        activeFreqs = [];
-        let playPitches = [];
-
-        activeChord.forEach((c) => {
-            const pOctave = c.octave + currentPlayOctave
-            const freq = eval(currentTuning[c.midiName % 12]);
-            const pPitch = baseFrequency * freq * 2 ** (pOctave -1);
-            activeFreqs.push(freq);
-            playPitches.push(pPitch);
         });
+    }
 
-        //if (arp) {
-        //    Tone.Transport.stop();
-        //    print("arp:")
-        //    const pattern = new Tone.Pattern(function(time, note) {
-        //            sampler.triggerAttackRelease(note, 0.1);
-        //            print(playPitches.indexOf(note) + " - " + note);
-        //        }, playPitches, "up").start(0);
-        //    pattern.iterations = 10;
-        //    Tone.Transport.start();
-        //}
-        //else {
-            sampler.triggerAttackRelease(playPitches, "8n");
-        //}
-
-        // TODO
-        //findNoteShape(activeChord);
-
+    //release audio of key and reset drag values
+    for (var endplay = 0; endplay < releasedKeys.length; endplay++) {
+        const removedHex = releasedKeys[endplay];
+        keyArr.forEach((h) => {
+            if (h.name === removedHex.name) {
+                if (interactionMode === "play") {
+                    playKey(h, "release");
+                }
+                h.touchStartX = -1;
+                h.touchStartY = -1;
+                h.touchDragX = -1;
+                h.touchDragY = -1;
+            }
+        });
     }
 }
+
 
 function playKey(h, mode) {
-    lastPlayedNote = h.pitchName + "" + (h.octave + currentPlayOctave);
-    lastPlayedHex = h;
-
-    const pOctave = h.octave + currentPlayOctave
+    const pOctave = h.octave + currentOctave;
     const freq = eval(currentTuning[h.midiName % 12]);
     const pPitch = baseFrequency * freq * 2 ** (pOctave -1);
 
@@ -1051,13 +855,15 @@ function playKey(h, mode) {
     activePlayFreqs.push(pPitch);
 
     if (mode === "release") {
-
-        //wip - release needs to take into account the latest retune for that hex
-        sampler.triggerRelease(pPitch);
+        //release would need to take pitch bend into account!
+        instrument.triggerRelease(pPitch);
+        activeFreqs = [];
+    } else if (mode === "short") {
+        instrument.triggerAttackRelease(pPitch, '16n');
         activeFreqs = [];
     }
     else {
-        sampler.triggerAttack(pPitch);
+        instrument.triggerAttack(pPitch);
     }
 }
 
@@ -1099,193 +905,169 @@ function keypressed(h) {
         toggleNoteInScale(h);
     }
 
-    // add or remove notes from chord
-    else if (activePage >= 0) {
-        reChord(h);
-        h.countdown = cooldownFrames;
-    }
     // play the note normally
     else {
         playKey(h);
     }
 }
 
-
-function keyReleased(h) {
-    if (activePage < 0 && interactionMode === "play") {
-        playKey(h, "release");
-    }
-}
-
-
 function controlPressed(b) {
-    // release all notes, just in case
-    synth.releaseAll();
+    instrument.releaseAll();
+    const rows = 9;
 
-    // go to page
-    //for (let n = 1; n <= 8; n++) {
-    //    if (b.label === n) {
-    //        pageIs(n - 1);
-    //        playChord(activeChord);
-    //        return;
-    //    }
-    //}
-
-    // other functions
-    switch (-b.name) {
-        //case 9:
-        //    pageIs(-1); // play live
-        //break;
-        //case 10:
-        //    if (activePage > -1) {
-        //        print("Cleared the page.");
-        //        pages[activePage] = [];
-        //        activeChord = [];
-        //        pageIs(activePage);
-        //    }
-        //    else {
-        //        prevChord = [];
-        //    }
-        //break;
-        //case 11:
-        //    if (previousPage > -1) {
-        //        print("Replaced page.");
-        //        pages[activePage] = pages[previousPage];
-        //        activeChord = pages[previousPage];
-        //        pageIs(activePage);
-        //        playChord(activeChord);
-        //    }
-        //break;
-        case 12:
-            print("Change key");
-            if (interactionMode === "key") {
-                interactionMode = "play";
-            } else {
-                interactionMode = "key";
-            }
-        break;
-        case 13:
-            print("Toggle notes");
-            if (interactionMode === "edit") {
-                interactionMode = "play";
-            } else {
-                interactionMode = "edit";
-            }
-        break;
-        case 14:
-            print("Changed scale");
-
-            if (scaleMode === "major") {
-                scaleMode = "minor";
-            } else if (scaleMode === "minor") {
-                scaleMode = "chromatic";
-            } else if (scaleMode === "chromatic") {
-                scaleMode = "major";
-            } else {
-                scaleMode = "chromatic";
-            }
-            pickScale(currentKey, scaleMode);
-        break;
-        case 15:
-            print("Changed octave");
-            if (currentPlayOctave < 2) {
-                currentPlayOctave++;
-            }
-            else {
-                currentPlayOctave = 0;
-            }
-        break;
-        case 16:
-            print("Changed label style");
-            if (labelStyle === "notes") {labelStyle = "intervals";}
-            //else if (labelStyle === "intervals") {labelStyle = "midi";}
-            else {labelStyle = "notes";}
-        break;
-        case 17:
-            print("Changed color theme!");
-            if (colorMode === "fifths") {colorMode = "major";}
-            else if (colorMode === "major") {colorMode = "fifths";}
-            //else {colorMode = "chromatic";}
-        break;
-        case 18:
-            print("Switched to different midi to grid XY layout");
-
-            const temp = gridIncrement_H;
-            gridIncrement_H = gridIncrement_V;
-            gridIncrement_V = temp;
-
-            hexagons.forEach((h) => {
-
-                h.setMidiFromGrid(
-                gridBaseMidi,
-                gridWidth,
-                gridIncrement_H,
-                gridIncrement_D,
-                gridIncrement_V);
-
-            });
-
-            break;
-        case 19:
-            print("Switched to 12 tone equal temperament");
-            tuneMode = "12tet";
-            currentTuning = tuning12tet;
-        break;
-        case 20:
-            print("Switched to 12 tone Novemdecimal");
-            tuneMode = "novemdecimal";
-            currentTuning = tuningNovemdecimal;
-        break;
-        case 21:
-            print("Switched to 12 tone 16-NEJI");
-            tuneMode = "16neji";
-            currentTuning = tuning16neji;
-        break;
-        case 22:
-            print("Switched to 12 tone Undecimal");
-            tuneMode = "undecimal";
-            currentTuning = tuningUndecimal;
-        break;
-        case 23:
-            print("Switched to 12 tone 11-NEJI");
-            tuneMode = "11neji";
-            currentTuning = tuning11neji;
-        break;
-        case 24:
-            print("Switched to 12 tone Harmonic series segment");
-            tuneMode = "harmonic";
-            currentTuning = tuningHarmonic;
-        break;
-        case 25:
-            print("Switched to simple 12 tone tuning");
-            tuneMode = "simple";
-            currentTuning = tuningSimple;
-        break;
-        case 28:
-            print("Switched to piano!");
-            currentSampler = 'Piano'
-            sampler = pianoSampler;
-        break;
-        case 29:
-            print("Switched to Rhodes!");
-            currentSampler = 'Rhodes'
-            sampler = rhodesSampler;
-        break;
-        case 30:
-            print("Switched to organ!");
-            currentSampler = 'Organ'
-            sampler = organSampler;
-        break;
-        case 31:
-            print("Switched to harp!");
-            currentSampler = 'Harp'
-            sampler = harpSampler;
-        break;
-        //print("Switched to next oscillator type");
-            //if (currentOscType === "sawtooth") {synthSetOsc("triangle");}
-            //else if (currentOscType === "triangle") {synthSetOsc("square");}
-            //else if (currentOscType === "square") {synthSetOsc("sine");}
-            //else {synthSetOsc("sawtooth");}
+    if (-b.name <= rows) {
+        switch (-b.name) {
+            case 1:
+                print("Change key");
+                if (interactionMode === "key") {
+                    interactionMode = "play";
+                } else {
+                    interactionMode = "key";
+                }
+                break;
+            case 2:
+                print("Toggle notes");
+                if (interactionMode === "edit") {
+                    interactionMode = "play";
+                } else {
+                    interactionMode = "edit";
+                }
+                break;
+            case 3:
+                print("Changed scale");
+    
+                if (scaleMode === "major") {
+                    scaleMode = "minor";
+                } else if (scaleMode === "minor") {
+                    scaleMode = "chromatic";
+                } else if (scaleMode === "chromatic") {
+                    scaleMode = "major";
+                } else {
+                    scaleMode = "chromatic";
+                }
+                pickScale(currentKey, scaleMode);
+                break;
+            case 4:
+                print("Changed octave");
+                currentOctave = (currentOctave < 2) ? currentOctave++ : 0;
+                break;
+            case 5:
+                print("Changed label style");
+                if (labelStyle === "notes") {labelStyle = "intervals";}
+                else {labelStyle = "notes";}
+                break;
+            case 6:
+                print("Changed color theme!");
+                if (colorMode === "fifths") {colorMode = "major";}
+                else if (colorMode === "major") {colorMode = "fifths";}
+                //else {colorMode = "chromatic";}
+                break;
+            case 7:
+                print("Switched to different midi to grid XY layout");
+                const temp = gridIncrement_H;
+                gridIncrement_H = gridIncrement_V;
+                gridIncrement_V = temp;
+    
+                keyArr.forEach((h) => {
+                    h.setMidiFromGrid(gridBaseMidi, gridWidth, gridIncrement_H, gridIncrement_D, gridIncrement_V);
+                });
+                break;
+        }
+    } else if (-b.name <= rows*2) {
+        switch (-b.name - rows) {
+            case 1:
+                print("Switched to 12 tone equal temperament");
+                tuneMode = "12tet";
+                currentTuning = tuning12tet;
+                break;
+            case 2:
+                print("Switched to simple 12 tone tuning");
+                tuneMode = "simple";
+                currentTuning = tuningSimple;
+                break;
+            case 3:
+                print("Switched to 12 tone Harmonic series segment");
+                tuneMode = "harmonic";
+                currentTuning = tuningHarmonic;
+                break;
+            case 4:
+                print("Switched to 12 tone Novemdecimal");
+                tuneMode = "novemdecimal";
+                currentTuning = tuningNovemdecimal;
+                break;
+            case 5:
+                print("Switched to 12 tone 16-NEJI");
+                tuneMode = "16neji";
+                currentTuning = tuning16neji;
+                break;
+            case 6:
+                print("Switched to 12 tone Undecimal");
+                tuneMode = "undecimal";
+                currentTuning = tuningUndecimal;
+                break;
+            case 7:
+                print("Switched to 12 tone 11-NEJI");
+                tuneMode = "11neji";
+                currentTuning = tuning11neji;
+                break;
+        }
+        const root = baseFrequency * eval(currentTuning[0]) * 2 ** 2;
+        const third = baseFrequency * eval(currentTuning[4]) * 2 ** 3;
+        const fifth = baseFrequency * eval(currentTuning[7]) * 2 ** 3;
+        //const m7 = baseFrequency * eval(currentTuning[10]) * 2 ** 2;
+        instrument.triggerAttackRelease(root, "16n");
+        instrument.triggerAttackRelease(third, "16n");
+        instrument.triggerAttackRelease(fifth, "16n");
+        //instrument.triggerAttackRelease(m7, "16n");
+    } else if (-b.name <= rows*3) {
+        switch (-b.name - rows*2) {
+            case 1:
+                print("Switched to piano!");
+                currentInstrument = "piano";
+                instrument = pianoSampler;
+                break;
+            case 2:
+                print("Switched to Rhodes!");
+                currentInstrument = "rhodes";
+                instrument = rhodesSampler;
+                break;
+            case 3:
+                print("Switched to organ!");
+                currentInstrument = "organ";
+                instrument = organSampler;
+                break;
+            case 4:
+                print("Switched to harp!");
+                currentInstrument = "harp";
+                instrument = harpSampler;
+                break;
+            case 5:
+                print("Switched to saw wave!");
+                currentInstrument = "sawtooth";
+                synth.set({"oscillator": {"type": "sawtooth"}});
+                instrument = synth;
+                break;
+            case 6:
+                print("Switched to square wave!");
+                currentInstrument = "square";
+                synth.set({"oscillator": {"type": "square"}});
+                instrument = synth;
+                break;
+            case 7:
+                print("Switched to triangle wave!");
+                currentInstrument = "triangle";
+                synth.set({"oscillator": {"type": "triangle"}});
+                instrument = synth;
+                break;
+            case 8:
+                print("Switched to sine wave!");
+                currentInstrument = "sine";
+                synth.set({"oscillator": {"type": "sine"}});
+                instrument = synth;
+                break;
+        }
+        instrument.triggerAttackRelease("C3", "16n");
+        instrument.triggerAttackRelease("C4", "16n");
     }
 }
 
@@ -1331,57 +1113,6 @@ function toggleNoteInScale(h) {
 }
 
 
-//function keyTyped() {
-//    // Show major scale from hovered note
-//    if (key === "e") {
-//        interactionMode = "key";
-//        mousePressed();
-//    }
-//    else if (key === "w") {
-//        interactionMode = "play";
-//        mousePressed();
-//    }
-//    else if (key === "r") {
-//        interactionMode = "edit";
-//        mousePressed();
-//    }
-//    else if (key === "q") {
-//        pageIs(-1);
-//        mousePressed();
-//    }
-//
-//    // Switch pages with number keys
-//    for (let i = 0; i < 8; i++) {
-//        if (key === String(i + 1)) {
-//            pageIs(i);
-//            playChord(activeChord);
-//        }
-//    }
-//}
-
-
-//function pageIs(i) {
-//    // save to correct page
-//    pages[activePage] = activeChord.slice();
-//    //print(activeChord[0].midiName + " was " + prevChord[0].midiName);
-//
-//    if (activeChord.length > 0) {
-//        //keep if the same page is set multiple times, don't update!
-//        if (prevChord !== activeChord) {
-//            prevChord = activeChord.slice();
-//            previousPage = activePage;
-//        }
-//    }
-//
-//    if (i >= 0) {
-//        activeChord = pages[i].slice();
-//    } else {
-//        activeChord = [];
-//    }
-//    activePage = i;
-//}
-
-
 function keyColorFromPalette(h, style) {
     let palette = hexColors.slice();
     let darkPalette = darkHexColors.slice();
@@ -1399,7 +1130,7 @@ function keyColorFromPalette(h, style) {
         else if (colorMode === "major")
         {
             cTable = layoutColorsMajor.slice()
-            if ((h.octave + currentPlayOctave + 1) % 2 == 0) {
+            if ((h.octave + currentOctave + 1) % 2 == 0) {
                 cTable = layoutColorsMajor2.slice()
             }
         }
@@ -1430,7 +1161,7 @@ function keyColorFromPalette(h, style) {
     }
     else if (style === "darker") {
         palette = darkerPalette;
-        offColor = color('black');
+        offColor = color("black");
     }
 
     //color according to on/off state in current scale
@@ -1449,13 +1180,13 @@ function keyColorFromPalette(h, style) {
 function drawPointConnector(x1, y1, x2, y2, c1, c2) {
     const steps = 20;
 
-    for (let s = 0; s < steps + 1; s++) {
-        const mixColor = lerpColor(c1, c2, s / steps);
-        const mixX = lerp(x1, x2, s / steps);
-        const mixY = lerp(y1, y2, s / steps);
+    for (let gridDistanceY = 0; gridDistanceY < steps + 1; gridDistanceY++) {
+        const mixColor = lerpColor(c1, c2, gridDistanceY / steps);
+        const mixX = lerp(x1, x2, gridDistanceY / steps);
+        const mixY = lerp(y1, y2, gridDistanceY / steps);
 
-        const size = map(s, 0, steps, 6, 14);
-        const alpha = map(s, 0, steps, 60, 255);
+        const size = map(gridDistanceY, 0, steps, 6, 14);
+        const alpha = map(gridDistanceY, 0, steps, 60, 255);
 
         mixColor.setAlpha(alpha);
         fill(mixColor);
@@ -1483,9 +1214,9 @@ function drawScaleLines() {
         const xCompareValue = getXValue(compareFreq);
 
         gradientCircle(
-            lerpColor(color('black'), color('#3E1C87'), 0.2),
+            lerpColor(color("black"), color("#3E1C87"), 0.2),
             0,
-            lerpColor(color('black'), color('#3E1C87'), 0.7),
+            lerpColor(color("black"), color("#3E1C87"), 0.7),
             20,
             xCompareValue,
             startY, 5);
@@ -1497,16 +1228,13 @@ function drawScaleLines() {
         let size = 7;
         push();
         noStroke();
-        let fillC = color('white');
+        let fillC = color("white");
 
         const offset = noteNames.indexOf(currentKey);
 
         //color,new
-        const inKlickedHexes = pressedButtons.find(t =>
-            (t.midiName % 12) === ((i+offset) % 12) &&
-            t.countdown > 0);
-        const inHoverHexes = pressedButtons.find(t =>
-            (t.midiName % 12) === ((i+offset) % 12));
+        const inKlickedHexes = pressedButtons.find(t => (t.midiName % 12) === ((i+offset) % 12) && t.countdown > 0);
+        const inHoverHexes = pressedButtons.find(t => (t.midiName % 12) === ((i+offset) % 12));
 
         if (inKlickedHexes == undefined) {
             let cTable = layoutColorsMajor2;
@@ -1538,23 +1266,19 @@ function drawScaleLines() {
     pop();
 }
 
-class Hexagon {
-    constructor(x, y, r, type, name, countdown) {
+class ButtonObj {
+    constructor(x, y, r, type, name) {
 
         this.x = x;
         this.y = y;
         this.r = r;
         this.type = type;
         this.name = name;
-        this.countdown = countdown;
+        this.countdown = 0;
 
-        this.setMidiFromGrid(
-            gridBaseMidi,
-            gridWidth,
-            gridIncrement_H,
-            gridIncrement_D,
-            gridIncrement_V);
+        this.setMidiFromGrid(gridBaseMidi, gridWidth, gridIncrement_H, gridIncrement_D, gridIncrement_V);
 
+        //WIP - Only relevant for active keys, shouldn't be here!
         this.touchStartX = -1;
         this.touchStartY = -1;
         this.touchDragX = -1;
@@ -1571,151 +1295,112 @@ class Hexagon {
         this.octave = floor(this.midiName / 12) - 1;
     }
 
-    render(state) {
+    renderKeyType(state) {
         push();
-        if (this.type === "note") {
+        noStroke();
 
-            strokeWeight(4);
-            noStroke();
+        let innerColor = color(keyColorFromPalette(this, "dark"));
+        let midColor = lerpColor(innerColor, color("black"), 0.2);
+        let outerColor = color(keyColorFromPalette(this, "darker"));
 
-            let innerColor = color(keyColorFromPalette(this, "dark"));
-            let midColor = lerpColor(innerColor, color("black"), 0.2);
-            let outerColor = color(keyColorFromPalette(this, "darker"));
-
-            //note states
-            switch (state) {
-                case "klicked":
-
-                    keyShape(this.x, this.y, this.r * 1.7, innerColor);
-                    gradientCircle(
-                        color('#FFFFFF80'),
-                        0,
-                        color('#FFFFFF00'),
-                        this.r * 1.59,
-                        this.x,
-                        this.y, 12);
+        //note states
+        switch (state) {
+            case "klicked":
+                keyShape(this.x, this.y, this.r * 1.7, innerColor);
+                gradientCircle(
+                    color("#FFFFFF80"), 0,
+                    color("#FFFFFF00"), this.r * 1.59,
+                    this.x, this.y, 12);
                 break;
-                case "hover":
-                    keyShape(this.x, this.y, this.r * 1.7, midColor);
-                    gradientCircle(
-                        color(keyColorFromPalette(this, "light")),
-                        0,
-                        midColor,
-                        this.r * 1.45,
-                        this.x,
-                        this.y, 18);
+            case "hover":
+                keyShape(this.x, this.y, this.r * 1.7, midColor);
+                gradientCircle(
+                    color(keyColorFromPalette(this, "light")), 0,
+                    midColor, this.r * 1.45,
+                    this.x, this.y, 18);
                 break;
-                case "idle":
-                    keyShape(this.x, this.y, this.r * 1.7, outerColor);
-                    gradientCircle(
-                        lerpColor(innerColor, outerColor, 0.2),
-                        0,
-                        outerColor,
-                        this.r * 1.45,
-                        this.x,
-                        this.y, 18);
+            case "idle":
+                keyShape(this.x, this.y, this.r * 1.7, outerColor);
+                gradientCircle(
+                    lerpColor(innerColor, outerColor, 0.2), 0,
+                    outerColor, this.r * 1.45,
+                    this.x, this.y, 18);
                 break;
-                case "inChord":
-                    keyShape(this.x, this.y, this.r * 1.7, "white");
-                    gradientCircle(
-                        innerColor,
-                        0,
-                        color('white'),
-                        this.r * 1.59,
-                        this.x,
-                        this.y, 12);
+            case "selected":
+                keyShape(this.x, this.y, this.r * 1.7, "white");
+                gradientCircle(
+                    innerColor, 0,
+                    color("white"), this.r * 1.59,
+                    this.x, this.y, 12);
                 break;
-                case "inChordHover":
-                    keyShape(this.x, this.y, this.r * 1.7, "white");
-                    gradientCircle(
-                        innerColor,
-                        0,
-                        color('white'),
-                        this.r * 1.59,
-                        this.x,
-                        this.y, 12);
+            case "glow":
+                gradientCircle(
+                    color(keyColorFromPalette(this, "light") + "06"), this.r * 0.5,
+                    color(keyColorFromPalette(this, "light") + "06"), this.r * 2.6,
+                    this.x, this.y, 14);
                 break;
-                case "prevChord":
-                    keyShape(this.x, this.y, this.r * 1.7, "black");
-                    gradientCircle(
-                        innerColor,
-                        0,
-                        "black",
-                        this.r * 1.59,
-                        this.x,
-                        this.y, 12);
-                break;
-                case "glow":
-                    gradientCircle(
-                        color(keyColorFromPalette(this, "light") + "06"),
-                        this.r * 0.5,
-                        color(keyColorFromPalette(this, "light") + "06"),
-                        this.r * 2.6,
-                        this.x,
-                        this.y, 14);
-                break;
-            }
         }
-        else if (this.type === "control") {
-            strokeWeight(2);
-            stroke('black');
-            //button states
-            switch (state) {
-                case "hidden":
-                    fill(backgroundColor);
-                    noStroke();
-                    break;
-                case "klicked":
-                    fill(darkStrokeColor);
-                    controlShape(this.x, this.y, this.r * 1.7);
-                    fill(hexColors[10]);
-                    noStroke();
-                    controlShape(this.x, this.y, this.r * 1.5);
-                    break;
-                case "hover":
-                    fill(outColor);
-                    controlShape(this.x, this.y, this.r * 1.7);
-                    noStroke();
-                    fill("#00000040");
-                    controlShape(this.x, this.y, this.r * 1.7);
-                    controlShape(this.x, this.y, this.r * 1.57);
-                    break;
-                case "idle":
-                    fill("#170744d0");
-                    controlShape(this.x, this.y, this.r * 1.7);
-                    break;
-                case "active":
-                    fill('#3E1C87');
-                    controlShape(this.x, this.y, this.r * 1.7);
-                    break;
-                case "activehover":
-                    fill(darkHexColors[10]);
-                    controlShape(this.x, this.y, this.r * 1.7);
-                    noStroke();
-                    fill("#ffffff30");
-                    controlShape(this.x, this.y, this.r * 1.57);
-                    controlShape(this.x, this.y, this.r * 1.4);
-                    break;
-                case "glow":
-                    fill("#00000030");
-                    noStroke();
-                    controlShape(this.x, this.y, this.r * 1.9);
-                    break;
-                case "secondaryOn":
-                    gradientCircle(
-                        color('#361976'),
-                        0,
-                        color('#000000'),
-                        this.r * 1.30,
-                        this.x,
-                        this.y, 12);
-                    noFill();
-                    stroke(midColor);
-                    controlShape(this.x, this.y, this.r * 1.7);
+        pop();
+    }
+
+    renderControlType(state) {
+        push();
+        strokeWeight(2);
+        stroke("black");
+
+        //button states
+        switch (state) {
+            case "hidden":
+                fill(backgroundColor);
+                noStroke();
                 break;
-            }
-            this.pickControlText();
+            case "klicked":
+                fill(darkStrokeColor);
+                controlShape(this.x, this.y, this.r * 1.7);
+                fill(hexColors[10]);
+                noStroke();
+                controlShape(this.x, this.y, this.r * 1.5);
+                break;
+            case "hover":
+                fill(outColor);
+                controlShape(this.x, this.y, this.r * 1.7);
+                noStroke();
+                fill("#00000040");
+                controlShape(this.x, this.y, this.r * 1.7);
+                controlShape(this.x, this.y, this.r * 1.57);
+                break;
+            case "idle":
+                fill("#170744d0");
+                controlShape(this.x, this.y, this.r * 1.7);
+                break;
+            case "active":
+                fill("#3E1C87");
+                controlShape(this.x, this.y, this.r * 1.7);
+                break;
+            case "activehover":
+                fill(darkHexColors[10]);
+                controlShape(this.x, this.y, this.r * 1.7);
+                noStroke();
+                fill("#ffffff30");
+                controlShape(this.x, this.y, this.r * 1.57);
+                controlShape(this.x, this.y, this.r * 1.4);
+                break;
+            case "glow":
+                fill("#00000030");
+                noStroke();
+                controlShape(this.x, this.y, this.r * 1.9);
+                break;
+            case "secondaryOn":
+                gradientCircle(
+                    color("#361976"), 0,
+                    color("#000000"), this.r * 1.30,
+                    this.x, this.y, 12);
+                noFill();
+                stroke(midColor);
+                controlShape(this.x, this.y, this.r * 1.7);
+            break;
         }
+        this.renderControlText();
         pop();
     }
 
@@ -1729,7 +1414,7 @@ class Hexagon {
         stroke("#00000050");
         strokeJoin(ROUND);
         fill("#00000050");
-        this.pickHexText();
+        this.renderKeyText();
 
         noStroke();
         if (state === "hover") {
@@ -1749,7 +1434,7 @@ class Hexagon {
             }
         }
 
-        this.pickHexText();
+        this.renderKeyText();
         this.hexDragOffsetIndicator();
         pop();
     }
@@ -1760,23 +1445,11 @@ class Hexagon {
 
         if (inKlickedHexes !== undefined) {
             return "klicked";
-        }
-        else if (hexInChord(this, activeChord) && inHoverHexes !== undefined) {
-            return "inChordHover";
-        }
-        else if (hexInChord(this, activeChord)) {
-            return "inChord";
-        }
-        else if (inHoverHexes !== undefined) {
+        } else if (inHoverHexes !== undefined) {
             return "hover";
-        }
-        else if (hexInChord(this, prevChord)) {
-            return "prevChord";
-        }
-        else if (this.pitchName === currentKey && interactionMode === "key") {
-            return "inChord";
-        }
-        else {
+        } else if (this.pitchName === currentKey && interactionMode === "key") {
+            return "selected";
+        } else {
             return "idle";
         }
     }
@@ -1785,35 +1458,35 @@ class Hexagon {
     drawButtonVariant() {
         const inHoverButtons = pressedButtons.find(t => t.name === this.name);
 
-        if (this.label === "") {
-            this.render("hidden");
+        if (rControlNames[-this.name] === "") {
+            this.renderControlType("hidden");
         } else if (this.countdown > 0) {
-            this.render("klicked");
-        } else if (this.isToggledOn && inHoverButtons !== undefined) {
-            this.render("activehover");
-        } else if (this.isToggledOn) {
-            this.render("active");
+            this.renderControlType("klicked");
+        } else if (this.isControlOn && inHoverButtons !== undefined) {
+            this.renderControlType("activehover");
+        } else if (this.isControlOn) {
+            this.renderControlType("active");
         } else if (inHoverButtons !== undefined) {
-            this.render("hover");
+            this.renderControlType("hover");
         } else if (this.secondaryOn){
-            this.render("secondaryOn");
+            this.renderControlType("secondaryOn");
         } else {
-            this.render("idle");
+            this.renderControlType("idle");
         }
     }
 
 
-    drawGlow() {
+    drawKeyGlow() {
         const inKlickedHexes = pressedButtons.find(t => t.midiName === this.midiName);
 
         if (inKlickedHexes !== undefined) {
-            this.render("glow");
+            this.renderKeyType("glow");
         }
     }
 
-    drawButtonGlow() {
+    drawControlGlow() {
         if (this.countdown > 0) {
-            this.render("glow");
+            this.renderControlType("glow");
         }
     }
 
@@ -1828,107 +1501,71 @@ class Hexagon {
         }
     }
 
-    get isToggledOn() {
-        if (this.label === activePage + 1 ||
-            this.name === -9 && activePage === -1 ||
-            this.name === -12 && interactionMode === "key" ||
-            this.name === -13 && interactionMode === "edit" ||
-            this.name === -19 && tuneMode === '12tet'||
-            this.name === -20 && tuneMode === 'novemdecimal'||
-            this.name === -21 && tuneMode === '16neji'||
-            this.name === -22 && tuneMode === 'undecimal' ||
-            this.name === -23 && tuneMode === '11neji'||
-            this.name === -24 && tuneMode === 'harmonic' ||
-            this.name === -25 && tuneMode === 'simple' ||
-            this.name === -28 && currentSampler === 'Piano'||
-            this.name === -29 && currentSampler === 'Rhodes' ||
-            this.name === -30 && currentSampler === 'Organ'||
-            this.name === -31 && currentSampler === 'Harp') {
-            return true;
+    get isControlOn() {
+        const onConditions = [
+            false,
+            false,
+            (interactionMode === "key"),
+            (interactionMode === "edit"),
+            false,
+            false,
+            false,
+            false,
+            false,
+
+            (tuneMode === "12tet"),
+            (tuneMode === "simple"),
+            (tuneMode === "harmonic"),
+            (tuneMode === "novemdecimal"),
+            (tuneMode === "16neji"),
+            (tuneMode === "undecimal"),
+            (tuneMode === "11neji"),
+            false,
+            false,
+
+            (currentInstrument === "piano"),
+            (currentInstrument === "rhodes"),
+            (currentInstrument === "organ"),
+            (currentInstrument === "harp"),
+            (currentInstrument === "sawtooth"),
+            (currentInstrument === "square"),
+            (currentInstrument === "triangle"),
+            (currentInstrument === "sine"),
+            false
+        ]
+
+        for (let i = 0; i < onConditions.length; i++) {
+            if (i == -this.name-1) {
+                return onConditions[i];
+            }
         }
+        return true;
     }
 
-    get secondaryOn() {
-        if (this.label === previousPage + 1) {
-            return true;
-        }
-    }
 
-    get label() {
-        if (this.type === "control") {
-            let label = -this.name;
-            if (label < 9) {
-                return 9 - label;
-            }
-            if (label === 9) {
-                return "Play Solo";
-            }
-            if (
-                this.name === -11 &&
-                previousPage > -1 &&
-                activePage > -1 &&
-                activePage !== previousPage
-            ) {
-                return "Paste page: " + (previousPage + 1);
-            }
-            if (label >= 10) {
-                return rControlNames[label - 10];
-            }
-            return label;
-        }
-    }
-
-    get description() {
-        if (this.type === "control") {
-            let desc = this.label;
-
-            if (this.label < 9) {
-                desc = "Switch to page " + this.label;
-            }
-
-            return desc;
-        }
-    }
-
-    pickControlText() {
+    renderControlText() {
         push();
         noStroke();
-        fill("#AA6EF5");
-
-        if (this.isToggledOn) {
-            fill("#D5B9F2");
-        }
+        const stateColor = (this.isControlOn) ? "#D5B9F2" : "#AA6EF5";
+        fill(stateColor);
 
         textSize(19);
-        text(this.label, this.x, this.y);
+        text(rControlNames[-this.name-1], this.x, this.y);
         pop();
-
-        //const imageX = this.x - 0.52 * this.r;
-        //const imageY = this.y - 0.54 * this.r;
-        //const size = 52;
-
-        //for (let i = 9; i <= 17; i++) {
-        //    if (this.name === -i) {
-        //        image(icons[i - 9], imageX, imageY, size, size);
-        //        pop();
-        //        return;
-        //    }
-        //}
     }
 
-
-    pickHexText() {
+    renderKeyText() {
         if (labelStyle === "notes")
         {
             if (this.pitchName == currentKey) {
-                text(this.pitchName + (this.octave + currentPlayOctave), this.x, this.y);
+                text(this.pitchName + (this.octave + currentOctave), this.x, this.y);
             }
             else {
                 text(this.pitchName, this.x, this.y);
             }
         }
         else if (labelStyle === "midi") {
-            text(this.midiName + 12 * currentPlayOctave, this.x, this.y);
+            text(this.midiName + 12 * currentOctave, this.x, this.y);
         }
         else if (labelStyle === "intervals") {
             const offset = noteNames.indexOf(currentKey);
@@ -1972,7 +1609,7 @@ class Hexagon {
             //     retune(this, xMapped);
             // }
             // if (yMapped !== 0) {
-            //     sampler.volume.value = map(xMapped, -1, 1, -20, 20);
+            //     instrument.volume.value = map(xMapped, -1, 1, -20, 20);
             // }
 
             let circleColor = color(keyColorFromPalette(this, "light"));
@@ -1998,42 +1635,29 @@ function dragDistanceMap(center, start, drag, min, max) {
 }
 
 
-function findNearestHex(touch) {
+function findNearestButton(touch, arr) {
 
-    const arr = showButtons ? [...buttons] : [...hexagons];
-    const minDistance = r * 0.85;
-    let closestHexagon;
+    //minimum distance is a weird way to measure which button is hit, wip
+    const minDistance = gridSizeX * 0.85;
+    let closestButton;
 
     if (!mouseUsed && touch != undefined) {
         arr.forEach((h) => {
-            if (h.distanceToTouch(touch) < minDistance) {closestHexagon = h;}
+            if (h.distanceToTouch(touch) < minDistance) {closestButton = h;}
         });
     }
     else {
         arr.forEach((h) => {
-            if (h.distanceToMouse < minDistance) {closestHexagon = h;}
+            if (h.distanceToMouse < minDistance) {closestButton = h;}
         });
     }
 
-    if (closestHexagon != undefined) {
-        print("Found " + closestHexagon.distanceToTouch(touch));
-        return closestHexagon;
+    if (closestButton != undefined) {
+        print("Found " + closestButton.distanceToTouch(touch));
+        return closestButton;
     } else {
         print("No hexagon found in reach!");
     }
-}
-
-
-function hexInChord(h, chord) {
-    let isInChord = false;
-
-    chord.forEach((c) => {
-        if (c !== undefined && c.midiName === h.midiName) {
-            isInChord = true;
-        }
-    });
-
-    return isInChord;
 }
 
 
@@ -2041,7 +1665,7 @@ function keyShape(x, y, r, fillColor) {
     push()
     fill(fillColor)
     if (circleMode === true) {
-        ellipse(x, y, r * 0.95);
+        ellipse(x, y, r * 0.99);
     } else {
         strokeWeight(r * 0.3);
         stroke(fillColor);
@@ -2078,106 +1702,41 @@ function hexagon(x, y, r) {
 function gradientCircle(cInner, sInner, cOuter, sOuter, x, y, steps) {
     push();
     noStroke();
-    for (let s = 0; s < steps; s++) {
-        const mixColor = lerpColor(cOuter, cInner, s / (steps*1.5));
-        const mixSize = lerp(sOuter, sInner, s / steps);
+    for (let gridDistanceY = 0; gridDistanceY < steps; gridDistanceY++) {
+        const mixColor = lerpColor(cOuter, cInner, gridDistanceY / (steps*1.5));
+        const mixSize = lerp(sOuter, sInner, gridDistanceY / steps);
         fill(mixColor);
         ellipse(x, y, mixSize*1);
     }
     pop();
 }
 
-function pagesText() {
-    textSize(21);
-    textAlign(LEFT, CENTER);
-
-    // base text
-    let pageText = "";
-    for (b = 0; b < pages.length; b++) {
-        pageText += pages[b].length;
-    }
-    text(pageText, 10, -44); //44
+function capitalize(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-function scaleText() {
+function cornerText() {
+    const scaleText = currentKey + (currentOctave+1) + " – " + capitalize(scaleMode) + " – " + capitalize(tuneMode);
+
     textSize(15);
     textAlign(LEFT, CENTER);
     textStyle(BOLD);
-
-    let scaleText = currentKey;
-    scaleText +=    (currentPlayOctave+1) + " – ";
-    scaleText += scaleMode.toUpperCase() + " – ";
-    scaleText += tuneMode.toUpperCase();
-
     text(scaleText, 72, 18);
-}
 
-function synthText() {
+    let playText = "";
+    if (pressedButtons.length > 0 && !menuIsOpen) {
+        for (let b = 0; b < pressedButtons.length; b++) {
+            const button = pressedButtons[b];
+            playText += (button.pitchName + (button.octave + currentOctave)) + " ";
+        }
+    } else {
+        playText = capitalize(currentInstrument);
+    }
+
     textSize(15);
     textAlign(RIGHT, CENTER);
     textStyle(BOLD);
-
-    let synthText = currentOscType.toUpperCase();
-
-    text(synthText, width - 10, -18); //18
-}
-
-function playText() {
-    textSize(15);
-    textAlign(RIGHT, CENTER);
-    textStyle(NORMAL);
-    noStroke();
-
-    let info = "Play Solo";
-
-    //needs fixing. display button info or entire chord WIP
-
-    // find nearest button
-    let lastNearestHex;
-    if (ongoingTouches.length > 0) {
-
-        if (!mouseUsed) {
-            lastNearestHex = findNearestHex(ongoingTouches[ongoingTouches.length-1]);
-        } else {
-            lastNearestHex = findNearestHex();
-        }
-
-        if (lastNearestHex !== undefined) {
-            // hovering over button
-            if (lastNearestHex.type === "control") {
-                buttons.forEach((b) => {
-                    if (b.name === lastNearestHex.name) {
-                        info = b.description;
-                    }
-                });
-            }
-        }
-    }
-
-    // if there is an active chord, list the notes
-    else if (activeChord.length > 0) {
-        info = "Chord ";
-        let prevOctave = activeChord[0].octave;
-
-        for (let a = 0; a < activeChord.length; a++) {
-            if (activeChord[a].octave !== prevOctave) {
-                info += ", ";
-            } else {
-                info += " ";
-            }
-            prevOctave = activeChord[a].octave;
-            info += activeChord[a].pitchName;
-        }
-    } else if (activePage >= 0) {
-        // chord mode with empty chord
-        info = "Chord Mode - Page " + (activePage + 1);
-    } else if (lastPlayedNote.length > 0) {
-        info = "Played " + lastPlayedNote + " (" + (lastPlayedHex.midiName + 12 * currentPlayOctave) + ")";
-    }
-
-    info += " – " + currentSampler;
-
-    text(info, width - 72, 18); //44
+    text(playText, width - 72, 18);
 }
 
 function scaleFreqToCents(freq) {
@@ -2185,7 +1744,6 @@ function scaleFreqToCents(freq) {
 }
 
 function mousePressed() {
-    //fullscreen(true);
     if (ongoingTouches.length <= 0) {
         mouseUsed = true;
         mouseDown = true;
@@ -2213,7 +1771,6 @@ function mouseDragged() {
 function mouseReleased() {
     if (ongoingTouches.length <= 0) {
         mouseDown = false;
-        dragOrder = [];
     }
     else {
         return false;
