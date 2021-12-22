@@ -81,7 +81,7 @@ const rControlNames = [
     "Labels",
     "Color",
     "GridXY",
-    "+",
+    "Shape",
     "+",
     "EDO 12",
     "JI 12",
@@ -90,7 +90,7 @@ const rControlNames = [
     "/16 NEJI",
     "/11 Undec",
     "/11 Snow",
-    "+",
+    "EDO 19",
     "+",
     "Piano",
     "Rhodes",
@@ -109,11 +109,11 @@ const noteNames = [
 const intervalNames = [
     "1", "m2", "2", "m3", "3", "4", "TT", "5", "m6", "6", "m7", "7",
 ];
+const intervalNames19tet = [
+    "1", "a1", "m2", "2", "s3", "m3", "3", "a3", "4", "tt", "TT", "5", "a5", "m6", "6", "M6", "m7", "7", "d8",
+];
 
-let tuneMode = "simple";
 const baseFrequency = 32.70 //C1
-let activeFreqs = [];
-let activePlayFreqs = [];
 const tuning12tet = [
     1,
     2 ** (1/12),
@@ -213,15 +213,40 @@ const tuningSimple = [
     "7/4", //harmonic 7th, minor 7th
     "15/8" //major 7th 17/9
 ];
+const tuning19tet = [
+    1,
+    2 ** (1/19),
+    2 ** (2/19),
+    2 ** (3/19),
+    2 ** (4/19),
+    2 ** (5/19),
+    2 ** (6/19),
+    2 ** (7/19),
+    2 ** (8/19),
+    2 ** (9/19),
+    2 ** (10/19),
+    2 ** (11/19),
+    2 ** (12/19),
+    2 ** (13/19),
+    2 ** (14/19),
+    2 ** (15/19),
+    2 ** (16/19),
+    2 ** (17/19),
+    2 ** (18/19)
+];
 
 const scaleMajor = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1];
 const scaleMinor = [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0];
 const scaleChromatic = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+const scaleMajor19 = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0];
 
 const layoutColorsThirds = [0, 7, 7, 11, 1, 7, 10, 7, 2, 9, 7, 7];
-const layoutColorsMajor = [1, 10, 1, 10, 1, 1, 10, 1, 10, 1, 10, 1];
-const layoutColorsMajor2 = [2, 7, 2, 7, 2, 2, 7, 2, 7, 2, 7, 2];
 const layoutColorsFifths = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
+//const layoutColorsMajor = // 1/10
+//const layoutColorsMajor2 = // 2/7
+
+
+
 
 const backgroundColor = "#050314";
 const outColor = "#56459A";
@@ -233,10 +258,13 @@ const darkStrokeColor = "#190E43A0";
 document.bgColor = backgroundColor;
 
 let scaleMode = "chromatic";
-let circleMode = true;
+let circleMode = false;
 let colorMode = "major";
 
+let tuneMode = "simple";
 let currentTuning = tuningSimple;
+let activeFreqs = [];
+let activePlayFreqs = [];
 
 let currentScale = scaleChromatic.slice();
 let scaleCustom = currentScale.slice(); //generate with toggle tool
@@ -848,7 +876,7 @@ function reactToTouch() {
 
 function playKey(h, mode) {
     const pOctave = h.octave + currentOctave;
-    const freq = eval(currentTuning[h.midiName % 12]);
+    const freq = eval(currentTuning[h.midiName % currentTuning.length]);
     const pPitch = baseFrequency * freq * 2 ** (pOctave -1);
 
     activeFreqs.push(freq);
@@ -873,7 +901,7 @@ function retune(h, float) {
     //pitchShift.pitch = float;
 
     //const pOctave = h.octave + currentPlayOctave
-    //const freq = currentTuning[h.midiName % 12];
+    //const freq = currentTuning[h.midiName % currentTuning.length];
     //const pPitch = baseFrequency * freq * 2 ** (pOctave -1);
     //
     //for (let a = 0; a < activePlayFreqs.length; a++) {
@@ -972,6 +1000,9 @@ function controlPressed(b) {
                     h.setMidiFromGrid(gridBaseMidi, gridWidth, gridIncrement_H, gridIncrement_D, gridIncrement_V);
                 });
                 break;
+            case 8:
+                print("switched shape of keys!");
+                circleMode = !circleMode;
         }
     } else if (-b.name <= rows*2) {
         switch (-b.name - rows) {
@@ -979,41 +1010,53 @@ function controlPressed(b) {
                 print("Switched to 12 tone equal temperament");
                 tuneMode = "12tet";
                 currentTuning = tuning12tet;
+                newGridIncrements(4, 7);
                 break;
             case 2:
                 print("Switched to simple 12 tone tuning");
                 tuneMode = "simple";
                 currentTuning = tuningSimple;
+                newGridIncrements(4, 7);
                 break;
             case 3:
                 print("Switched to 12 tone Harmonic series segment");
                 tuneMode = "harmonic";
                 currentTuning = tuningHarmonic;
+                newGridIncrements(4, 7);
                 break;
             case 4:
                 print("Switched to 12 tone Novemdecimal");
                 tuneMode = "novemdecimal";
                 currentTuning = tuningNovemdecimal;
+                newGridIncrements(4, 7);
                 break;
             case 5:
                 print("Switched to 12 tone 16-NEJI");
                 tuneMode = "16neji";
                 currentTuning = tuning16neji;
+                newGridIncrements(4, 7);
                 break;
             case 6:
                 print("Switched to 12 tone Undecimal");
                 tuneMode = "undecimal";
                 currentTuning = tuningUndecimal;
+                newGridIncrements(4, 7);
                 break;
             case 7:
                 print("Switched to 12 tone 11-NEJI");
                 tuneMode = "11neji";
                 currentTuning = tuning11neji;
+                newGridIncrements(4, 7);
+                break;
+            case 8:
+                tuneMode = "19tet";
+                currentTuning = tuning19tet;
+                newGridIncrements(6, 11);
                 break;
         }
         const root = baseFrequency * eval(currentTuning[0]) * 2 ** 2;
-        const third = baseFrequency * eval(currentTuning[4]) * 2 ** 3;
-        const fifth = baseFrequency * eval(currentTuning[7]) * 2 ** 3;
+        const third = baseFrequency * eval(currentTuning[gridIncrement_D]) * 2 ** 3;
+        const fifth = baseFrequency * eval(currentTuning[gridIncrement_V]) * 2 ** 3;
         //const m7 = baseFrequency * eval(currentTuning[10]) * 2 ** 2;
         instrument.triggerAttackRelease(root, "16n");
         instrument.triggerAttackRelease(third, "16n");
@@ -1071,82 +1114,126 @@ function controlPressed(b) {
     }
 }
 
+function newGridIncrements(small, big) {
+    if (small != gridIncrement_D && small != gridIncrement_V) {
+        if (gridIncrement_D < gridIncrement_V) {
+            gridIncrement_D = small;
+            gridIncrement_V = big;
+        } else {
+            gridIncrement_D = big;
+            gridIncrement_V = small;
+        }
+        keyArr.forEach((h) => {
+            h.setMidiFromGrid(gridBaseMidi, gridWidth, gridIncrement_H, gridIncrement_D, gridIncrement_V);
+        });
+    }
+}
+
 
 function pickScale(pitch, mode) {
     //start from note
     const offset = noteNames.indexOf(pitch);
 
-    for (let i = 0; i < currentScale.length; i++) {
-        if (mode === "major") {
-            currentScale[(i + offset) % 12] = scaleMajor[i];
-        } else if (mode === "minor") {
-            currentScale[(i + offset) % 12] = scaleMinor[i];
-        } else if (mode === "chromatic") {
-            currentScale[i] = scaleChromatic[i];
-        } else if (mode === "custom") {
-            currentScale[(i + offset) % 12] = scaleCustom[i];
+    //WIP: make this compatible with other octave sizes
+    if (mode === chromatic || currentTuning.length != 12) {
+        currentScale = new Array(currentTuning.length).fill(1); //all notes are on
+        scaleMode = "chromatic"; //in case it isn't already!
+    } else {
+        for (let i = 0; i < currentTuning.length; i++) {
+            if (mode === "major") {
+                currentScale[(i + offset) % 12] = scaleMajor[i];
+            } else if (mode === "minor") {
+                currentScale[(i + offset) % 12] = scaleMinor[i];
+            } else if (mode === "custom") {
+                currentScale[(i + offset) % 12] = scaleCustom[i];
+            }
         }
     }
 }
 
 
 function toggleNoteInScale(h) {
-    //always uses custom scale, change the key to get back to defaults
-    scaleMode = "custom";
+    if (currentTuning.length == 12) {
+        //always uses custom scale, change the key to get back to defaults
+        scaleMode = "custom";
 
-    //get position of current name in notenames
-    const offset = noteNames.indexOf(h.pitchName);
-    const keyOffset = noteNames.indexOf(currentKey);
-    print (currentKey + " at " + keyOffset)
+        //get position of current name in notenames
+        const offset = noteNames.indexOf(h.pitchName);
+        const keyOffset = noteNames.indexOf(currentKey);
+        print (currentKey + " at " + keyOffset)
 
-    //todo use key for offset and custom scale
+        //todo use key for offset and custom scale
 
-    if (scaleCustom[(offset - keyOffset) % 12] === 1) {
-        scaleCustom[(offset - keyOffset) % 12] = 0;
+        if (scaleCustom[(offset - keyOffset) % 12] === 1) {
+            scaleCustom[(offset - keyOffset) % 12] = 0;
+        } else {
+            scaleCustom[(offset - keyOffset) % 12] = 1;
+            playKey(h);
+        }
+
+        //save the scale so it can be moved around in key later
+        currentScale = scaleCustom.slice();
     } else {
-        scaleCustom[(offset - keyOffset) % 12] = 1;
-        playKey(h);
+        print("Tuning needs to be 12 notes long for this!");
     }
-
-    //save the scale so it can be moved around in key later
-    currentScale = scaleCustom.slice();
 }
 
 
 function keyColorFromPalette(h, style) {
-    let palette = hexColors.slice();
-    let darkPalette = darkHexColors.slice();
-    let darkerPalette = darkerHexColors.slice();
-    let lightPalette = lightHexColors.slice();
+    let palette = new Array;
+    let darkPalette = new Array;
+    let darkerPalette = new Array;
+    let lightPalette = new Array;
 
-    if (colorMode !== "chromatic" && h.type === "note") {
+    if (colorMode !== "chromatic") {
 
         //how to translate the colors?
         let cTable;
-        if (colorMode === "thirds")
-        {
-            cTable = layoutColorsThirds.slice()
-        }
-        else if (colorMode === "major")
-        {
-            cTable = layoutColorsMajor.slice()
-            if ((h.octave + currentOctave + 1) % 2 == 0) {
-                cTable = layoutColorsMajor2.slice()
+
+        if (currentTuning.length == 12) {
+            if (colorMode === "thirds")
+            {
+                cTable = layoutColorsThirds.slice()
+            }
+            else if (colorMode === "major")
+            {
+                cTable = scaleMajor.slice();
+                for (let c = 0; c < cTable.length; c++) {
+                    if ((h.octave + currentOctave) % 2 == 0) {
+                        cTable[c] = (cTable[c] == 1) ? 1 : 10;
+                    } else {
+                        cTable[c] = (cTable[c] == 1) ? 2 : 7;
+                    }
+                }
+            }
+            else if (colorMode === "fifths")
+            {
+                cTable = layoutColorsFifths.slice()
+            }
+        } else if (currentTuning.length == 19) {
+            cTable = scaleMajor19.slice();
+            for (let c = 0; c < cTable.length; c++) {
+                if ((h.octave + currentOctave) % 2 == 0) {
+                    cTable[c] = (cTable[c] == 1) ? 1 : 10;
+                } else {
+                    cTable[c] = (cTable[c] == 1) ? 2 : 7;
+                }
             }
         }
-        else if (colorMode === "fifths")
-        {
-            cTable = layoutColorsFifths.slice()
-        }
 
-        for (let i = 0; i < hexColors.length; i++) {
+        for (let i = 0; i < cTable.length; i++) {
             let lookup = cTable[i];
 
-            palette[i] = hexColors[lookup];
-            darkPalette[i] = darkHexColors[lookup];
-            darkerPalette[i] = darkerHexColors[lookup];
-            lightPalette[i] = lightHexColors[lookup];
+            palette.push(hexColors[lookup]);
+            darkPalette.push(darkHexColors[lookup]);
+            darkerPalette.push(darkerHexColors[lookup]);
+            lightPalette.push(lightHexColors[lookup]);
         }
+    } else {
+        palette = hexColors.slice();
+        darkPalette = darkHexColors.slice();
+        darkerPalette = darkerHexColors.slice();
+        lightPalette = lightHexColors.slice();
     }
 
     let offColor = outColor;
@@ -1165,14 +1252,22 @@ function keyColorFromPalette(h, style) {
     }
 
     //color according to on/off state in current scale
-    const index = noteNames.indexOf(h.pitchName);
-    const offset = noteNames.indexOf(currentKey);
+    let index = 0;
+    let offset = 0;
 
-    if (currentScale[index] == 1) {
-        const shiftedColor = palette[(h.midiName - offset) % 12];
+    if (currentTuning.length !== 12) {
+        offset = noteNames.indexOf(currentKey);
+        const shiftedColor = palette[(h.midiName - offset) % currentTuning.length];
         return shiftedColor;
     } else {
-        return offColor;
+        index = noteNames.indexOf(h.pitchName);
+        offset = noteNames.indexOf(currentKey);
+        if (currentScale[index] == 1) {
+            const shiftedColor = palette[(h.midiName - offset) % 12];
+            return shiftedColor;
+        } else {
+            return offColor;
+        }
     }
 }
 
@@ -1205,12 +1300,12 @@ function drawScaleLines() {
     noStroke();
 
     //WIP: adjust with octave length
-    const octLength = currentTuning.length;
+    const octaveLength = currentTuning.length;
 
     let getXValue = (fr) => map(scaleFreqToCents(fr+1), 0, 1200, startX, endX);
 
-    for (let j = 0; j < octLength; j++) {
-        const compareFreq = tuning12tet[j] - 1;
+    for (let j = 0; j < 12; j++) {
+        const compareFreq = 2 ** (j/12) - 1;
         const xCompareValue = getXValue(compareFreq);
 
         gradientCircle(
@@ -1222,7 +1317,7 @@ function drawScaleLines() {
             startY, 5);
     }
 
-    for (let i = 0; i < octLength; i++) {
+    for (let i = 0; i < octaveLength; i++) {
         let freq = eval(currentTuning[i]) - 1;
 
         let size = 7;
@@ -1233,19 +1328,35 @@ function drawScaleLines() {
         const offset = noteNames.indexOf(currentKey);
 
         //color,new
-        const inKlickedHexes = pressedButtons.find(t => (t.midiName % 12) === ((i+offset) % 12) && t.countdown > 0);
-        const inHoverHexes = pressedButtons.find(t => (t.midiName % 12) === ((i+offset) % 12));
+        const inKlickedHexes = pressedButtons.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength) && t.countdown > 0);
+        const inHoverHexes = pressedButtons.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength));
 
         if (inKlickedHexes == undefined) {
-            let cTable = layoutColorsMajor2;
+            let darkHexColor;
+            let cTable;
 
-            if (colorMode === "thirds") {cTable = layoutColorsThirds;}
-            else if (colorMode === "fifths") {cTable = layoutColorsFifths;}
+            if (octaveLength == 12) {
+                cTable = scaleMajor.slice();
+                for (let c = 0; c < cTable.length; c++) {
+                    cTable[c] = (cTable[c] == 1) ? 2 : 7;
+                }
 
-            const colorIndex = cTable[i % currentScale.length];
+                if (colorMode === "thirds") {cTable = layoutColorsThirds;}
+                else if (colorMode === "fifths") {cTable = layoutColorsFifths;}
 
-            const hexColor = color(hexColors[colorIndex]);
-            let darkHexColor = color(darkHexColors[colorIndex]);
+            } else if (octaveLength == 19) {
+                cTable = scaleMajor19.slice();
+                for (let c = 0; c < cTable.length; c++) {
+                    cTable[c] = (cTable[c] == 1) ? 2 : 7;
+                }
+                print(cTable[0], cTable[1], cTable[2]);
+            } else {
+                print("Can't do anything with the length of this octave!")
+            }
+
+            const colorIndex = cTable[i % currentTuning.length];
+            darkHexColor = color(darkHexColors[colorIndex]);
+
             fillC = darkHexColor;
             fillC.setAlpha(220);
             //stroke(darkHexColor);
@@ -1291,8 +1402,12 @@ class ButtonObj {
             floor((this.name % width) / 2) * h +
             ((this.name % width) % 2) * d +
             floor(this.name / width) * v;
-        this.pitchName = noteNames[this.midiName % currentTuning.length];
-        this.octave = floor(this.midiName / 12) - 1;
+        if (currentTuning.length !== 12) {
+            this.pitchName = this.midiName % currentTuning.length + 1;
+        } else {
+            this.pitchName = noteNames[this.midiName % 12];
+        }
+        this.octave = floor(this.midiName / currentTuning.length) - 1;
     }
 
     renderKeyType(state) {
@@ -1420,7 +1535,7 @@ class ButtonObj {
         if (state === "hover") {
             fill("white");
         }
-        else if (this.pitchName === currentKey) { 
+        else if (this.pitchName === currentKey || this.pitchName === 1) { 
             fill(rootColor); 
         }
         else {
@@ -1520,7 +1635,7 @@ class ButtonObj {
             (tuneMode === "16neji"),
             (tuneMode === "undecimal"),
             (tuneMode === "11neji"),
-            false,
+            (tuneMode === "19tet"),
             false,
 
             (currentInstrument === "piano"),
@@ -1555,32 +1670,44 @@ class ButtonObj {
     }
 
     renderKeyText() {
-        if (labelStyle === "notes")
-        {
-            if (this.pitchName == currentKey) {
-                text(this.pitchName + (this.octave + currentOctave), this.x, this.y);
+        const octaveLength = currentTuning.length;
+        if (octaveLength == 12) {
+            if (labelStyle === "notes")
+            {
+                if (this.pitchName == currentKey) {
+                    text(this.pitchName + (this.octave + currentOctave), this.x, this.y);
+                }
+                else {
+                    text(this.pitchName, this.x, this.y);
+                }
             }
-            else {
+            else if (labelStyle === "midi") {
+                text(this.midiName + octaveLength * currentOctave, this.x, this.y);
+            }
+            else if (labelStyle === "intervals") {
+                const offset = noteNames.indexOf(currentKey);
+                const intervalName = intervalNames[(this.midiName - offset) % 12];
+                text(intervalName, this.x, this.y);
+            }
+        } else if (octaveLength == 19) {
+            if (labelStyle === "intervals") {
+                const offset = noteNames.indexOf(currentKey);
+                const intervalName = intervalNames19tet[(this.midiName - offset) % 19];
+                text(intervalName, this.x, this.y);
+            } else {
                 text(this.pitchName, this.x, this.y);
             }
         }
-        else if (labelStyle === "midi") {
-            text(this.midiName + 12 * currentOctave, this.x, this.y);
-        }
-        else if (labelStyle === "intervals") {
-            const offset = noteNames.indexOf(currentKey);
-            const intervalName = intervalNames[(this.midiName - offset) % 12];
-            text(intervalName, this.x, this.y);
-        }
+
 
         //extra text above
         push();
         textSize(11);
         fill(keyColorFromPalette(this, "dark"));
 
-        if (currentTuning != tuning12tet) {
+        if (currentTuning != tuning12tet && currentTuning != tuning19tet) {
             const offset = noteNames.indexOf(currentKey);
-            const intervalName = currentTuning[(this.midiName - offset) % 12];
+            const intervalName = currentTuning[(this.midiName - offset) % octaveLength];
 
             let topText = intervalName;
             if (topText == 1) {
