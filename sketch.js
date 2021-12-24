@@ -234,18 +234,48 @@ const tuning19tet = [
     2 ** (17/19),
     2 ** (18/19)
 ];
+const tuning31ji = [ //7-limit by Adriaan Fokker
+    "1/1",
+    "64/63",
+    "135/128",
+    "15/14",
+    "35/32",
+    "9/8",
+    "8/7",
+    "7/6",
+    "135/112",
+    "315/256",
+    "5/4",
+    "9/7",
+    "21/16",
+    "4/3",
+    "175/128",
+    "45/32",
+    "10/7",
+    "35/24",
+    "3/2",
+    "32/21",
+    "14/9",
+    "45/28",
+    "105/64",
+    "5/3",
+    "12/7",
+    "7/4",
+    "16/9",
+    "945/512",
+    "15/8",
+    "40/21",
+    "63/32"
+];
 
 const scaleMajor = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1];
 const scaleMinor = [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0];
 const scaleChromatic = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 const scaleMajor19 = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0];
+const scaleMajor31 = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 const layoutColorsThirds = [0, 7, 7, 11, 1, 7, 10, 7, 2, 9, 7, 7];
 const layoutColorsFifths = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
-//const layoutColorsMajor = // 1/10
-//const layoutColorsMajor2 = // 2/7
-
-
 
 
 const backgroundColor = "#050314";
@@ -1139,7 +1169,7 @@ function pickScale(pitch, mode) {
         currentScale = new Array(currentTuning.length).fill(1); //all notes are on
         scaleMode = "chromatic"; //in case it isn't already!
     } else {
-        for (let i = 0; i < currentTuning.length; i++) {
+        for (let i = 0; i < 12; i++) {
             if (mode === "major") {
                 currentScale[(i + offset) % 12] = scaleMajor[i];
             } else if (mode === "minor") {
