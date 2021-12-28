@@ -278,19 +278,15 @@ const scaleChromatic = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 const scaleMajor19 = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0];
 const scaleMajor31 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0];
 const scalePrimal21 = [1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0];
-//const scalePrimal21 = [1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0];
 
-const layoutColorsThirds = [0, 7, 7, 11, 1, 7, 10, 7, 2, 9, 7, 7];
-const layoutColorsFifths = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
-
+const layoutColorsFifths = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5]; //next hue after every fifth
 
 const backgroundColor = "#050314";
 const outColor = "#56459A";
 const darkOutColor = "#493C94";
 const lightOutColor = "#E8D1FF";
 const midColor = hexColors[10];
-const activeColor = "#E8D1FF";
-const darkStrokeColor = "#190E43A0";
+const buttonBaseColor = "#190E43A0";
 document.bgColor = backgroundColor;
 
 let scaleMode = "chromatic";
@@ -299,15 +295,18 @@ let colorMode = "major";
 
 let tuneMode = "simple";
 let currentTuning = tuningSimple;
-let activeFreqs = [];
-let activePlayFreqs = [];
 
 let currentScale = scaleChromatic.slice();
 let scaleCustom = currentScale.slice(); //generate with toggle tool
-
-let currentKey = "C";
+let currentKey = "C"; //wip store as numerical offset instead
 let currentOctave = 0;
 let labelStyle = "intervals";
+
+
+// wip: make these not quite be hexagons, only store swipe data here etc.
+let pressedButtons = new Array;
+let lastPressedButtons = new Array;
+
 
 // permanent key grid
 let gridSizeX, gridSizeY;
@@ -317,10 +316,7 @@ let controlsArr = new Array;
 // detect playing
 let interactionMode = "play";
 let menuIsOpen = false;
-
 let ongoingTouches = new Array;
-let pressedButtons = new Array;
-let lastPressedButtons = new Array;
 
 //mouse
 let mouseUsed = false;
@@ -338,23 +334,47 @@ let pianoSampler;
 let rhodesSampler;
 let organSampler;
 let harpSampler;
+let synthvoices = [];
 
 let instrument;
 let currentInstrument = "piano";
+let instrumentType = "sampler";
+Tone.context.lookAhead = 0;
+
+let activeKeys = {
+    //object key is the name (same as hex name)
+    //value is also an object with the following keys:
+
+    //touchStartX/Y, touchDragX/Y
+    //instrument
+};
 
 //const pitchShift = new Tone.PitchShift().toDestination();
 
 function preload() {
-    synth = new Tone.PolySynth({
-    "volume": -10,
+    for (let i = 0; i < 32; i++) {
+        synthvoices.push(new Tone.PolySynth());
+        synthvoices[i].toDestination();
+        synthvoices[i].set({
+            "volume": -10,
+            "envelope": {
+                "attack": 0,
+                "decay": 0,
+                "sustain": 0.3,
+                "release": 1,
+                }
+            });
+        synthvoices[i].set({oscillator: {type: "sawtooth"}});
+    }
+
+    synth = new Tone.PolySynth().toDestination();
+    synth.set({"volume": -10,
     "envelope": {
         "attack": 0,
         "decay": 0,
         "sustain": 0.3,
         "release": 1,
-        }
-    }).toDestination();
-
+        }});
     synth.set({"oscillator": {"type": "sawtooth"}});
 
     pianoSampler = new Tone.Sampler({
@@ -404,6 +424,13 @@ function preload() {
     instrument = pianoSampler;
 }
 
+function freeVoice (i) {
+    let containsVoice = Object.keys(activeKeys).find(key => activeKeys[key].voice == synthvoices[i]);
+    if (containsVoice !== undefined) {
+        print ("Removed key: " + containsVoice);
+        delete activeKeys[containsVoice];
+    }
+}
 
 
 function setup() {
@@ -482,7 +509,7 @@ function handleStart(evt) {
 
     for (let i = 0; i < newTouches.length; i++) {
         evt.preventDefault();
-        print("touchstart: " + i);
+        //print("touchstart: " + i);
         ongoingTouches.push(copyTouch(newTouches[i]));
     }
 
@@ -510,11 +537,13 @@ function handleMove(evt) {
         const idx = ongoingTouchIndexById(newTouches[i].identifier);
 
         if (idx >= 0) {
-            print("continuing touch " + idx);
+            //print("continuing touch " + idx);
             ongoingTouches.splice(idx, 1, copyTouch(newTouches[i])); // swap in the new touch record
         }
     }
     drawMinDuration = 20;
+
+
     loop();
 }
 
@@ -526,7 +555,7 @@ function handleEnd(evt) {
         const idx = ongoingTouchIndexById(newTouches[i].identifier);
         
         if (idx >= 0) {
-            print("removing touch " + idx);
+            //print("removing touch " + idx);
             ongoingTouches.splice(idx, 1);
         }
     }
@@ -535,9 +564,11 @@ function handleEnd(evt) {
     if (newTouches[0].clientX > width - 72 && newTouches[0].clientY < 72) {
         pressedButtons = [];
         lastPressedButtons = [];
-        activeFreqs = [];
+        activeKeys = {};
         ongoingTouches = [];
-        //wip, this still isn't quite working
+        synthvoices.forEach(v => {
+            v.triggerRelease();
+        });
         keyArr.forEach((h) => {
             playKey(h, "release");
             h.touchStartX = -1;
@@ -589,6 +620,13 @@ function draw() {
     } else {
         noLoop();
         drawMinDuration = 20;
+
+        if (instrumentType == "synth") {
+            for (let i = 0; i < 32; i++) {
+                freeVoice(i);
+            }
+            print("Remaining active key objects: " + Object.values(activeKeys));
+        }
     }
 }
 
@@ -752,7 +790,7 @@ function reactToPressedControls() {
     }
 
     //find unique items in each
-    const attackedKeys = pressedButtons.filter((o) => lastPressedButtons.indexOf(o) === -1);
+    const attackedKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) === undefined);
 
     if (attackedKeys.length > 0)
     {
@@ -829,6 +867,15 @@ function reactToPressedKeys() {
     }
 }
 
+function uniqByKeepFirst(a, key) {
+    // from https://stackoverflow.com/questions/9229645/remove-duplicate-values-from-js-array
+    let seen = new Set();
+    return a.filter(item => {
+        let k = key(item);
+        return seen.has(k) ? false : seen.add(k);
+    });
+}
+
 
 function detectMouse() {
     //write new later
@@ -836,7 +883,7 @@ function detectMouse() {
 
 function reactToPen() {
     //clean up duplicates
-    pressedButtons = [...new Set(pressedButtons)];
+    pressedButtons = uniqByKeepFirst(pressedButtons, p => p.name);
 
     //find unique items in each
     let attackedKeys = pressedButtons.filter((o) => lastPressedButtons.indexOf(o) === -1);
@@ -863,99 +910,52 @@ function reactToPen() {
 function reactToTouch() {
     //only when hexagons are shown
 
-    //cleaning up duplicates?
-    //then it should only be possible for there to be one pressed button with a certain name,
-    //or at least all the ones after need to properly work with their own touchdrag and start
-
     //clean up duplicates and sort
-    pressedButtons = [...new Set(pressedButtons)];
+    pressedButtons = uniqByKeepFirst(pressedButtons, p => p.name);
     pressedButtons.sort((a, b) => a.name - b.name);
 
-    //give continuous drag values
-    keyArr.forEach((h) => {
-        pressedButtons.forEach((t) => {
-            if (t.name === h.name && t.touchDragX != -1) {
-                h.touchDragX = t.touchDragX;
-                h.touchDragY = t.touchDragY;
-            }
-        });
-    });
 
     //find unique items in each
-    let attackedKeys = pressedButtons.filter((o) => lastPressedButtons.indexOf(o) === -1);
-    let releasedKeys = lastPressedButtons.filter((o) => pressedButtons.indexOf(o) === -1);
+    const attackedKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) === undefined);
+    const releasedKeys = lastPressedButtons.filter(p => pressedButtons.find(l => {return l.name == p.name}) === undefined);
+    const sameKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) !== undefined);
 
     //find key and press
-    for (var play = 0; play < attackedKeys.length; play++) {
+    for (let play = 0; play < attackedKeys.length; play++) {
         const playHex = attackedKeys[play];
         keyArr.forEach((h) => {
             if (h.name === playHex.name) {
                 keypressed(h);
-                h.touchStartX = playHex.touchDragX;
-                h.touchStartY = playHex.touchDragY;
             }
         });
     }
 
     //release audio of key and reset drag values
-    for (var endplay = 0; endplay < releasedKeys.length; endplay++) {
+    for (let endplay = 0; endplay < releasedKeys.length; endplay++) {
         const removedHex = releasedKeys[endplay];
         keyArr.forEach((h) => {
             if (h.name === removedHex.name) {
                 if (interactionMode === "play") {
                     playKey(h, "release");
                 }
-                h.touchStartX = -1;
-                h.touchStartY = -1;
-                h.touchDragX = -1;
-                h.touchDragY = -1;
             }
         });
     }
-}
 
-
-function playKey(h, mode) {
-    const pOctave = h.octave + currentOctave;
-    const freq = eval(currentTuning[h.midiName % currentTuning.length]);
-    const pPitch = baseFrequency * freq * 2 ** (pOctave -1);
-
-    activeFreqs.push(freq);
-    activePlayFreqs.push(pPitch);
-
-    if (mode === "release") {
-        //release would need to take pitch bend into account!
-        instrument.triggerRelease(pPitch);
-        activeFreqs = [];
-    } else if (mode === "short") {
-        instrument.triggerAttackRelease(pPitch, '16n');
-        activeFreqs = [];
-    }
-    else {
-        instrument.triggerAttack(pPitch);
+    if (interactionMode === "play" && instrumentType === "synth") {
+        //detect movement on same keys
+        for (let sameplay = 0; sameplay < sameKeys.length; sameplay++) {
+            const sameHex = sameKeys[sameplay];
+            keyArr.forEach((h) => {
+                if (h.name === sameHex.name) {
+                    dragValuesInActive(h);
+                    bendKeys();
+                }
+            });
+        }
     }
 }
 
-function retune(h, float) {
-
-    //print("retune", h.pitchName, float);
-    //pitchShift.pitch = float;
-
-    //const pOctave = h.octave + currentPlayOctave
-    //const freq = currentTuning[h.midiName % currentTuning.length];
-    //const pPitch = baseFrequency * freq * 2 ** (pOctave -1);
-    //
-    //for (let a = 0; a < activePlayFreqs.length; a++) {
-    //    if (activePlayFreqs[a] == pPitch) {
-    //        //WIP
-    //        //Find correct voice of sampler, then retune that one
-    //        //activePlayFreqs[a] = pPitch + 50;
-    //
-    //        //find note with pPitch
-    //
-    //    }
-    //}
-}
 
 function keypressed(h) {
 
@@ -979,6 +979,98 @@ function keypressed(h) {
         playKey(h);
     }
 }
+
+
+function playKey(h, mode) {
+    const pOctave = h.octave + currentOctave;
+    const freq = eval(currentTuning[h.midiName % currentTuning.length]);
+    const pPitch = baseFrequency * freq * 2 ** (pOctave -1);
+
+    if (instrumentType !== "synth") {
+        if (mode === "release") {
+            instrument.triggerRelease(pPitch);
+        } else {
+            instrument.triggerAttack(pPitch);
+        }
+    }
+    else {
+        if (mode === "release") {
+            activeKeys[h.name].voice.triggerRelease(pPitch);
+            delete activeKeys[h.name].dragValues;
+        } else {
+            //play note
+            for (let i = 0; i < 32; i++) {
+                let containsVoice = Object.values(activeKeys).find(key => {return key.voice === synthvoices[i]});
+
+                //in free slot
+                if (containsVoice == undefined) {
+                    activeKeys[h.name] = {"key": h, "voice": synthvoices[i]};
+
+                    print(i + "-voice")
+                    activeKeys[h.name].voice.triggerAttack(pPitch);
+                    break;
+                }
+            }
+        }
+        print(Object.values(activeKeys));
+        //print(activeKeys);
+    }
+}
+
+function dragValuesInActive(h) {
+
+    if (activeKeys[h.name] == undefined) {
+        print("No active note to apply key drag on!")
+        return;
+    }
+
+    //find touch that is in range in both X and Y
+    for (let i = 0; i < ongoingTouches.length; i++) {
+
+        const touchX = ongoingTouches[i].clientX;
+        const touchY = ongoingTouches[i].clientY;
+        const centerOffsetX = h.x - touchX;
+        const centerOffsetY = h.y - touchY;
+
+        //in range
+        if (Math.abs(centerOffsetX) < 15 && Math.abs(centerOffsetY) < 15) {
+
+            //already has start saved?
+            let hasDragStart = Object.values(activeKeys).find(key => {return key.dragValues !== undefined});
+            
+            if (hasDragStart) {
+                //use start values to calculate drag offset
+                const diffX = touchX - activeKeys[h.name].dragValues.startX;
+                const diffY = touchY - activeKeys[h.name].dragValues.startY;
+                activeKeys[h.name].dragValues.dragX = diffX;
+                activeKeys[h.name].dragValues.dragY = diffY;
+            }
+            else {
+                //set all to start value
+                const startX = touchX;
+                const startY = touchY;
+                activeKeys[h.name].dragValues = {"startX": startX, "startY": startY};
+            }
+            print(activeKeys[h.name].dragValues);
+            return;
+        }
+    }
+    return ("No touch found in range!");
+}
+
+function bendKeys() {
+    Object.values(activeKeys).forEach(a => {
+
+        const keyHasBeenDragged = (a.key.dragValues !== undefined && a.key.dragValues.dragX !== undefined);
+
+        if (keyHasBeenDragged) {
+            const detuneCents = dragDistanceMap(a.key.x, a.dragValues.startX, a.dragValues.dragX, 5, 40) * 100;
+            print("detuning by: " + detuneCents)
+            a.voice.set({ detune: detuneCents });
+        }
+    });
+}
+
 
 function controlPressed(b) {
     instrument.releaseAll();
@@ -1047,128 +1139,147 @@ function controlPressed(b) {
                 print("Switched to 12 tone equal temperament");
                 tuneMode = "12tet";
                 currentTuning = tuning12tet;
-                calculateNewMidiGrid(4, 7);
                 break;
             case 2:
                 print("Switched to simple 12 tone tuning");
                 tuneMode = "simple";
                 currentTuning = tuningSimple;
-                calculateNewMidiGrid(4, 7);
                 break;
             case 3:
                 print("Switched to 12 tone Harmonic series segment");
                 tuneMode = "harmonic";
                 currentTuning = tuningHarmonic;
-                calculateNewMidiGrid(4, 7);
                 break;
             case 4:
                 print("Switched to 12 tone Novemdecimal");
                 tuneMode = "novemdecimal";
                 currentTuning = tuningNovemdecimal;
-                calculateNewMidiGrid(4, 7);
                 break;
             case 5:
                 print("Switched to 12 tone 16-NEJI");
                 tuneMode = "16neji";
                 currentTuning = tuning16neji;
-                calculateNewMidiGrid(4, 7);
                 break;
             case 6:
                 print("Switched to 12 tone Undecimal");
                 tuneMode = "undecimal";
                 currentTuning = tuningUndecimal;
-                calculateNewMidiGrid(4, 7);
                 break;
             case 7:
                 print("Switched to 12 tone 11-NEJI");
                 tuneMode = "11neji";
                 currentTuning = tuning11neji;
-                calculateNewMidiGrid(4, 7);
                 break;
         }
-        //after tuning change, play test chord
-        const root = baseFrequency * eval(currentTuning[0]) * 2 ** 2;
-        const third = baseFrequency * eval(currentTuning[gridIncrement_D]) * 2 ** 3;
-        const fifth = baseFrequency * eval(currentTuning[gridIncrement_V]) * 2 ** 3;
-        instrument.triggerAttackRelease(root, "16n");
-        instrument.triggerAttackRelease(third, "16n");
-        instrument.triggerAttackRelease(fifth, "16n");
+        currentOctave = 0;
+        calculateNewMidiGrid(4, 7);
+        playTestChord([4,7]);
+
     } else if (-b.name <= rows*3) {
         switch (-b.name - rows*2) {
             case 1:
                 tuneMode = "19tet";
                 currentTuning = tuning19tet;
+                currentOctave = 0;
                 calculateNewMidiGrid(6, 11);
+                playTestChord([6, 11]);
                 break;
             case 2:
                 tuneMode = "31ji";
                 currentTuning = tuning31ji;
+                currentOctave = 1;
                 calculateNewMidiGrid(5, 9);
-                if (currentOctave = 0) {currentOctave++}
+                playTestChord([10, 18]);
                 break;
             case 3:
                 tuneMode = "21astral";
                 currentTuning = tuning21Astral;
+                currentOctave = 0;
                 calculateNewMidiGrid(5, 9);
+                playTestChord([6, 12, 18]);
                 break;
         }
-        //after tuning change, play test chord
-        const root = baseFrequency * eval(currentTuning[0]) * 2 ** 2;
-        const third = baseFrequency * eval(currentTuning[gridIncrement_D]) * 2 ** 3;
-        const fifth = baseFrequency * eval(currentTuning[gridIncrement_V]) * 2 ** 3;
-        instrument.triggerAttackRelease(root, "16n");
-        instrument.triggerAttackRelease(third, "16n");
-        instrument.triggerAttackRelease(fifth, "16n");
     } else if (-b.name <= rows*4) {
         switch (-b.name - rows*3) {
             case 1:
                 print("Switched to piano!");
                 currentInstrument = "piano";
                 instrument = pianoSampler;
+                instrumentType = "sampler";
                 break;
             case 2:
                 print("Switched to Rhodes!");
                 currentInstrument = "rhodes";
                 instrument = rhodesSampler;
+                instrumentType = "sampler";
                 break;
             case 3:
                 print("Switched to organ!");
                 currentInstrument = "organ";
                 instrument = organSampler;
+                instrumentType = "sampler";
                 break;
             case 4:
                 print("Switched to harp!");
                 currentInstrument = "harp";
                 instrument = harpSampler;
+                instrumentType = "sampler";
                 break;
             case 5:
                 print("Switched to saw wave!");
                 currentInstrument = "sawtooth";
                 synth.set({"oscillator": {"type": "sawtooth"}});
+                for (let i = 0; i < 32; i++) {
+                    synthvoices[i].set({oscillator: {type: "sawtooth"}});
+                }
                 instrument = synth;
+                instrumentType = "synth";
                 break;
             case 6:
                 print("Switched to square wave!");
                 currentInstrument = "square";
                 synth.set({"oscillator": {"type": "square"}});
+                for (let i = 0; i < 32; i++) {
+                    synthvoices[i].set({oscillator: {type: "square"}});
+                }
                 instrument = synth;
+                instrumentType = "synth";
                 break;
             case 7:
                 print("Switched to triangle wave!");
                 currentInstrument = "triangle";
                 synth.set({"oscillator": {"type": "triangle"}});
+                for (let i = 0; i < 32; i++) {
+                    synthvoices[i].set({oscillator: {type: "triangle"}});
+                }
                 instrument = synth;
+                instrumentType = "synth";
                 break;
             case 8:
                 print("Switched to sine wave!");
                 currentInstrument = "sine";
                 synth.set({"oscillator": {"type": "sine"}});
+                for (let i = 0; i < 32; i++) {
+                    synthvoices[i].set({oscillator: {type: "sine"}});
+                }
                 instrument = synth;
+                instrumentType = "synth";
                 break;
         }
         instrument.triggerAttackRelease("C3", "16n");
         instrument.triggerAttackRelease("C4", "16n");
     }
+}
+
+function playTestChord(intervals) {
+    //play root
+    const root = baseFrequency * eval(currentTuning[0]) * 2 ** 2;
+    instrument.triggerAttackRelease(root, "16n");
+
+    intervals.forEach(i => {
+        const freq = baseFrequency * eval(currentTuning[i]) * 2 ** 3;
+        instrument.triggerAttackRelease(freq, "16n");
+    });
 }
 
 function calculateNewMidiGrid(small, big) {
@@ -1251,11 +1362,7 @@ function keyColorFromPalette(h, style) {
         let cTable;
 
         if (currentTuning.length == 12) {
-            if (colorMode === "thirds")
-            {
-                cTable = layoutColorsThirds.slice()
-            }
-            else if (colorMode === "major")
+            if (colorMode === "major")
             {
                 cTable = scaleMajor.slice();
                 for (let c = 0; c < cTable.length; c++) {
@@ -1405,8 +1512,7 @@ function drawScaleLines() {
                     cTable[c] = (cTable[c] == 1) ? 2 : 7;
                 }
 
-                if (colorMode === "thirds") {cTable = layoutColorsThirds;}
-                else if (colorMode === "fifths") {cTable = layoutColorsFifths;}
+                if (colorMode === "fifths") {cTable = layoutColorsFifths;}
 
             } else {
                 if (octaveLength == 19) {cTable = scaleMajor19.slice();}
@@ -1535,9 +1641,9 @@ class ButtonObj {
                 noStroke();
                 break;
             case "klicked":
-                fill(darkStrokeColor);
+                fill(buttonBaseColor);
                 controlShape(this.x, this.y, this.r * 1.7);
-                fill(hexColors[10]);
+                fill(midColor);
                 noStroke();
                 controlShape(this.x, this.y, this.r * 1.5);
                 break;
@@ -1833,10 +1939,10 @@ class ButtonObj {
 
 function dragDistanceMap(center, start, drag, min, max) {
     if (drag > start) {
-        return map(drag, start + min, center + max, 0, 1, true);
+        return map(start + drag, start + min, center + max, 0, 1, true);
     }
     else {
-        return map(drag, center - max, start - min, -1, 0, true);
+        return map(start + drag, center - max, start - min, -1, 0, true);
     }
 }
 
@@ -1859,10 +1965,10 @@ function findNearestButton(touch, arr) {
     }
 
     if (closestButton != undefined) {
-        print("Found " + closestButton.distanceToTouch(touch));
+        //print("Found " + closestButton.distanceToTouch(touch));
         return closestButton;
     } else {
-        print("No hexagon found in reach!");
+        //print("No hexagon found in reach!");
     }
 }
 
@@ -1922,7 +2028,8 @@ function capitalize(string) {
 }
 
 function cornerText() {
-    const scaleText = currentKey + (currentOctave+1) + " – " + capitalize(scaleMode) + " – " + capitalize(tuneMode);
+    const scaleText = currentKey + (currentOctave+1) + " – " + 
+        capitalize(scaleMode) + " – " + capitalize(tuneMode) + " " + Object.values(activeKeys).length;
     textSize(15);
     textAlign(LEFT, CENTER);
     textStyle(BOLD);
