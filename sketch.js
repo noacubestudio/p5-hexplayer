@@ -77,7 +77,7 @@ const rootColor = "#FFD0B6";
 const rControlNames = [
     "Move Key", "Toggle", "Scales", "Octave", "Labels", "Color", "GridXY", "Shape", "+",
     "EDO 12", "JI 12", "Mode 12","/19 Novem","/16 NEJI","/11 Undec","/11 Snow","+","+",
-    "EDO 19", "JI 31", "Astral 21", "+", "+", "+", "+", "+", "+",
+    "EDO 19", "JI 31", "Astral 21", "EDO 24", "JI 24", "+", "+", "+", "+",
     "Piano", "Rhodes", "Organ", "Harp", "Sawtooth", "Square", "Triangle", "Sine", "+",
 ];
 
@@ -90,9 +90,15 @@ const intervalNames = [
 const intervalNames19tet = [
     "1", "a1", "m2", "2", "s3", "m3", "3", "a3", "4", "tt", "TT", "5", "a5", "m6", "6", "M6", "m7", "7", "d8",
 ];
-const intervalNames31tet = [
-    "1", "", "", "m2", "n2", "2", "S2", "s3", "m3", "n3", "3", "", "", "4", "", "", "", "", "5", "", "s6", "m6", "n6", "6", "", "h7", "m7", "n7", "7", "", "",
+const intervalNames24tet = [
+    "1", "-2", "m2", "~2", "2", "-3", "m3", "~3", "3", "+3", "4", "+4", "TT", "-5", "5", "-6", "m6", "~6", "6", "-7", "m7", "~7", "7", "-8",
 ];
+const intervalNames31tet = [
+    "1", "+1", "-2", "m2", "~2", "2", "+2", "-3", "m3", "~3", "3", "+3", "-4", "4", "+4", "tt", "TT", "-5", "5", "+5", "-6", "m6", "~6", "6", "+6", "-7", "m7", "~7", "7", "+7", "-8",
+];
+//const intervalNames31tet = [
+//    "1", "", "", "m2", "n2", "2", "S2", "s3", "m3", "n3", "3", "", "", "4", "", "", "", "", "5", "", "s6", "m6", "n6", "6", //"", "h7", "m7", "n7", "7", "", "",
+//];
 
 const baseFrequency = 32.70 //C1
 const tuning12tet = [
@@ -270,12 +276,65 @@ const tuning21Astral = [
     "231/128",
     "21/11",
     "64/33",
-]
+];
+const tuning24tet = [
+    1,
+    2 ** (1/24),
+    2 ** (2/24),
+    2 ** (3/24),
+    2 ** (4/24),
+    2 ** (5/24),
+    2 ** (6/24),
+    2 ** (7/24),
+    2 ** (8/24),
+    2 ** (9/24),
+    2 ** (10/24),
+    2 ** (11/24),
+    2 ** (12/24),
+    2 ** (13/24),
+    2 ** (14/24),
+    2 ** (15/24),
+    2 ** (16/24),
+    2 ** (17/24),
+    2 ** (18/24),
+    2 ** (19/24),
+    2 ** (20/24),
+    2 ** (21/24),
+    2 ** (22/24),
+    2 ** (23/24),
+];
+const tuning24ji = [
+    "1/1",
+    "33/32",
+    "16/15",
+    "12/11",
+    "9/8",
+    "7/6", //6/5, 15/13
+    "6/5",
+    "11/9",
+    "5/4",
+    "9/7", //13/10
+    "4/3",
+    "11/8",
+    "7/5",
+    "16/11",
+    "3/2",
+    "14/9",
+    "8/5",
+    "18/11",
+    "5/3",
+    "7/4",
+    "16/9", //9/5
+    "11/6",
+    "15/8",
+    "35/18" //27/14
+];
 
 const scaleMajor = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1];
 const scaleMinor = [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0];
 const scaleChromatic = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 const scaleMajor19 = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0];
+const scaleMajor24 = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0];
 const scaleMajor31 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0];
 const scalePrimal21 = [1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0];
 
@@ -1061,11 +1120,12 @@ function dragValuesInActive(h) {
 function bendKeys() {
     Object.values(activeKeys).forEach(a => {
 
-        const keyHasBeenDragged = (a.key.dragValues !== undefined && a.key.dragValues.dragX !== undefined);
+        const keyHasBeenDragged = (a.dragValues !== undefined && a.dragValues.dragX !== undefined);
 
         if (keyHasBeenDragged) {
             const detuneCents = dragDistanceMap(a.key.x, a.dragValues.startX, a.dragValues.dragX, 5, 40) * 100;
             print("detuning by: " + detuneCents)
+            ellipse(a.key.x + detuneCents, a.key.y, 30);
             a.voice.set({ detune: detuneCents });
         }
     });
@@ -1197,6 +1257,20 @@ function controlPressed(b) {
                 currentOctave = 0;
                 calculateNewMidiGrid(5, 9);
                 playTestChord([6, 12, 18]);
+                break;
+            case 4:
+                tuneMode = "24tet";
+                currentTuning = tuning24tet;
+                currentOctave = 1;
+                calculateNewMidiGrid(4, 7);
+                playTestChord([8, 14]);
+                break;
+            case 5: 
+                tuneMode = "24ji";
+                currentTuning = tuning24ji;
+                currentOctave = 1;
+                calculateNewMidiGrid(4, 7);
+                playTestChord([8, 14]);
                 break;
         }
     } else if (-b.name <= rows*4) {
@@ -1379,6 +1453,7 @@ function keyColorFromPalette(h, style) {
             }
         } else {
             if (currentTuning.length == 19) {cTable = scaleMajor19.slice();}
+            else if (currentTuning.length == 24) {cTable = scaleMajor24.slice();}
             else if (currentTuning.length == 31) {cTable = scaleMajor31.slice();}
             else if (currentTuning == tuning21Astral) {cTable = scalePrimal21.slice();}
             else {cTable = new Array(currentTuning.length).fill(0);}
@@ -1516,6 +1591,7 @@ function drawScaleLines() {
 
             } else {
                 if (octaveLength == 19) {cTable = scaleMajor19.slice();}
+                else if (octaveLength == 24) {cTable = scaleMajor24.slice();}
                 else if (octaveLength == 31) {cTable = scaleMajor31.slice();}
                 else if (currentTuning == tuning21Astral) {cTable = scalePrimal21.slice();}
                 else {cTable = new Array(octaveLength).fill(0);}
@@ -1812,8 +1888,8 @@ class ButtonObj {
             (tuneMode === "19tet"),
             (tuneMode === "31ji"),
             (tuneMode === "21astral"),
-            false,
-            false,
+            (tuneMode === "24tet"),
+            (tuneMode === "24ji"),
             false,
             false,
             false,
@@ -1875,6 +1951,7 @@ class ButtonObj {
                 const offset = noteNames.indexOf(currentKey);
                 let intervalNamesTable;
                 if (octaveLength == 19) {intervalNamesTable = intervalNames19tet.slice();}
+                else if (octaveLength == 24) {intervalNamesTable = intervalNames24tet.slice();}
                 else if (octaveLength == 31) {intervalNamesTable = intervalNames31tet.slice();}
                 else {intervalNamesTable = new Array(octaveLength).fill((this.midiName - offset) % octaveLength + 1);}
                 
@@ -1890,7 +1967,9 @@ class ButtonObj {
         textSize(11);
         fill(keyColorFromPalette(this, "dark"));
 
-        if (currentTuning != tuning12tet && currentTuning != tuning19tet) {
+        if (currentTuning != tuning12tet &&
+                currentTuning != tuning19tet &&
+                currentTuning != tuning24tet) {
             const offset = noteNames.indexOf(currentKey);
             const intervalName = currentTuning[(this.midiName - offset) % octaveLength];
 
