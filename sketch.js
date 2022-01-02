@@ -401,18 +401,15 @@ let instrumentType = "sampler";
 Tone.context.lookAhead = 0;
 
 let activeKeys = {
-    //object key is the name (same as hex name)
-    //value is also an object with the following keys:
-
-    //touchStartX/Y, touchDragX/Y
-    //instrument
+    //structure:    h.name = {"synth"..., "dragValues"...}
 };
 
 //const pitchShift = new Tone.PitchShift().toDestination();
 
 function preload() {
+    //custom array of polysynths that can have separate properties
     for (let i = 0; i < 32; i++) {
-        synthvoices.push(new Tone.PolySynth());
+        synthvoices.push(new Tone.Synth());
         synthvoices[i].toDestination();
         synthvoices[i].set({
             "volume": -10,
@@ -423,9 +420,10 @@ function preload() {
                 "release": 1,
                 }
             });
-        synthvoices[i].set({oscillator: {type: "sawtooth"}});
+        synthvoices[i].set({"oscillator": {"type": "sawtooth"}});
     }
 
+    //default polysynth for menu activation
     synth = new Tone.PolySynth().toDestination();
     synth.set({"volume": -10,
     "envelope": {
@@ -482,15 +480,6 @@ function preload() {
 
     instrument = pianoSampler;
 }
-
-function freeVoice (i) {
-    let containsVoice = Object.keys(activeKeys).find(key => activeKeys[key].voice == synthvoices[i]);
-    if (containsVoice !== undefined) {
-        print ("Removed key: " + containsVoice);
-        delete activeKeys[containsVoice];
-    }
-}
-
 
 function setup() {
     canvas = createCanvas(1366, 920);
@@ -603,36 +592,36 @@ function handleMove(evt) {
         }
     }
     drawMinDuration = 20;
-
-
     loop();
 }
 
 function handleEnd(evt) {
     const newTouches = evt.changedTouches;
 
-    for (let i = 0; i < newTouches.length; i++) {
-        evt.preventDefault();
+    if (newTouches.length == 1 && newTouches[0].clientX > width - 72 && newTouches[0].clientY < 72) {
+        print("DELETING STUFF!")
+        //one finger on top right clear button
+        //evt.preventDefault();
+        ////pressedButtons = [];
+        ////lastPressedButtons = [];
+        //activeKeys = {};
+        //ongoingTouches = [];
+        //synthvoices.forEach(v => {
+        //    v.triggerRelease();
+        //});
+        //keyArr.forEach((h) => {
+        //    playKey(h, "release");
+        //});
+    } else {
+        //normal release
+        for (let i = 0; i < newTouches.length; i++) {
+            evt.preventDefault();
 
-        //clear and stop everything when tap in top right
-        if (newTouches[i].clientX > width - 72 && newTouches[i].clientY < 72) {
-            pressedButtons = [];
-            lastPressedButtons = [];
-            activeKeys = {};
-            ongoingTouches = [];
-            synthvoices.forEach(v => {
-                v.triggerRelease();
-            });
-            keyArr.forEach((h) => {
-                playKey(h, "release");
-            });
-        }
-
-        const idx = ongoingTouchIndexById(newTouches[i].identifier);
-        
-        if (idx >= 0) {
-            //print("removing touch " + idx);
-            ongoingTouches.splice(idx, 1);
+            const idx = ongoingTouchIndexById(newTouches[i].identifier);
+            if (idx >= 0) {
+                //print("removing touch " + idx);
+                ongoingTouches.splice(idx, 1);
+            }
         }
     }
 
@@ -683,13 +672,6 @@ function draw() {
     } else {
         noLoop();
         drawMinDuration = 20;
-
-        if (instrumentType == "synth") {
-            for (let i = 0; i < 32; i++) {
-                freeVoice(i);
-            }
-            print("Remaining active key objects: " + Object.values(activeKeys));
-        }
     }
 }
 
@@ -795,6 +777,8 @@ function runKeys() {
     //noStroke();
     //rect(0, height-16, 300, 16);
     cornerText();
+
+    bendKeys();
 }
 
 
@@ -873,18 +857,10 @@ function reactToPressedKeys() {
     lastPressedButtons = pressedButtons.slice();
     pressedButtons = [];
 
-    let touchesOnHex = 0;
-
     for (let i = 0; i < ongoingTouches.length; i++) {
-
         nearestHex = findNearestButton(ongoingTouches[i], keyArr)
         if (nearestHex !== undefined) {
             pressedButtons.push(nearestHex);
-
-            //pass the latest x and y values of that touch to the hex
-            pressedButtons[touchesOnHex].touchDragX = ongoingTouches[i].clientX;
-            pressedButtons[touchesOnHex].touchDragY = ongoingTouches[i].clientY;
-            touchesOnHex++;
         }
     }
 
@@ -1012,7 +988,7 @@ function reactToTouch() {
             keyArr.forEach((h) => {
                 if (h.name === sameHex.name) {
                     dragValuesInActive(h);
-                    bendKeys();
+                    //bendKeys();
                 }
             });
         }
@@ -1055,11 +1031,14 @@ function playKey(h, mode) {
         } else {
             instrument.triggerAttack(pPitch);
         }
-    }
-    else {
+    } else {
         if (mode === "release") {
-            activeKeys[h.name].voice.triggerRelease(pPitch);
-            delete activeKeys[h.name].dragValues;
+            if (activeKeys[h.name] !== undefined) {
+                activeKeys[h.name].voice.triggerRelease();
+                delete activeKeys[h.name].dragValues;
+            } else {
+                print("No voice to release! " + h.name);
+            }
         } else {
             //play note
             for (let i = 0; i < 32; i++) {
@@ -1067,10 +1046,29 @@ function playKey(h, mode) {
 
                 //in free slot
                 if (containsVoice == undefined) {
+
+                    //if the key was already active (played again, audio not over yet)
+                    if (activeKeys[h.name] !== undefined) {
+                        activeKeys[h.name].voice.onsilence = () => {};
+                    }
+
                     activeKeys[h.name] = {"key": h, "voice": synthvoices[i]};
 
-                    print(i + "-voice")
+                    print("Playing " + i + "-voice")
                     activeKeys[h.name].voice.triggerAttack(pPitch);
+                    activeKeys[h.name].voice.onsilence = () => {
+                        //if not pressed anymore
+                        //if () {
+                            delete activeKeys[h.name];
+                            print(i + "-voice is silent, remaining active key objects: " + Object.values(activeKeys));
+                            drawMinDuration = 20;
+                            loop();
+                        //} else {
+                        //    //but then, delete when not pressed and time over! somehow
+                        //    print("Can't delete this on silence yet, still pressed")
+                        //}
+                    }
+                    
                     break;
                 }
             }
@@ -1096,12 +1094,9 @@ function dragValuesInActive(h) {
         const centerOffsetY = h.y - touchY;
 
         //in range
-        if (Math.abs(centerOffsetX) < 15 && Math.abs(centerOffsetY) < 15) {
+        if (Math.abs(centerOffsetX) < 35 && Math.abs(centerOffsetY) < 35) {
 
-            //already has start saved?
-            let hasDragStart = Object.values(activeKeys).find(key => {return key.dragValues !== undefined});
-            
-            if (hasDragStart) {
+            if (activeKeys[h.name].dragValues !== undefined) {
                 //use start values to calculate drag offset
                 const diffX = touchX - activeKeys[h.name].dragValues.startX;
                 const diffY = touchY - activeKeys[h.name].dragValues.startY;
@@ -1114,7 +1109,7 @@ function dragValuesInActive(h) {
                 const startY = touchY;
                 activeKeys[h.name].dragValues = {"startX": startX, "startY": startY};
             }
-            print(activeKeys[h.name].dragValues);
+            print("Drag values set to: " + activeKeys[h.name].dragValues);
             return;
         }
     }
@@ -1125,12 +1120,23 @@ function bendKeys() {
     Object.values(activeKeys).forEach(a => {
 
         const keyHasBeenDragged = (a.dragValues !== undefined && a.dragValues.dragX !== undefined);
-
         if (keyHasBeenDragged) {
-            const detuneCents = dragDistanceMap(a.key.x, a.dragValues.startX, a.dragValues.dragX, 5, 40) * 100;
+            const maxDetuneCents = 1200 / currentTuning.length;
+            const detuneCents = dragDistanceMap(a.key.x, a.dragValues.startX, a.dragValues.dragX, 5, 40) * maxDetuneCents;
             print("detuning by: " + detuneCents)
-            ellipse(a.key.x + detuneCents, a.key.y, 30);
-            a.voice.set({ detune: detuneCents });
+            a.voice.set({ "detune": detuneCents });
+
+            if (detuneCents !== 0) {
+                push();
+                fill('#FFFFFFC0');
+                noStroke();
+                ellipse(a.dragValues.startX + a.dragValues.dragX, a.key.y - 50, (Math.abs(detuneCents) / 4) + 6);
+                ellipse(a.dragValues.startX, a.key.y - 50, 2);
+                ellipse(a.key.x + 40, a.key.y - 50, 2);
+                ellipse(a.key.x - 40, a.key.y - 50, 2);
+                //text(detuneCents.toFixed(1), a.key.x, a.key.y -60);
+                pop();
+            }
         }
     });
 }
@@ -1308,7 +1314,7 @@ function controlPressed(b) {
                 currentInstrument = "sawtooth";
                 synth.set({"oscillator": {"type": "sawtooth"}});
                 for (let i = 0; i < 32; i++) {
-                    synthvoices[i].set({oscillator: {type: "sawtooth"}});
+                    synthvoices[i].set({"oscillator": {"type": "sawtooth"}});
                 }
                 instrument = synth;
                 instrumentType = "synth";
@@ -1318,7 +1324,7 @@ function controlPressed(b) {
                 currentInstrument = "square";
                 synth.set({"oscillator": {"type": "square"}});
                 for (let i = 0; i < 32; i++) {
-                    synthvoices[i].set({oscillator: {type: "square"}});
+                    synthvoices[i].set({"oscillator": {"type": "square"}});
                 }
                 instrument = synth;
                 instrumentType = "synth";
@@ -1328,7 +1334,7 @@ function controlPressed(b) {
                 currentInstrument = "triangle";
                 synth.set({"oscillator": {"type": "triangle"}});
                 for (let i = 0; i < 32; i++) {
-                    synthvoices[i].set({oscillator: {type: "triangle"}});
+                    synthvoices[i].set({"oscillator": {"type": "triangle"}});
                 }
                 instrument = synth;
                 instrumentType = "synth";
@@ -1338,7 +1344,7 @@ function controlPressed(b) {
                 currentInstrument = "sine";
                 synth.set({"oscillator": {"type": "sine"}});
                 for (let i = 0; i < 32; i++) {
-                    synthvoices[i].set({oscillator: {type: "sine"}});
+                    synthvoices[i].set({"oscillator": {"type": "sine"}});
                 }
                 instrument = synth;
                 instrumentType = "synth";
@@ -1804,7 +1810,6 @@ class ButtonObj {
         }
 
         this.renderKeyText();
-        this.hexDragOffsetIndicator();
         pop();
     }
 
@@ -1992,47 +1997,17 @@ class ButtonObj {
         }
         pop();
     }
-
-
-    hexDragOffsetIndicator() {
-        //extra control text
-        //push();
-        ////textSize(12);
-//
-        //let xMapped = 0;
-        //let yMapped = 0;
-//
-        //if (this.touchStartX >= 0 && this.touchStartY >= 0 && this.touchDragX >= 0 && this.touchDragY >= 0)
-        //{
-        //    xMapped = dragDistanceMap(this.x, this.touchStartX, this.touchDragX, 5, 40);
-        //    yMapped = dragDistanceMap(this.y, this.touchStartY, this.touchDragY, 5, 40);
-//
-        //    // if (xMapped !== 0) {
-        //    //     retune(this, xMapped);
-        //    // }
-        //    // if (yMapped !== 0) {
-        //    //     instrument.volume.value = map(xMapped, -1, 1, -20, 20);
-        //    // }
-//
-        //    let circleColor = color(keyColorFromPalette(this, "light"));
-        //    circleColor.setAlpha(60);
-        //    fill(circleColor);
-//
-        //    const distance = dist(this.x, this.y, this.touchDragX, this.touchDragY)
-        //    ellipse(this.touchDragX, this.touchDragY, 30 + distance * 1.5);
-        //}
-        ////text(xMapped, this.x, this.y - 30);
-        ////text(yMapped, this.x, this.y + 30);
-        //pop();
-    }
 }
 
+
 function dragDistanceMap(center, start, drag, min, max) {
-    if (drag > start) {
+    if (drag > min) {
         return map(start + drag, start + min, center + max, 0, 1, true);
+    } else if (-drag > min) {
+        return map(start + drag, start - min, center - max, 0, -1, true);
     }
     else {
-        return map(start + drag, center - max, start - min, -1, 0, true);
+        return 0;
     }
 }
 
@@ -2126,16 +2101,18 @@ function cornerText() {
     textStyle(BOLD);
 
     let playText = "";
+    if (instrumentType == "synth") {
+        playText = Object.values(activeKeys).length + " - ";
+    }
     if (pressedButtons.length > 0 && !menuIsOpen) {
         // show which buttons are pressed
-        playText = Object.values(activeKeys).length + " - ";
         for (let b = 0; b < pressedButtons.length; b++) {
             const button = pressedButtons[b];
             playText += (button.pitchName + "(" + (button.octave + currentOctave)) + ") ";
         }
     } else {
         //show general info
-        playText = currentKey + (currentOctave) + " – " + capitalize(tuneMode);
+        playText += currentKey + (currentOctave) + " – " + capitalize(tuneMode);
     }
 
     const xOffset = 15;
