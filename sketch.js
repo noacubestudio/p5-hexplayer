@@ -4,11 +4,12 @@ let readyForSound = false; //only play sound when ready
 let drawMinDuration = 20; //
 
 let gridBaseMidi = 24;
-let gridWidth = 19;
+let gridWidth;
 let gridIncrement_H = 1;
 let gridIncrement_D = 4;
 let gridIncrement_V = 7;
 let gridXYswapped = false;
+let isConcertina = false;
 
 const hexColors = [
     "#DE4D44",
@@ -75,9 +76,9 @@ const darkerHexColors = [
 const rootColor = "#FFD0B6";
 
 const rControlNames = [
-    "Move Key", "Toggle", "Scales", "Octave", "Labels", "Color", "GridXY", "Shape", "+",
+    "Move Key", "Toggle", "Scales", "Octave", "Labels", "Color", "GridXY", "Shape", "Concertina",
     "EDO 12", "JI 12", "Mode 12","/19 Novem","/16 NEJI","/11 Undec","/11 Snow","+","+",
-    "EDO 19", "JI 31", "Astral 21", "EDO 24", "JI 24", "+", "+", "+", "+",
+    "EDO 19", "JI 31", "Astral 21", "EDO 24", "JI 24", "EDO 14", "+", "+", "+",
     "Piano", "Rhodes", "Organ", "Harp", "Sawtooth", "Square", "Triangle", "Sine", "+",
 ];
 
@@ -88,8 +89,16 @@ const intervalNames = [
     "1", "m2", "2", "m3", "3", "4", "TT", "5", "m6", "6", "m7", "7",
 ];
 const intervalNames19tet = [
-    "1", "a1", "m2", "2", "s3", "m3", "3", "a3", "4", "tt", "TT", "5", "a5", "m6", "6", "M6", "m7", "7", "d8",
+    "1", "»1", "2«", "2", "»2", "3«", "3", "›34‹", "4", "»4", "5«", "5", "»5", "6«", "6", "»6", "7«", "7", "›71‹",
 ];
+const intervalNames14tet = [
+    "1", "1*", "2", "2*", "3", "3*", "4", "4*", "5", "5*", "6", "6*", "7", "7*",
+];
+
+//const intervalNames19tet = [
+//    "1", "a1", "m2", "2", "s3", "m3", "3", "a3", "4", "tt", "TT", "5", "a5", "m6", "6", "M6", "m7", "7", "d8",
+//];
+
 const intervalNames24tet = [
     "1", "-2", "m2", "~2", "2", "-3", "m3", "~3", "3", "+3", "4", "+4", "TT", "-5", "5", "-6", "m6", "~6", "6", "-7", "m7", "~7", "7", "-8",
 ];
@@ -221,6 +230,22 @@ const tuning19tet = [
     2 ** (17/19),
     2 ** (18/19)
 ];
+const tuning14tet = [
+    1,
+    2 ** (1/14),
+    2 ** (2/14),
+    2 ** (3/14),
+    2 ** (4/14),
+    2 ** (5/14),
+    2 ** (6/14),
+    2 ** (7/14),
+    2 ** (8/14),
+    2 ** (9/14),
+    2 ** (10/14),
+    2 ** (11/14),
+    2 ** (12/14),
+    2 ** (13/14),
+];
 const tuning31ji = [ //7-limit by Adriaan Fokker
     "1/1",
     "64/63",
@@ -334,6 +359,8 @@ const scaleMajor = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1];
 const scaleMinor = [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0];
 const scaleChromatic = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 const scaleMajor19 = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0];
+const scaleMajor14 = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0];
+const scaleTop19 =   [0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0];
 const scaleMajor24 = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0];
 const scaleMajor31 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0];
 const scalePrimal21 = [1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0];
@@ -482,7 +509,7 @@ function preload() {
 }
 
 function setup() {
-    canvas = createCanvas(1366, 920);
+    canvas = createCanvas(1366, 1000);
     canvas.parent("canvasContainer");
     strokeWeight(2);
 
@@ -492,30 +519,15 @@ function setup() {
     textStyle(BOLD);
     rectMode(RADIUS);
 
-    //store the hexagon keys with the correct coordinates and ID
-    gridSizeX = 52;
-    gridSizeY = sqrt((3 * pow(gridSizeX, 2)) / 4);
-    hStartX = -0.5 * gridSizeX;
-    let id = 0;
-
-    for (let y = 19 * gridSizeY; y > -50; y -= 2 * gridSizeY) {
-        for (let x = 0; x < 28 * gridSizeX; x += 3 * gridSizeX) {
-            //even rows
-            keyArr.push(new ButtonObj(x + hStartX, y + 1.8 * gridSizeY, gridSizeX, "note", id++));
-            //odd rows
-            if (x < 26 * gridSizeX) {
-                keyArr.push(new ButtonObj(x + hStartX + 1.5 * gridSizeX, y + 0.8 * gridSizeY, gridSizeX, "note", id++));
-            }
-        }
-    }
+    makeHexagons();
 
     //create buttons with negative IDs
     const rows = 9;
     for (let b = 0; b < rows; b++) {
-        controlsArr.push(new ButtonObj(gridSizeX*2.0, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1)));
-        controlsArr.push(new ButtonObj(gridSizeX*4.5, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1 + rows)));
-        controlsArr.push(new ButtonObj(gridSizeX*7.0, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1 + rows*2)));
-        controlsArr.push(new ButtonObj(gridSizeX*9.5, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1 + rows*3)));
+        controlsArr.push(new ButtonObj(800 + gridSizeX*0.0, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1)));
+        controlsArr.push(new ButtonObj(800 + gridSizeX*2.5, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1 + rows)));
+        controlsArr.push(new ButtonObj(800 + gridSizeX*5.0, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1 + rows*2)));
+        controlsArr.push(new ButtonObj(800 + gridSizeX*7.5, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1 + rows*3)));
     }
 
     let style = document.createElement("style");
@@ -551,15 +563,68 @@ function setup() {
     draw();
 }
 
+function makeHexagons() {
+
+    //empty old array first
+    keyArr = [];
+
+    //store the hexagon keys with the correct coordinates and ID
+
+    gridSizeX = 52; gridSizeY = 52;
+    let hStartX = -0.5 * gridSizeX;
+    let hStartY = 0.8 * gridSizeY;
+    let id = 0;
+
+    //hexagons are less wide so they can interlock
+    if (isConcertina == false) {
+        gridSizeY = sqrt((3 * pow(gridSizeY, 2)) / 4);
+        gridWidth = 19; //how many in a row + odd row
+
+        //create hexagons interlocking horizontally
+        for (let y = 21 * gridSizeY; y > -50; y -= 2 * gridSizeY) {
+            for (let x = 0; x < 28 * gridSizeX; x += 3 * gridSizeX) {
+                //even rows
+                keyArr.push(new ButtonObj(x + hStartX, y + hStartY + gridSizeY, gridSizeX, "note", id++));
+                //odd rows
+                if (x > 25 * gridSizeX) { break;}
+                keyArr.push(new ButtonObj(x + hStartX + 1.5*gridSizeX, y + hStartY, gridSizeX, "note", id++));
+            }
+        }
+
+    } else {
+        //concertina layout
+        gridSizeX = sqrt((3 * pow(gridSizeX, 2)) / 4);
+        hStartX = 0;
+        hStartY = -10;
+        gridWidth = 13; //how many in a column + odd column
+        
+        //create hexagons interlocking vertically
+        for (let x = 0; x < 32 * gridSizeX; x += 2 * gridSizeX) {
+            for (let y = 18 * gridSizeY; y > -50; y -= 3 * gridSizeY) {
+                //even columns
+                keyArr.push(new ButtonObj(x + hStartX, y + hStartY, gridSizeY, "note", id++));
+                //odd columns
+                if (y < 5) { break;}
+                keyArr.push(new ButtonObj(x + hStartX + gridSizeX, y + hStartY - 1.5*gridSizeY, gridSizeY, "note", id++));
+            }
+        }
+    }
+}
+
 
 function handleStart(evt) {
     const newTouches = evt.changedTouches;
 
     for (let i = 0; i < newTouches.length; i++) {
         evt.preventDefault();
-        if (newTouches[i].clientX > width - 72 && newTouches[i].clientY < 72) { return };
         //print("touchstart: " + i);
         ongoingTouches.push(copyTouch(newTouches[i]));
+
+        // Render buttons when left icon pressed
+        if (newTouches[i].clientX > width-72 && newTouches[i].clientY < 72)
+        {
+            menuIsOpen = true;
+        }
     }
 
     // get combined pen pressure from new touches
@@ -598,21 +663,21 @@ function handleMove(evt) {
 function handleEnd(evt) {
     const newTouches = evt.changedTouches;
 
-    if (newTouches.length == 1 && newTouches[0].clientX > width - 72 && newTouches[0].clientY < 72) {
-        print("DELETING STUFF!")
-        //one finger on top right clear button
-        //evt.preventDefault();
-        ////pressedButtons = [];
-        ////lastPressedButtons = [];
-        //activeKeys = {};
-        //ongoingTouches = [];
-        //synthvoices.forEach(v => {
-        //    v.triggerRelease();
-        //});
-        //keyArr.forEach((h) => {
-        //    playKey(h, "release");
-        //});
-    } else {
+    //if (newTouches.length == 1 && newTouches[0].clientX > width - 72 && newTouches[0].clientY < 72) {
+    //    print("DELETING STUFF!")
+    //    //one finger on top right clear button
+    //    //evt.preventDefault();
+    //    ////pressedButtons = [];
+    //    ////lastPressedButtons = [];
+    //    //activeKeys = {};
+    //    //ongoingTouches = [];
+    //    //synthvoices.forEach(v => {
+    //    //    v.triggerRelease();
+    //    //});
+    //    //keyArr.forEach((h) => {
+    //    //    playKey(h, "release");
+    //    //});
+    //} else {
         //normal release
         for (let i = 0; i < newTouches.length; i++) {
             evt.preventDefault();
@@ -623,7 +688,7 @@ function handleEnd(evt) {
                 ongoingTouches.splice(idx, 1);
             }
         }
-    }
+    //}
 
     drawMinDuration = 20;
     loop();
@@ -680,14 +745,14 @@ function runKeys() {
     let optionsBG = color(backgroundColor);
     optionsBG.setAlpha(230);
 
-    // Render buttons when left icon pressed
-    if (ongoingTouches.length > 0 && ongoingTouches[0].clientX < 72 && ongoingTouches[0].clientY < 72)
-    {
-        // show controls on the left
-        menuIsOpen = true;
+    //close menu if no keys pressed
+    if (ongoingTouches.length === 0) {
+        menuIsOpen = false;
+    }
 
+    if (menuIsOpen) {
         if (mouseUsed === false) {
-            reactToPressedControls()
+            reactToPressedControls();
         }
 
         // Render all hexagons + variants below
@@ -707,7 +772,7 @@ function runKeys() {
         });
 
         fill(optionsBG);
-        rect(300, 420, 265, 350, 20);
+        rect(1000, 420, 265, 350, 20);
         optionsBG.setAlpha(50);
         background(optionsBG);
 
@@ -725,9 +790,6 @@ function runKeys() {
     }
     else
     {
-        //don"t show the controls
-        menuIsOpen = false;
-
         if (mouseUsed === false) {
             reactToPressedKeys()
         }
@@ -753,23 +815,7 @@ function runKeys() {
             h.renderText(h.findKeyVariant);
         });
     }
-
-    //top left and right corner icons
-    push();
-    noStroke();
-    optionsBG.setAlpha(150);
-    fill(optionsBG);
-    ellipse(36, 36, 60);
-    ellipse(width-36, 36, 60);
-    strokeWeight(6)
-    stroke(color("#5027A9"));
-    noFill();
-    ellipse(36, 36, 30);
-    ellipse(width-36, 36, 30);
-    pop();
-
-    //lines at the top showing scale;
-    drawScaleLines();
+    renderTuningReference();
 
     //text info in corners
     //optionsBG.setAlpha(80);
@@ -865,10 +911,9 @@ function reactToPressedKeys() {
     }
 
     //check if apple pencil or touch was used
-    if (penPressure > 0.0) {
+    if (penPressure > 0.0 && menuIsOpen == false) {
         reactToPen();
-    }
-    else {
+    } else {
         reactToTouch();
     }
 
@@ -1132,8 +1177,7 @@ function bendKeys() {
                 noStroke();
                 ellipse(a.dragValues.startX + a.dragValues.dragX, a.key.y - 50, (Math.abs(detuneCents) / 4) + 6);
                 ellipse(a.dragValues.startX, a.key.y - 50, 2);
-                ellipse(a.key.x + 40, a.key.y - 50, 2);
-                ellipse(a.key.x - 40, a.key.y - 50, 2);
+                ellipse(a.key.x + 40 * Math.sign(detuneCents), a.key.y - 50, 2);
                 //text(detuneCents.toFixed(1), a.key.x, a.key.y -60);
                 pop();
             }
@@ -1197,11 +1241,24 @@ function controlPressed(b) {
             case 7:
                 print("Switched to different midi to grid XY layout");
                 gridXYswapped = !gridXYswapped;
+                if (gridXYswapped) {
+                    isConcertina = false;
+                }
                 calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
                 break;
             case 8:
                 print("switched shape of keys!");
                 roundKeyMode = !roundKeyMode;
+                break;
+            case 9:
+                print("turned semitones to whole tones!");
+                isConcertina = !isConcertina;
+                if (isConcertina) {
+                    gridXYswapped = false;
+                }
+                makeHexagons();
+                calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
+                break;
         }
     } else if (-b.name <= rows*2) {
         switch (-b.name - rows) {
@@ -1264,7 +1321,7 @@ function controlPressed(b) {
             case 3:
                 tuneMode = "21astral";
                 currentTuning = tuning21Astral;
-                currentOctave = 0;
+                currentOctave = 1;
                 calculateNewMidiGrid(5, 9);
                 playTestChord([6, 12, 18]);
                 break;
@@ -1282,6 +1339,12 @@ function controlPressed(b) {
                 calculateNewMidiGrid(4, 7);
                 playTestChord([8, 14]);
                 break;
+            case 6:
+                tuneMode = "14tet";
+                currentTuning = tuning14tet;
+                currentOctave = 0;
+                calculateNewMidiGrid(4, 5);
+                playTestChord([4, 8]);
         }
     } else if (-b.name <= rows*4) {
         switch (-b.name - rows*3) {
@@ -1368,20 +1431,35 @@ function playTestChord(intervals) {
 
 function calculateNewMidiGrid(small, big) {
 
-    gridBaseMidi = currentTuning.length * 2;
-    gridIncrement_H = 2 * small - big;;
+    if (isConcertina) {
+        gridBaseMidi = Math.floor(currentTuning.length * 1.5);
+    } else {
+        gridBaseMidi = currentTuning.length * 2;
+    }
+
+    //save for checking elsewhere
+    gridIncrement_H = 2 * small - big; //should be semitone
     gridIncrement_D = small;
     gridIncrement_V = big;
 
-    if (gridXYswapped == false) {
-        keyArr.forEach((h) => {
-            h.setMidiFromGrid(gridBaseMidi, gridWidth, gridIncrement_H, gridIncrement_D, gridIncrement_V);
-        });
+    //actual values take into account extra grid modes
+    if (gridXYswapped) {
+        newIncrement_H = big;
+        newIncrement_D = small;
+        newIncrement_V = 2 * small - big;
+    } else if (isConcertina) {
+        newIncrement_H = currentTuning.length; //octave
+        newIncrement_D = big;
+        newIncrement_V = (2 * big) % currentTuning.length;
     } else {
-        keyArr.forEach((h) => {
-            h.setMidiFromGrid(gridBaseMidi, gridWidth, gridIncrement_V, gridIncrement_D, gridIncrement_H);
-        });
+        newIncrement_H = 2 * small - big;
+        newIncrement_D = small;
+        newIncrement_V = big;
     }
+
+        keyArr.forEach((h) => {
+            h.setMidiFromGrid(gridBaseMidi, gridWidth, newIncrement_H, newIncrement_D, newIncrement_V);
+        });
 }
 
 
@@ -1444,6 +1522,7 @@ function keyColorFromPalette(h, style) {
 
         //how to translate the colors?
         let cTable;
+        let tTable; //for additional colors, check if exists)
 
         if (currentTuning.length == 12) {
             if (colorMode === "major")
@@ -1462,7 +1541,8 @@ function keyColorFromPalette(h, style) {
                 cTable = layoutColorsFifths.slice()
             }
         } else {
-            if (currentTuning.length == 19) {cTable = scaleMajor19.slice();}
+            if (currentTuning.length == 19) {cTable = scaleMajor19.slice(); tTable = scaleTop19.slice();}
+            else if (currentTuning.length == 14) {cTable = scaleMajor14.slice();}
             else if (currentTuning.length == 24) {cTable = scaleMajor24.slice();}
             else if (currentTuning.length == 31) {cTable = scaleMajor31.slice();}
             else if (currentTuning == tuning21Astral) {cTable = scalePrimal21.slice();}
@@ -1473,6 +1553,16 @@ function keyColorFromPalette(h, style) {
                     cTable[c] = (cTable[c] == 1) ? 1 : 10;
                 } else {
                     cTable[c] = (cTable[c] == 1) ? 2 : 7;
+                }
+            }
+
+            if (tTable !== undefined) {
+                for (let t = 0; t < tTable.length; t++) {
+                    if ((h.octave + currentOctave) % 2 == 0) {
+                        if (tTable[t] == 1) cTable[t] = 11;
+                    } else {
+                        if (tTable[t] == 1) cTable[t] = 6;
+                    }
                 }
             }
         }
@@ -1546,94 +1636,191 @@ function drawPointConnector(x1, y1, x2, y2, c1, c2) {
 }
 
 
-function drawScaleLines() {
-    const hLength = 400;
-    const startX = (width - hLength) / 2;
-    const endX = (width + hLength) / 2;
-    const startY = 13;
+function renderTuningReference() {
+    push();
 
-    push()
+    const cornerOffset = 40;
+    translate(width-cornerOffset, cornerOffset);
+
+    //round base
     noStroke();
-    fill(backgroundColor);
-    rect(width / 2 - 12, startY, 202, 13, 100)
+    baseColor = color(backgroundColor);
+    baseColor.setAlpha(140);
+    fill(baseColor);
+    ellipse(0, 0, 46);
+    ellipse(0, 0, 46);
+    ellipse(0, 0, 70);
 
-    //WIP: adjust with octave length
     const octaveLength = currentTuning.length;
-
-    let getXValue = (fr) => map(scaleFreqToCents(fr+1), 0, 1200, startX, endX);
-
-    for (let j = 0; j < 12; j++) {
-        const compareFreq = 2 ** (j/12) - 1;
-        const xCompareValue = getXValue(compareFreq);
-
-        gradientCircle(
-            lerpColor(color("black"), color("#3E1C87"), 0.2),
-            0,
-            lerpColor(color("black"), color("#3E1C87"), 0.7),
-            16,
-            xCompareValue,
-            startY, 5);
-    }
-
     for (let i = 0; i < octaveLength; i++) {
-        let freq = eval(currentTuning[i]) - 1;
 
-        let size = 7;
-        push();
-        noStroke();
-        let fillC = color("white");
+        // color per position
+        let cTable = scaleMajor.slice();
 
-        const offset = noteNames.indexOf(currentKey);
-
-        //color,new
-        const inKlickedHexes = pressedButtons.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength) && t.countdown > 0);
-        const inHoverHexes = pressedButtons.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength));
-
-        if (inKlickedHexes == undefined) {
-            let darkHexColor;
-            let cTable;
-
-            if (octaveLength == 12) {
-                cTable = scaleMajor.slice();
-                for (let c = 0; c < cTable.length; c++) {
-                    cTable[c] = (cTable[c] == 1) ? 2 : 7;
-                }
-
-                if (colorMode === "fifths") {cTable = layoutColorsFifths;}
-
+        if (octaveLength == 12) {
+            if (colorMode === "fifths") {
+                cTable = layoutColorsFifths;
             } else {
-                if (octaveLength == 19) {cTable = scaleMajor19.slice();}
-                else if (octaveLength == 24) {cTable = scaleMajor24.slice();}
-                else if (octaveLength == 31) {cTable = scaleMajor31.slice();}
-                else if (currentTuning == tuning21Astral) {cTable = scalePrimal21.slice();}
-                else {cTable = new Array(octaveLength).fill(0);}
-
                 for (let c = 0; c < cTable.length; c++) {
                     cTable[c] = (cTable[c] == 1) ? 2 : 7;
                 }
             }
+        } else {
+            if (octaveLength == 19) {cTable = scaleMajor19.slice();}
+            else if (octaveLength == 14) {cTable = scaleMajor14.slice();}
+            else if (octaveLength == 24) {cTable = scaleMajor24.slice();}
+            else if (octaveLength == 31) {cTable = scaleMajor31.slice();}
+            else if (currentTuning == tuning21Astral) {cTable = scalePrimal21.slice();}
+            else {cTable = new Array(octaveLength).fill(0);}
 
-            const colorIndex = cTable[i % currentTuning.length];
-            darkHexColor = color(darkHexColors[colorIndex]);
-
-            fillC = darkHexColor;
-            fillC.setAlpha(220);
-            //stroke(darkHexColor);
+            for (let c = 0; c < cTable.length; c++) {
+                cTable[c] = (cTable[c] == 1) ? 2 : 7;
+            }
         }
 
-        if (inHoverHexes !== undefined) {
-            size = 12;
+        strokeWeight(1.5);
+
+        //inner lines
+        if (i < 12) {
+            //color
+            let referenceTable = scaleMajor.slice();
+            for (let c = 0; c < referenceTable.length; c++) {
+                referenceTable[c] = (referenceTable[c] == 1) ? 2 : 7;
+            }
+
+            //12tet lines
+            const refIndex = referenceTable[i];
+            const fillDark = color(darkHexColors[refIndex]);
+            fillDark.setAlpha(160);
+            stroke(fillDark);
+            const angle = map(i, 0, 12, 0, TWO_PI) - HALF_PI;
+
+            const x1 = cos(angle) * 10;
+            const y1 = sin(angle) * 10;
+            const x2 = cos(angle) * 22;
+            const y2 = sin(angle) * 22;
+            line(x1, y1, x2, y2);
         }
 
-        const xValue = getXValue(freq);
+        //true lines
+        let fillC;
+        const offset = noteNames.indexOf(currentKey);
+        const inHoverHexes = pressedButtons.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength));
+        const colorIndex = cTable[i % currentTuning.length];
 
-        noStroke();
-        fill(fillC);
-        ellipse(xValue, startY, size);
+        const freq = eval(currentTuning[i]);
+        const cents = scaleFreqToCents(freq);
+        const angle = map(cents, 0, 1200, 0, TWO_PI) - HALF_PI;
 
-        pop();
+        const x1 = cos(angle) * 24;
+        const y1 = sin(angle) * 24;
+        const x2 = cos(angle) * 32;
+        const y2 = sin(angle) * 32;
+
+        if (inHoverHexes == undefined) {
+            fillC = color(darkHexColors[colorIndex]);
+            fillC.setAlpha(210);
+            stroke(fillC);
+            line(x1, y1, x2, y2);
+        } else {
+            fillC = color(lightHexColors[colorIndex]);
+            strokeWeight(2.2);
+            stroke(fillC);
+            line(x1, y1, x2, y2);
+
+            fillC.setAlpha(50);
+            strokeWeight(5.5);
+            stroke(fillC);
+            line(x1, y1, x2, y2);
+
+            fillC.setAlpha(20);
+            strokeWeight(10);
+            stroke(fillC);
+            line(x1, y1, x2, y2);
+        }
+        
+
+        
     }
+
+
     pop();
+
+    // const octaveLength = currentTuning.length;
+// 
+    // let getXValue = (fr) => map(scaleFreqToCents(fr+1), 0, 1200, startX, endX);
+// 
+    // for (let j = 0; j < 12; j++) {
+        // const compareFreq = 2 ** (j/12) - 1;
+        // const xCompareValue = getXValue(compareFreq);
+// 
+        // gradientCircle(
+            // lerpColor(color("black"), color("#3E1C87"), 0.2),
+            // 0,
+            // lerpColor(color("black"), color("#3E1C87"), 0.7),
+            // 16,
+            // xCompareValue,
+            // startY, 5);
+    // }
+// 
+    // for (let i = 0; i < octaveLength; i++) {
+        // let freq = eval(currentTuning[i]) - 1;
+// 
+        // let size = 7;
+        // push();
+        // noStroke();
+        // let fillC = color("white");
+// 
+        // const offset = noteNames.indexOf(currentKey);
+// 
+        // const inKlickedHexes = pressedButtons.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength) && t.countdown > 0);
+        // const inHoverHexes = pressedButtons.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength));
+// 
+        // if (inKlickedHexes == undefined) {
+            // let darkHexColor;
+            // let cTable;
+// 
+            // if (octaveLength == 12) {
+                // cTable = scaleMajor.slice();
+                // for (let c = 0; c < cTable.length; c++) {
+                    // cTable[c] = (cTable[c] == 1) ? 2 : 7;
+                // }
+// 
+                // if (colorMode === "fifths") {cTable = layoutColorsFifths;}
+// 
+            // } else {
+                // if (octaveLength == 19) {cTable = scaleMajor19.slice();}
+                // else if (octaveLength == 14) {cTable = scaleMajor14.slice();}
+                // else if (octaveLength == 24) {cTable = scaleMajor24.slice();}
+                // else if (octaveLength == 31) {cTable = scaleMajor31.slice();}
+                // else if (currentTuning == tuning21Astral) {cTable = scalePrimal21.slice();}
+                // else {cTable = new Array(octaveLength).fill(0);}
+// 
+                // for (let c = 0; c < cTable.length; c++) {
+                    // cTable[c] = (cTable[c] == 1) ? 2 : 7;
+                // }
+            // }
+// 
+            // const colorIndex = cTable[i % currentTuning.length];
+            // darkHexColor = color(darkHexColors[colorIndex]);
+// 
+            // fillC = darkHexColor;
+            // fillC.setAlpha(220);
+        // }
+// 
+        // if (inHoverHexes !== undefined) {
+            // size = 12;
+        // }
+// 
+        // const xValue = getXValue(freq);
+// 
+        // noStroke();
+        // fill(fillC);
+        // ellipse(xValue, startY, size);
+// 
+        // pop();
+    // }
+    // pop();
 }
 
 class ButtonObj {
@@ -1817,7 +2004,15 @@ class ButtonObj {
         if (menuIsOpen) {return "idle";};
         const inKlickedHexes = pressedButtons.find(t => t.midiName === this.midiName && t.countdown > 0);
         const inHoverHexes = pressedButtons.find(t => t.midiName === this.midiName);
-        const differentOctaveHexes = pressedButtons.find(t => t.midiName % currentTuning.length === this.midiName % currentTuning.length);
+
+        //also highlight same note in different octave.
+        //in concertina layout, highlight the semitone instead.
+        let differentOctaveHexes;
+        if (isConcertina) {
+            differentOctaveHexes = pressedButtons.find(t => Math.abs(t.midiName - this.midiName) === 1);
+        } else {
+            differentOctaveHexes = pressedButtons.find(t => t.midiName % currentTuning.length === this.midiName % currentTuning.length);
+        }
 
         if (inKlickedHexes !== undefined) {
             return "klicked";
@@ -1887,9 +2082,9 @@ class ButtonObj {
             (interactionMode === "edit"),
             false,
             false,
+            gridXYswapped,
             false,
-            false,
-            false,
+            isConcertina,
 
             (tuneMode === "12tet"),
             (tuneMode === "simple"),
@@ -1906,7 +2101,7 @@ class ButtonObj {
             (tuneMode === "21astral"),
             (tuneMode === "24tet"),
             (tuneMode === "24ji"),
-            false,
+            (tuneMode === "14tet"),
             false,
             false,
             false,
@@ -1944,39 +2139,42 @@ class ButtonObj {
 
     renderKeyText() {
         const octaveLength = currentTuning.length;
+        let keyText = this.name;
         if (octaveLength == 12) {
             if (labelStyle === "notes")
             {
                 if (this.pitchName == currentKey) {
-                    text(this.pitchName + (this.octave + currentOctave), this.x, this.y);
+                    keyText = this.pitchName + (this.octave + currentOctave);
                 }
                 else {
-                    text(this.pitchName, this.x, this.y);
+                    keyText = this.pitchName;
                 }
             }
             else if (labelStyle === "midi") {
-                text(this.midiName + octaveLength * currentOctave, this.x, this.y);
+                keyText = this.midiName + octaveLength * currentOctave;
             }
             else if (labelStyle === "intervals") {
                 const offset = noteNames.indexOf(currentKey);
                 const intervalName = intervalNames[(this.midiName - offset) % 12];
-                text(intervalName, this.x, this.y);
+                keyText = intervalName;
             }
         } else {
             if (labelStyle === "intervals") {
                 const offset = noteNames.indexOf(currentKey);
                 let intervalNamesTable;
                 if (octaveLength == 19) {intervalNamesTable = intervalNames19tet.slice();}
+                else if (octaveLength == 14) {intervalNamesTable = intervalNames14tet.slice();}
                 else if (octaveLength == 24) {intervalNamesTable = intervalNames24tet.slice();}
                 else if (octaveLength == 31) {intervalNamesTable = intervalNames31tet.slice();}
                 else {intervalNamesTable = new Array(octaveLength).fill((this.midiName - offset) % octaveLength + 1);}
                 
                 const intervalName = intervalNamesTable[(this.midiName - offset) % octaveLength];
-                text(intervalName, this.x, this.y);
+                keyText = intervalName;
             } else {
-                text(this.pitchName, this.x, this.y);
+                keyText = this.pitchName - 1;
             }
-        } 
+        }
+        text(keyText, this.x, this.y);
 
         //extra text above
         push();
@@ -1985,7 +2183,8 @@ class ButtonObj {
 
         if (currentTuning != tuning12tet &&
                 currentTuning != tuning19tet &&
-                currentTuning != tuning24tet) {
+                currentTuning != tuning24tet &&
+                currentTuning != tuning14tet) {
             const offset = noteNames.indexOf(currentKey);
             const intervalName = currentTuning[(this.midiName - offset) % octaveLength];
 
@@ -2015,7 +2214,7 @@ function dragDistanceMap(center, start, drag, min, max) {
 function findNearestButton(touch, arr) {
 
     //minimum distance is a weird way to measure which button is hit, wip
-    const minDistance = gridSizeX * 0.85;
+    const minDistance = (isConcertina) ? gridSizeY * 0.85 : gridSizeX * 0.85;
     let closestButton;
 
     if (!mouseUsed && touch != undefined) {
@@ -2047,7 +2246,8 @@ function keyShape(x, y, r, fillColor) {
         strokeWeight(r * 0.3);
         stroke(fillColor);
         strokeJoin(ROUND)
-        hexagon(x, y, r * 0.38);
+        if (isConcertina) hexagon(x, y, r * 0.38, 1/2 * PI);
+        else hexagon(x, y, r * 0.38, 0);
     }
     pop()
 }
@@ -2056,11 +2256,11 @@ function controlShape(x, y, r) {
     rect(x, y, r * 0.7, r * 0.4, r * 0.1);
 }
 
-function hexagon(x, y, r) {
+function hexagon(x, y, r, angle) {
     beginShape();
     for (let a = 0; a < 2 * PI; a += (2 * PI) / 6) {
-        let x2 = cos(a) * r;
-        let y2 = sin(a) * r;
+        let x2 = cos(a + angle) * r;
+        let y2 = sin(a + angle) * r;
         vertex(x + x2, y + y2);
     }
     endShape(CLOSE);
@@ -2100,9 +2300,9 @@ function cornerText() {
     textSize(15);
     textStyle(BOLD);
 
-    let playText = "";
+    let playText = currentKey + (currentOctave) + "–" + capitalize(tuneMode) + " ";
     if (instrumentType == "synth") {
-        playText = Object.values(activeKeys).length + " - ";
+        playText += Object.values(activeKeys).length + " - ";
     }
     if (pressedButtons.length > 0 && !menuIsOpen) {
         // show which buttons are pressed
@@ -2110,10 +2310,8 @@ function cornerText() {
             const button = pressedButtons[b];
             playText += (button.pitchName + "(" + (button.octave + currentOctave)) + ") ";
         }
-    } else {
-        //show general info
-        playText += currentKey + (currentOctave) + " – " + capitalize(tuneMode);
     }
+    //playText += " " + drawMinDuration;
 
     const xOffset = 15;
     const yOffset = height - 18;
@@ -2126,7 +2324,8 @@ function cornerText() {
     text(playText, xOffset, yOffset);
 
     noStroke();
-    fill(color("#5027A9"));
+    const textColor = lerpColor(color("#5027A9"), color("#FFFFFF"), drawMinDuration/20)
+    fill(textColor);
     text(playText, xOffset, yOffset);
 
     pop();
