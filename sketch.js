@@ -75,12 +75,7 @@ const darkerHexColors = [
 
 const rootColor = "#FFD0B6";
 
-const rControlNames = [
-    "Move Key", "Toggle", "Scales", "Octave", "Labels", "Color", "GridXY", "Shape", "Concertina",
-    "EDO 12", "JI 12", "Mode 12","/19 Novem","/16 NEJI","/11 Undec","/11 Snow","+","+",
-    "EDO 19", "JI 31", "Astral 21", "EDO 24", "JI 24", "EDO 14", "+", "+", "+",
-    "Piano", "Rhodes", "Organ", "Harp", "Sawtooth", "Square", "Triangle", "Sine", "+",
-];
+let menuButtons = [];
 
 const noteNames = [
     "C","C#","D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
@@ -383,7 +378,6 @@ let tuneMode = "12tet";
 let currentTuning = tuning12tet;
 
 let currentScale = scaleChromatic.slice();
-let scaleCustom = currentScale.slice(); //generate with toggle tool
 let currentKey = "C"; //wip store as numerical offset instead
 let currentOctave = 0;
 let labelStyle = "intervals";
@@ -522,12 +516,14 @@ function setup() {
     makeHexagons();
 
     //create buttons with negative IDs
+    const xOffset = 740; const yOffset = 110;
+    const bWidth = gridSizeX * 3; const bHeight = gridSizeY * 1.7;
     const rows = 9;
     for (let b = 0; b < rows; b++) {
-        controlsArr.push(new ButtonObj(800 + gridSizeX*0.0, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1)));
-        controlsArr.push(new ButtonObj(800 + gridSizeX*2.5, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1 + rows)));
-        controlsArr.push(new ButtonObj(800 + gridSizeX*5.0, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1 + rows*2)));
-        controlsArr.push(new ButtonObj(800 + gridSizeX*7.5, 2.5*gridSizeY + b*gridSizeY*1.7, gridSizeX, "control", -(b + 1 + rows*3)));
+        controlsArr.push(new ButtonObj(xOffset + bWidth*0, yOffset + b*bHeight, gridSizeX, "control", -(b + 1)));
+        controlsArr.push(new ButtonObj(xOffset + bWidth*1, yOffset + b*bHeight, gridSizeX, "control", -(b + 1 + rows)));
+        controlsArr.push(new ButtonObj(xOffset + bWidth*2, yOffset + b*bHeight, gridSizeX, "control", -(b + 1 + rows*2)));
+        controlsArr.push(new ButtonObj(xOffset + bWidth*3, yOffset + b*bHeight, gridSizeX, "control", -(b + 1 + rows*3)));
     }
 
     let style = document.createElement("style");
@@ -617,7 +613,7 @@ function handleStart(evt) {
 
     for (let i = 0; i < newTouches.length; i++) {
         evt.preventDefault();
-        //print("touchstart: " + i);
+        newTouches[i].interactionType = "start";
         ongoingTouches.push(copyTouch(newTouches[i]));
 
         // Render buttons when left icon pressed
@@ -648,8 +644,8 @@ function handleMove(evt) {
 
     for (let i = 0; i < newTouches.length; i++) {
         evt.preventDefault();
-
         const idx = ongoingTouchIndexById(newTouches[i].identifier);
+        newTouches[i].interactionType = "move";
 
         if (idx >= 0) {
             //print("continuing touch " + idx);
@@ -663,44 +659,10 @@ function handleMove(evt) {
 function handleEnd(evt) {
     const newTouches = evt.changedTouches;
 
-    //if (newTouches.length == 1 && newTouches[0].clientX > width - 72 && newTouches[0].clientY < 72) {
-    //    print("DELETING STUFF!")
-    //    //one finger on top right clear button
-    //    //evt.preventDefault();
-    //    ////pressedButtons = [];
-    //    ////lastPressedButtons = [];
-    //    //activeKeys = {};
-    //    //ongoingTouches = [];
-    //    //synthvoices.forEach(v => {
-    //    //    v.triggerRelease();
-    //    //});
-    //    //keyArr.forEach((h) => {
-    //    //    playKey(h, "release");
-    //    //});
-    //} else {
-        //normal release
-        for (let i = 0; i < newTouches.length; i++) {
-            evt.preventDefault();
-
-            const idx = ongoingTouchIndexById(newTouches[i].identifier);
-            if (idx >= 0) {
-                //print("removing touch " + idx);
-                ongoingTouches.splice(idx, 1);
-            }
-        }
-    //}
-
-    drawMinDuration = 20;
-    loop();
-}
-
-function handleCancel(evt) {
-    const newTouches = evt.changedTouches;
-
     for (let i = 0; i < newTouches.length; i++) {
         evt.preventDefault();
         const idx = ongoingTouchIndexById(newTouches[i].identifier);
-        
+
         if (idx >= 0) {
             //print("removing touch " + idx);
             ongoingTouches.splice(idx, 1);
@@ -710,12 +672,18 @@ function handleCancel(evt) {
     loop();
 }
 
+function handleCancel(evt) {
+    handleEnd(evt)
+}
+
 function copyTouch(touch) {
     return {
         identifier: touch.identifier,
         clientX: touch.clientX,
         clientY: touch.clientY, 
-        force: touch.force};
+        force: touch.force,
+        interactionType: touch.interactionType
+    };
 }
 
 function ongoingTouchIndexById(idToFind) {
@@ -743,7 +711,7 @@ function draw() {
 function runKeys() {
     background(backgroundColor);
     let optionsBG = color(backgroundColor);
-    optionsBG.setAlpha(230);
+    //optionsBG.setAlpha(230);
 
     //close menu if no keys pressed
     if (ongoingTouches.length === 0) {
@@ -772,9 +740,12 @@ function runKeys() {
         });
 
         fill(optionsBG);
-        rect(1000, 420, 265, 350, 20);
-        optionsBG.setAlpha(50);
+        rect(975, 415, 320, 350, 20);
+        optionsBG.setAlpha(80);
         background(optionsBG);
+
+        // update control states
+        updateControlStates();
 
         controlsArr.forEach((b) => {
             if (b.countdown > 0) {
@@ -787,9 +758,10 @@ function runKeys() {
         controlsArr.forEach((b) => {
             b.drawControlGlow();
         });
-    }
-    else
-    {
+
+    } else {
+        //menu is closed
+
         if (mouseUsed === false) {
             reactToPressedKeys()
         }
@@ -814,17 +786,14 @@ function runKeys() {
         keyArr.forEach((h) => {
             h.renderText(h.findKeyVariant);
         });
+
+        //produce pitch bends from drag on keys
+        bendKeys();
     }
+
+    //visual
     renderTuningReference();
-
-    //text info in corners
-    //optionsBG.setAlpha(80);
-    //fill(optionsBG);
-    //noStroke();
-    //rect(0, height-16, 300, 16);
     cornerText();
-
-    bendKeys();
 }
 
 
@@ -899,7 +868,7 @@ function reactToPressedControls() {
 
 
 function reactToPressedKeys() {
-    //update which buttons are hovered over/ pressed
+    // update which buttons are hovered over/ pressed
     lastPressedButtons = pressedButtons.slice();
     pressedButtons = [];
 
@@ -910,16 +879,17 @@ function reactToPressedKeys() {
         }
     }
 
-    //check if apple pencil or touch was used
+    // check if apple pencil or touch was used
     if (penPressure > 0.0 && menuIsOpen == false) {
         reactToPen();
     } else {
         reactToTouch();
     }
 
+    // when last finger or pen is lifted
     if (ongoingTouches.length === 0) {
 
-        //add new line hexes to set, then remove the live line
+        // add new line hexes to set, then remove the live line
         if (penDragStartKey !== undefined && penDragEndKey !== undefined) {
 
             const startName = penDragStartKey.name;
@@ -951,6 +921,12 @@ function reactToPressedKeys() {
     }
 }
 
+
+function detectMouse() {
+    //WIP, write new later
+}
+
+
 function uniqByKeepFirst(a, key) {
     // from https://stackoverflow.com/questions/9229645/remove-duplicate-values-from-js-array
     let seen = new Set();
@@ -960,10 +936,6 @@ function uniqByKeepFirst(a, key) {
     });
 }
 
-
-function detectMouse() {
-    //write new later
-}
 
 function reactToPen() {
     //clean up duplicates
@@ -997,7 +969,6 @@ function reactToTouch() {
     //clean up duplicates and sort
     pressedButtons = uniqByKeepFirst(pressedButtons, p => p.name);
     pressedButtons.sort((a, b) => a.name - b.name);
-
 
     //find unique items in each
     const attackedKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) === undefined);
@@ -1033,7 +1004,6 @@ function reactToTouch() {
             keyArr.forEach((h) => {
                 if (h.name === sameHex.name) {
                     dragValuesInActive(h);
-                    //bendKeys();
                 }
             });
         }
@@ -1050,12 +1020,6 @@ function keypressed(h) {
         currentKey = h.pitchName;
         pickScale(currentKey, scaleMode);
         print("Key mode current key: " + currentKey)
-    }
-
-    // toggle notes in scale
-    else if (interactionMode === "edit") {
-        h.countdown = cooldownFrames;
-        toggleNoteInScale(h);
     }
 
     // play the note normally
@@ -1190,6 +1154,8 @@ function controlPressed(b) {
     instrument.releaseAll();
     const rows = 9;
 
+    //same order as menuButtons
+
     if (-b.name <= rows) {
         switch (-b.name) {
             case 1:
@@ -1201,14 +1167,6 @@ function controlPressed(b) {
                 }
                 break;
             case 2:
-                print("Toggle notes");
-                if (interactionMode === "edit") {
-                    interactionMode = "play";
-                } else {
-                    interactionMode = "edit";
-                }
-                break;
-            case 3:
                 print("Changed scale");
     
                 if (scaleMode === "major") {
@@ -1222,23 +1180,23 @@ function controlPressed(b) {
                 }
                 pickScale(currentKey, scaleMode);
                 break;
-            case 4:
+            case 3:
                 print("Changed octave");
                 currentOctave++;
                 if (currentOctave == 3) {currentOctave = 0;}
                 break;
-            case 5:
+            case 4:
                 print("Changed label style");
                 if (labelStyle === "notes") {labelStyle = "intervals";}
                 else {labelStyle = "notes";}
                 break;
-            case 6:
+            case 5:
                 print("Changed color theme!");
                 if (colorMode === "fifths") {colorMode = "major";}
-                else if (colorMode === "major") {colorMode = "fifths";}
-                //else {colorMode = "chromatic";}
+                else {colorMode = "fifths";}
+                //{colorMode = "chromatic";}
                 break;
-            case 7:
+            case 6:
                 print("Switched to different midi to grid XY layout");
                 gridXYswapped = !gridXYswapped;
                 if (gridXYswapped) {
@@ -1246,11 +1204,11 @@ function controlPressed(b) {
                 }
                 calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
                 break;
-            case 8:
+            case 7:
                 print("switched shape of keys!");
                 roundKeyMode = !roundKeyMode;
                 break;
-            case 9:
+            case 8:
                 print("turned semitones to whole tones!");
                 isConcertina = !isConcertina;
                 if (isConcertina) {
@@ -1258,6 +1216,8 @@ function controlPressed(b) {
                 }
                 makeHexagons();
                 calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
+                break;
+            case 9:
                 break;
         }
     } else if (-b.name <= rows*2) {
@@ -1477,37 +1437,8 @@ function pickScale(pitch, mode) {
                 currentScale[(i + offset) % 12] = scaleMajor[i];
             } else if (mode === "minor") {
                 currentScale[(i + offset) % 12] = scaleMinor[i];
-            } else if (mode === "custom") {
-                currentScale[(i + offset) % 12] = scaleCustom[i];
             }
         }
-    }
-}
-
-
-function toggleNoteInScale(h) {
-    if (currentTuning.length == 12) {
-        //always uses custom scale, change the key to get back to defaults
-        scaleMode = "custom";
-
-        //get position of current name in notenames
-        const offset = noteNames.indexOf(h.pitchName);
-        const keyOffset = noteNames.indexOf(currentKey);
-        print (currentKey + " at " + keyOffset)
-
-        //todo use key for offset and custom scale
-
-        if (scaleCustom[(offset - keyOffset) % 12] === 1) {
-            scaleCustom[(offset - keyOffset) % 12] = 0;
-        } else {
-            scaleCustom[(offset - keyOffset) % 12] = 1;
-            playKey(h);
-        }
-
-        //save the scale so it can be moved around in key later
-        currentScale = scaleCustom.slice();
-    } else {
-        print("Tuning needs to be 12 notes long for this!");
     }
 }
 
@@ -1520,60 +1451,17 @@ function keyColorFromPalette(h, style) {
 
     if (colorMode !== "chromatic") {
 
-        //how to translate the colors?
-        let cTable;
-        let tTable; //for additional colors, check if exists)
+        //table of colors
+        const isOffsetOctave = ((h.octave + currentOctave) % 2 == 0);
+        const colorIds = generateKeyColorTable(isOffsetOctave);
 
-        if (currentTuning.length == 12) {
-            if (colorMode === "major")
-            {
-                cTable = scaleMajor.slice();
-                for (let c = 0; c < cTable.length; c++) {
-                    if ((h.octave + currentOctave) % 2 == 0) {
-                        cTable[c] = (cTable[c] == 1) ? 1 : 10;
-                    } else {
-                        cTable[c] = (cTable[c] == 1) ? 2 : 7;
-                    }
-                }
-            }
-            else if (colorMode === "fifths")
-            {
-                cTable = layoutColorsFifths.slice()
-            }
-        } else {
-            if (currentTuning.length == 19) {cTable = scaleMajor19.slice(); tTable = scaleTop19.slice();}
-            else if (currentTuning.length == 14) {cTable = scaleMajor14.slice();}
-            else if (currentTuning.length == 24) {cTable = scaleMajor24.slice();}
-            else if (currentTuning.length == 31) {cTable = scaleMajor31.slice();}
-            else if (currentTuning == tuning21Astral) {cTable = scalePrimal21.slice();}
-            else {cTable = new Array(currentTuning.length).fill(0);}
+        for (let i = 0; i < colorIds.length; i++) {
+            let id = colorIds[i];
 
-            for (let c = 0; c < cTable.length; c++) {
-                if ((h.octave + currentOctave) % 2 == 0) {
-                    cTable[c] = (cTable[c] == 1) ? 1 : 10;
-                } else {
-                    cTable[c] = (cTable[c] == 1) ? 2 : 7;
-                }
-            }
-
-            if (tTable !== undefined) {
-                for (let t = 0; t < tTable.length; t++) {
-                    if ((h.octave + currentOctave) % 2 == 0) {
-                        if (tTable[t] == 1) cTable[t] = 11;
-                    } else {
-                        if (tTable[t] == 1) cTable[t] = 6;
-                    }
-                }
-            }
-        }
-
-        for (let i = 0; i < cTable.length; i++) {
-            let lookup = cTable[i];
-
-            palette.push(hexColors[lookup]);
-            darkPalette.push(darkHexColors[lookup]);
-            darkerPalette.push(darkerHexColors[lookup]);
-            lightPalette.push(lightHexColors[lookup]);
+            palette.push(hexColors[id]);
+            darkPalette.push(darkHexColors[id]);
+            darkerPalette.push(darkerHexColors[id]);
+            lightPalette.push(lightHexColors[id]);
         }
     } else {
         palette = hexColors.slice();
@@ -1635,12 +1523,52 @@ function drawPointConnector(x1, y1, x2, y2, c1, c2) {
     }
 }
 
+function generateKeyColorTable(isOddOctave) {
+
+    const octaveLength = currentTuning.length;
+
+    // just use fifth layout colors
+    if (octaveLength == 12 && colorMode === "fifths") {
+        return layoutColorsFifths;
+    }
+
+    //base color scheme on scale
+    const oddOctave = {highlight:2, medium:6, default:7};
+    const evenOctave = {highlight:1, medium:11, default:10};
+    const colorScheme = (isOddOctave) ? evenOctave : oddOctave;
+
+    let colorIdTable;
+    let tTable; //may be filled for additional colors
+
+    if (octaveLength == 12) {colorIdTable = scaleMajor.slice();}
+    else if (octaveLength == 19) {colorIdTable = scaleMajor19.slice(); tTable = scaleTop19.slice();}
+    else if (octaveLength == 14) {colorIdTable = scaleMajor14.slice();}
+    else if (octaveLength == 24) {colorIdTable = scaleMajor24.slice();}
+    else if (octaveLength == 31) {colorIdTable = scaleMajor31.slice();}
+    else if (currentTuning == tuning21Astral) {colorIdTable = scalePrimal21.slice();}
+    else {colorIdTable = new Array(octaveLength).fill(0);}
+
+    for (let c = 0; c < colorIdTable.length; c++) {
+
+        let color = colorScheme.default;
+
+        if (colorIdTable[c] == 1) {
+            color = colorScheme.highlight;
+        } else if (tTable !== undefined && tTable[c] == 1) {
+            color = colorScheme.medium;
+        }
+        colorIdTable[c] = color;
+    }
+    return colorIdTable;
+}
+
 
 function renderTuningReference() {
     push();
 
     const cornerOffset = 40;
     translate(width-cornerOffset, cornerOffset);
+    scale(1.1)
 
     //round base
     noStroke();
@@ -1648,179 +1576,134 @@ function renderTuningReference() {
     baseColor.setAlpha(140);
     fill(baseColor);
     ellipse(0, 0, 46);
-    ellipse(0, 0, 46);
-    ellipse(0, 0, 70);
+    ellipse(0, 0, 64);
+    ellipse(0, 0, 66);
 
+
+    //12tet lines
+    strokeWeight(1.2);
+    for (let t = 0; t < 12; t++) {
+        const colorId = (scaleMajor[t] == 1) ? 2 : 7;
+        const lineColor = color(darkHexColors[colorId]);
+        lineColor.setAlpha((pressedButtons.length > 1) ? 90 : 110);
+        stroke(lineColor);
+
+        const angle = map(t, 0, 12, 0, TWO_PI) - HALF_PI;
+        const start = {x: cos(angle) * 6, y: sin(angle) * 6};
+        const end = {x: cos(angle) * 28, y: sin(angle) * 28};
+        line(start.x, start.y, end.x, end.y);
+    }
+
+
+    //outer lines
+    const colorIdTable = generateKeyColorTable(false);
     const octaveLength = currentTuning.length;
+    let lastAngle;
+    let lastLineColor;
+
     for (let i = 0; i < octaveLength; i++) {
 
-        // color per position
-        let cTable = scaleMajor.slice();
-
-        if (octaveLength == 12) {
-            if (colorMode === "fifths") {
-                cTable = layoutColorsFifths;
-            } else {
-                for (let c = 0; c < cTable.length; c++) {
-                    cTable[c] = (cTable[c] == 1) ? 2 : 7;
-                }
-            }
-        } else {
-            if (octaveLength == 19) {cTable = scaleMajor19.slice();}
-            else if (octaveLength == 14) {cTable = scaleMajor14.slice();}
-            else if (octaveLength == 24) {cTable = scaleMajor24.slice();}
-            else if (octaveLength == 31) {cTable = scaleMajor31.slice();}
-            else if (currentTuning == tuning21Astral) {cTable = scalePrimal21.slice();}
-            else {cTable = new Array(octaveLength).fill(0);}
-
-            for (let c = 0; c < cTable.length; c++) {
-                cTable[c] = (cTable[c] == 1) ? 2 : 7;
-            }
-        }
-
-        strokeWeight(1.5);
-
-        //inner lines
-        if (i < 12) {
-            //color
-            let referenceTable = scaleMajor.slice();
-            for (let c = 0; c < referenceTable.length; c++) {
-                referenceTable[c] = (referenceTable[c] == 1) ? 2 : 7;
-            }
-
-            //12tet lines
-            const refIndex = referenceTable[i];
-            const fillDark = color(darkHexColors[refIndex]);
-            fillDark.setAlpha(160);
-            stroke(fillDark);
-            const angle = map(i, 0, 12, 0, TWO_PI) - HALF_PI;
-
-            const x1 = cos(angle) * 10;
-            const y1 = sin(angle) * 10;
-            const x2 = cos(angle) * 22;
-            const y2 = sin(angle) * 22;
-            line(x1, y1, x2, y2);
-        }
-
-        //true lines
-        let fillC;
+        //line color
         const offset = noteNames.indexOf(currentKey);
         const inHoverHexes = pressedButtons.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength));
-        const colorIndex = cTable[i % currentTuning.length];
+        const colorId = colorIdTable[i];
 
         const freq = eval(currentTuning[i]);
         const cents = scaleFreqToCents(freq);
         const angle = map(cents, 0, 1200, 0, TWO_PI) - HALF_PI;
+        const start = {x: cos(angle) * 20, y: sin(angle) * 20};
+        const end = {x: cos(angle) * 28, y: sin(angle) * 28};
 
-        const x1 = cos(angle) * 24;
-        const y1 = sin(angle) * 24;
-        const x2 = cos(angle) * 32;
-        const y2 = sin(angle) * 32;
+        let lineColor;
+
+        //line connecting to last line
+        if (lastAngle !== undefined && inHoverHexes !== undefined) {
+            const last = {x: cos(lastAngle) * 26, y: sin(lastAngle) * 26};
+            const now = {x: cos(angle) * 26, y: sin(angle) * 26};
+            const halfway = {x: (last.x+now.x)/2, y: (last.y+now.y)/2};
+
+            strokeWeight(1.5);
+            stroke(lastLineColor);
+            line(last.x, last.y, halfway.x, halfway.y);
+
+            lineColor = color(lightHexColors[colorId]);
+            lineColor.setAlpha(210);
+            stroke(lineColor);
+            line(halfway.x, halfway.y, now.x, now.y);
+        }
 
         if (inHoverHexes == undefined) {
-            fillC = color(darkHexColors[colorIndex]);
-            fillC.setAlpha(210);
-            stroke(fillC);
-            line(x1, y1, x2, y2);
+            lineColor = color(darkHexColors[colorId]);
+            lineColor.setAlpha((pressedButtons.length > 1) ? 180 : 210);
+            strokeWeight(2);
+            stroke(lineColor);
+            line(start.x, start.y, end.x, end.y);
         } else {
-            fillC = color(lightHexColors[colorIndex]);
-            strokeWeight(2.2);
-            stroke(fillC);
-            line(x1, y1, x2, y2);
+            lineColor = color(lightHexColors[colorId]);
+            strokeWeight(3);
+            stroke(lineColor);
+            line(start.x, start.y, end.x, end.y);
 
-            fillC.setAlpha(50);
-            strokeWeight(5.5);
-            stroke(fillC);
-            line(x1, y1, x2, y2);
+            lineColor.setAlpha(50);
+            strokeWeight(6);
+            stroke(lineColor);
+            line(start.x, start.y, end.x, end.y);
 
-            fillC.setAlpha(20);
+            lineColor.setAlpha(20);
             strokeWeight(10);
-            stroke(fillC);
-            line(x1, y1, x2, y2);
+            stroke(lineColor);
+            line(start.x, start.y, end.x, end.y);
+
+            lastAngle = angle;
+            lastLineColor = color(lightHexColors[colorId]);
+            lastLineColor.setAlpha(210);
         }
-        
-
-        
     }
-
-
     pop();
+}
 
-    // const octaveLength = currentTuning.length;
-// 
-    // let getXValue = (fr) => map(scaleFreqToCents(fr+1), 0, 1200, startX, endX);
-// 
-    // for (let j = 0; j < 12; j++) {
-        // const compareFreq = 2 ** (j/12) - 1;
-        // const xCompareValue = getXValue(compareFreq);
-// 
-        // gradientCircle(
-            // lerpColor(color("black"), color("#3E1C87"), 0.2),
-            // 0,
-            // lerpColor(color("black"), color("#3E1C87"), 0.7),
-            // 16,
-            // xCompareValue,
-            // startY, 5);
-    // }
-// 
-    // for (let i = 0; i < octaveLength; i++) {
-        // let freq = eval(currentTuning[i]) - 1;
-// 
-        // let size = 7;
-        // push();
-        // noStroke();
-        // let fillC = color("white");
-// 
-        // const offset = noteNames.indexOf(currentKey);
-// 
-        // const inKlickedHexes = pressedButtons.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength) && t.countdown > 0);
-        // const inHoverHexes = pressedButtons.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength));
-// 
-        // if (inKlickedHexes == undefined) {
-            // let darkHexColor;
-            // let cTable;
-// 
-            // if (octaveLength == 12) {
-                // cTable = scaleMajor.slice();
-                // for (let c = 0; c < cTable.length; c++) {
-                    // cTable[c] = (cTable[c] == 1) ? 2 : 7;
-                // }
-// 
-                // if (colorMode === "fifths") {cTable = layoutColorsFifths;}
-// 
-            // } else {
-                // if (octaveLength == 19) {cTable = scaleMajor19.slice();}
-                // else if (octaveLength == 14) {cTable = scaleMajor14.slice();}
-                // else if (octaveLength == 24) {cTable = scaleMajor24.slice();}
-                // else if (octaveLength == 31) {cTable = scaleMajor31.slice();}
-                // else if (currentTuning == tuning21Astral) {cTable = scalePrimal21.slice();}
-                // else {cTable = new Array(octaveLength).fill(0);}
-// 
-                // for (let c = 0; c < cTable.length; c++) {
-                    // cTable[c] = (cTable[c] == 1) ? 2 : 7;
-                // }
-            // }
-// 
-            // const colorIndex = cTable[i % currentTuning.length];
-            // darkHexColor = color(darkHexColors[colorIndex]);
-// 
-            // fillC = darkHexColor;
-            // fillC.setAlpha(220);
-        // }
-// 
-        // if (inHoverHexes !== undefined) {
-            // size = 12;
-        // }
-// 
-        // const xValue = getXValue(freq);
-// 
-        // noStroke();
-        // fill(fillC);
-        // ellipse(xValue, startY, size);
-// 
-        // pop();
-    // }
-    // pop();
+function updateControlStates() {
+    menuButtons = [
+        {name:"Move Key " + currentKey, onCondition:(interactionMode === "key")},
+        {name:capitalize(scaleMode), onCondition:undefined},
+        {name:"Octave "+ currentOctave, onCondition:undefined},
+        {name:"Note Labels", onCondition:(labelStyle === "notes")},
+        {name:"Rainbow", onCondition:(colorMode === "fifths")},
+        {name:"Swap X/Y", onCondition:gridXYswapped},
+        {name:"Round Keys", onCondition:roundKeyMode},
+        {name:"Concertina", onCondition:isConcertina},
+        {name:"", onCondition:undefined},
+
+        {name:"EDO 12", onCondition:(tuneMode === "12tet")},
+        {name:"JI 12", onCondition:(tuneMode === "simple")},
+        {name:"Mode 12", onCondition:(tuneMode === "harmonic")},
+        {name:"/19 Novem", onCondition:(tuneMode === "novemdecimal")},
+        {name:"/16 NEJI", onCondition:(tuneMode === "16neji")},
+        {name:"/11 Undec", onCondition:(tuneMode === "undecimal")},
+        {name:"/11 Snow", onCondition:(tuneMode === "11neji")},
+        {name:"", onCondition:undefined},
+        {name:"", onCondition:undefined},
+
+        {name:"EDO 19", onCondition:(tuneMode === "19tet")},
+        {name:"JI 31", onCondition:(tuneMode === "31ji")},
+        {name:"Astral 21", onCondition:(tuneMode === "21astral")},
+        {name:"EDO 24", onCondition:(tuneMode === "24tet")},
+        {name:"JI 24", onCondition:(tuneMode === "24ji")},
+        {name:"EDO 14", onCondition:(tuneMode === "14tet")},
+        {name:"", onCondition:undefined},
+        {name:"", onCondition:undefined},
+        {name:"", onCondition:undefined},
+
+        {name:"Piano", onCondition:(currentInstrument === "piano")},
+        {name:"Rhodes", onCondition:(currentInstrument === "rhodes")},
+        {name:"Organ", onCondition:(currentInstrument === "organ")},
+        {name:"Harp", onCondition:(currentInstrument === "harp")},
+        {name:"Sawtooth", onCondition:(currentInstrument === "sawtooth")},
+        {name:"Square", onCondition:(currentInstrument === "square")},
+        {name:"Triangle", onCondition:(currentInstrument === "triangle")},
+        {name:"Sine", onCondition:(currentInstrument === "sine")},
+        {name:"", onCondition:undefined}
+    ];
 }
 
 class ButtonObj {
@@ -1913,8 +1796,8 @@ class ButtonObj {
         //button states
         switch (state) {
             case "hidden":
-                fill(backgroundColor);
-                noStroke();
+                fill("#17074450");
+                controlShape(this.x, this.y, this.r * 1.7);
                 break;
             case "klicked":
                 fill(buttonBaseColor);
@@ -1932,11 +1815,20 @@ class ButtonObj {
                 controlShape(this.x, this.y, this.r * 1.57);
                 break;
             case "idle":
-                fill("#170744d0");
+                //more states than on/off
+                fill("#170744");
                 controlShape(this.x, this.y, this.r * 1.7);
+                fill("#3E1C8790");
+                noStroke();
+                triangle(this.x + 70, this.y, this.x + 55, this.y + 12, this.x + 55, this.y - 12);
+                triangle(this.x - 70, this.y, this.x - 55, this.y + 12, this.x - 55, this.y - 12);
                 break;
             case "active":
                 fill("#3E1C87");
+                controlShape(this.x, this.y, this.r * 1.7);
+                break;
+            case "inactive":
+                fill("#170744");
                 controlShape(this.x, this.y, this.r * 1.7);
                 break;
             case "activehover":
@@ -2027,11 +1919,10 @@ class ButtonObj {
         }
     }
 
-
     renderControlVariant() {
         const inHoverButtons = pressedButtons.find(t => t.name === this.name);
 
-        if (rControlNames[-this.name] === "") {
+        if (menuButtons[-this.name - 1] !== undefined && menuButtons[-this.name - 1].name === "") {
             this.renderControlType("hidden");
         } else if (this.countdown > 0) {
             this.renderControlType("klicked");
@@ -2039,6 +1930,8 @@ class ButtonObj {
             this.renderControlType("activehover");
         } else if (this.isControlOn) {
             this.renderControlType("active");
+        } else if (this.isControlOn === false) {
+            this.renderControlType("inactive");
         } else if (inHoverButtons !== undefined) {
             this.renderControlType("hover");
         } else if (this.secondaryOn){
@@ -2075,54 +1968,13 @@ class ButtonObj {
     }
 
     get isControlOn() {
-        const onConditions = [
-            false,
-            false,
-            (interactionMode === "key"),
-            (interactionMode === "edit"),
-            false,
-            false,
-            gridXYswapped,
-            false,
-            isConcertina,
-
-            (tuneMode === "12tet"),
-            (tuneMode === "simple"),
-            (tuneMode === "harmonic"),
-            (tuneMode === "novemdecimal"),
-            (tuneMode === "16neji"),
-            (tuneMode === "undecimal"),
-            (tuneMode === "11neji"),
-            false, 
-            false,
-
-            (tuneMode === "19tet"),
-            (tuneMode === "31ji"),
-            (tuneMode === "21astral"),
-            (tuneMode === "24tet"),
-            (tuneMode === "24ji"),
-            (tuneMode === "14tet"),
-            false,
-            false,
-            false,
-
-            (currentInstrument === "piano"),
-            (currentInstrument === "rhodes"),
-            (currentInstrument === "organ"),
-            (currentInstrument === "harp"),
-            (currentInstrument === "sawtooth"),
-            (currentInstrument === "square"),
-            (currentInstrument === "triangle"),
-            (currentInstrument === "sine"),
-            false
-        ]
-
-        for (let i = 0; i < onConditions.length; i++) {
+        for (let i = 0; i < menuButtons.length; i++) {
             if (i == -this.name-1) {
-                return onConditions[i];
+                return menuButtons[i].onCondition;
             }
         }
-        return true;
+        //if checking number that's too big
+        return undefined;
     }
 
 
@@ -2133,7 +1985,7 @@ class ButtonObj {
         fill(stateColor);
 
         textSize(19);
-        text(rControlNames[-this.name-1], this.x, this.y);
+        text(menuButtons[-this.name-1].name, this.x, this.y);
         pop();
     }
 
@@ -2237,14 +2089,14 @@ function findNearestButton(touch, arr) {
 }
 
 
-function keyShape(x, y, r, fillColor) {
+function keyShape(x, y, r, lineColorolor) {
     push()
-    fill(fillColor)
+    fill(lineColorolor)
     if (roundKeyMode === true) {
         ellipse(x, y, r * 0.99);
     } else {
         strokeWeight(r * 0.3);
-        stroke(fillColor);
+        stroke(lineColorolor);
         strokeJoin(ROUND)
         if (isConcertina) hexagon(x, y, r * 0.38, 1/2 * PI);
         else hexagon(x, y, r * 0.38, 0);
@@ -2253,7 +2105,7 @@ function keyShape(x, y, r, fillColor) {
 }
 
 function controlShape(x, y, r) {
-    rect(x, y, r * 0.7, r * 0.4, r * 0.1);
+    rect(x, y, r * 0.85, r * 0.4, r * 0.1);
 }
 
 function hexagon(x, y, r, angle) {
