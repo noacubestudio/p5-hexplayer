@@ -383,9 +383,9 @@ let currentOctave = 0;
 let labelStyle = "intervals";
 
 
-// wip: make these not quite be hexagons, only store swipe data here etc.
 let pressedButtons = new Array;
 let lastPressedButtons = new Array;
+let sustainedKeys = new Array;
 
 
 // permanent key grid
@@ -462,7 +462,7 @@ function preload() {
             A4: "piano440.mp3",
             A5: "piano880.mp3"
         },
-        release: 1,
+        release: 1.5,
         baseUrl: "sounds/",
     }).toDestination();
 
@@ -845,7 +845,7 @@ function reactToPressedControls() {
     pressedButtons = [];
 
     for (let i = 0; i < ongoingTouches.length; i++) {
-        nearestHex = findNearestButton(ongoingTouches[i], controlsArr);
+        const nearestHex = findNearestButton(ongoingTouches[i], controlsArr);
         if (nearestHex !== undefined) {
             pressedButtons.push(nearestHex);
         }
@@ -873,7 +873,7 @@ function reactToPressedKeys() {
     pressedButtons = [];
 
     for (let i = 0; i < ongoingTouches.length; i++) {
-        nearestHex = findNearestButton(ongoingTouches[i], keyArr)
+        const nearestHex = findNearestButton(ongoingTouches[i], keyArr);
         if (nearestHex !== undefined) {
             pressedButtons.push(nearestHex);
         }
@@ -883,7 +883,7 @@ function reactToPressedKeys() {
     if (penPressure > 0.0 && menuIsOpen == false) {
         reactToPen();
     } else {
-        reactToTouch();
+        keyboardReactToTouch();
     }
 
     // when last finger or pen is lifted
@@ -963,19 +963,20 @@ function reactToPen() {
 }
 
 
-function reactToTouch() {
-    //only when hexagons are shown
+function keyboardReactToTouch() {
+    // every key stores:
+    // .lastTouch.id and .lastTouch.type
 
-    //clean up duplicates and sort
+    // clean up duplicates and sort
     pressedButtons = uniqByKeepFirst(pressedButtons, p => p.name);
     pressedButtons.sort((a, b) => a.name - b.name);
 
-    //find unique items in each
+    // find unique items in each
     const attackedKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) === undefined);
     const releasedKeys = lastPressedButtons.filter(p => pressedButtons.find(l => {return l.name == p.name}) === undefined);
     const sameKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) !== undefined);
 
-    //find key and press
+    // find key and press
     for (let play = 0; play < attackedKeys.length; play++) {
         const playHex = attackedKeys[play];
         keyArr.forEach((h) => {
@@ -983,18 +984,46 @@ function reactToTouch() {
                 keypressed(h);
             }
         });
+        //remove sustained keys one semitone higher or lower from the playHex
+        filterSustainedKeys("inSemiToneRange", playHex);
     }
 
-    //release audio of key and reset drag values
-    for (let endplay = 0; endplay < releasedKeys.length; endplay++) {
-        const removedHex = releasedKeys[endplay];
-        keyArr.forEach((h) => {
-            if (h.name === removedHex.name) {
-                if (interactionMode === "play") {
-                    playKey(h, "release");
+    // release audio of key
+    if (interactionMode === "play") {
+
+        for (let r = 0; r < releasedKeys.length; r++) {
+            const removedHex = releasedKeys[r];
+
+            //see if finger still used (only dragged off the hexagon)
+            let fingerStillDown = false;
+            ongoingTouches.forEach((o) => {
+                if (o.identifier === removedHex.lastTouch.id) {
+                    fingerStillDown = true;
                 }
+            });
+
+            if (fingerStillDown) {
+                // push to list of sustained keys, that will be released
+                print("Sustaining " + removedHex.midiName, removedHex.lastTouch.id)
+                sustainedKeys.push(removedHex);
+                // wip, currently not needed...
+                // keyArr.forEach((h) => {
+                //     if (h.name === removedHex.name) {
+                //         keysustained(h);
+                //     }
+                // });
+
+            } else {
+                // actually release the note
+                keyArr.forEach((h) => {
+                    if (h.name === removedHex.name) {
+                        playKey(h, "release");
+                    }
+                });
             }
-        });
+        }
+        // find sustained keys with index that doesn't match any current index, remove them
+        filterSustainedKeys("touchIdGone");
     }
 
     if (interactionMode === "play" && instrumentType === "synth") {
@@ -1011,21 +1040,73 @@ function reactToTouch() {
 }
 
 
+function filterSustainedKeys (mode, compareHex) {
+    if (sustainedKeys.length > 0) {
+
+        let stillSustained = [];
+        let stopSustained = [];
+
+        if (mode === "inSemiToneRange") {
+            sustainedKeys.forEach((s) => {
+                if (s.midiName < compareHex.midiName + 2 &&
+                    s.midiName > compareHex.midiName - 2 &&
+                    s.midiName !== compareHex.midiName) {
+                    print("Was in range: " + s.midiName, compareHex.midiName)
+                    stopSustained.push(s);
+                } else {
+                    stillSustained.push(s);
+                }
+            });
+        } else if (mode === "touchIdGone") {
+            sustainedKeys.forEach((s) => {
+
+                let sustainFingerStillPresent = false
+                ongoingTouches.forEach((o) => {
+                    if (s.lastTouch.id === o.identifier) {
+                        sustainFingerStillPresent = true;
+                    }
+                });
+
+                if (!sustainFingerStillPresent) {
+                    print("Belonged to finger that was lifted: " + s.lastTouch.id)
+                    stopSustained.push(s);
+                } else {
+                    stillSustained.push(s);
+                }
+            });
+        }
+
+        sustainedKeys = stillSustained.slice();
+        // release the rest
+        stopSustained.forEach((n) => {
+            //print("Stopping key " + n.midiName, n.lastTouch.id)
+            keyArr.forEach((h) => {
+                if (h.midiName === n.midiName) {
+                    playKey(h, "release");
+                }
+            });
+        });
+    }
+}
+
+
 function keypressed(h) {
 
-    // change key with to note, or change scale
     if (interactionMode === "key") {
-
+        // change key with to note, or change scale
         h.countdown = cooldownFrames;
         currentKey = h.pitchName;
         pickScale(currentKey, scaleMode);
         print("Key mode current key: " + currentKey)
-    }
-
-    // play the note normally
-    else {
+    } else {
+        // play the note normally
         playKey(h);
     }
+}
+
+function keySustained(h) {
+    // this key is still playing.
+    //could do something here, WIP.
 }
 
 
@@ -1606,6 +1687,7 @@ function renderTuningReference() {
         //line color
         const offset = noteNames.indexOf(currentKey);
         const inHoverHexes = pressedButtons.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength));
+        const inSustainedKeys = sustainedKeys.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength));
         const colorId = colorIdTable[i];
 
         const freq = eval(currentTuning[i]);
@@ -1617,7 +1699,7 @@ function renderTuningReference() {
         let lineColor;
 
         //line connecting to last line
-        if (lastAngle !== undefined && inHoverHexes !== undefined) {
+        if (lastAngle !== undefined && (inHoverHexes !== undefined || inSustainedKeys !== undefined)) {
             const last = {x: cos(lastAngle) * 26, y: sin(lastAngle) * 26};
             const now = {x: cos(angle) * 26, y: sin(angle) * 26};
             const halfway = {x: (last.x+now.x)/2, y: (last.y+now.y)/2};
@@ -1632,7 +1714,7 @@ function renderTuningReference() {
             line(halfway.x, halfway.y, now.x, now.y);
         }
 
-        if (inHoverHexes == undefined) {
+        if (inHoverHexes == undefined && inSustainedKeys == undefined) {
             lineColor = color(darkHexColors[colorId]);
             lineColor.setAlpha((pressedButtons.length > 1) ? 180 : 210);
             strokeWeight(2);
@@ -1733,13 +1815,17 @@ class ButtonObj {
         this.octave = floor(this.midiName / currentTuning.length) - 2;
     }
 
-    renderKeyType(state) {
+    renderKeyType(state, strength) {
         push();
         noStroke();
 
-        let innerColor = color(keyColorFromPalette(this, "dark"));
-        let midColor = lerpColor(innerColor, color("black"), 0.2);
-        let outerColor = color(keyColorFromPalette(this, "darker"));
+        const highlightColor = color(keyColorFromPalette(this, "light"));
+        const innerColor = color(keyColorFromPalette(this, "dark"));
+        const outerColor = color(keyColorFromPalette(this, "darker"));
+
+        const brighterColor = lerpColor(color("#FFFFFF"), highlightColor, 0.9);
+        const midColor = lerpColor(innerColor, outerColor, 0.3);
+        const darkerColor = lerpColor(innerColor, outerColor, 0.5);
 
         //note states
         switch (state) {
@@ -1753,8 +1839,15 @@ class ButtonObj {
             case "hover":
                 keyShape(this.x, this.y, this.r * 1.7, midColor);
                 gradientCircle(
-                    color(keyColorFromPalette(this, "light")), 0,
+                    highlightColor, 0,
                     midColor, this.r * 1.45,
+                    this.x, this.y, 18);
+                break;
+            case "sustained":
+                keyShape(this.x, this.y, this.r * 1.7, darkerColor);
+                gradientCircle(
+                    highlightColor, 0,
+                    darkerColor, this.r * 1.45,
                     this.x, this.y, 18);
                 break;
             case "idle":
@@ -1780,8 +1873,8 @@ class ButtonObj {
                 break;
             case "glow":
                 gradientCircle(
-                    color(keyColorFromPalette(this, "light") + "06"), this.r * 0.5,
-                    color(keyColorFromPalette(this, "light") + "06"), this.r * 2.6,
+                    color(keyColorFromPalette(this, "light") + strength), this.r * 0.5,
+                    color(keyColorFromPalette(this, "light") + strength), this.r * 2.6,
                     this.x, this.y, 14);
                 break;
         }
@@ -1871,7 +1964,7 @@ class ButtonObj {
         this.renderKeyText();
 
         noStroke();
-        if (state === "hover") {
+        if (state === "hover" || state === "sustained") {
             fill("white");
         } else if (state === "differentOctave"){
             const base = color(keyColorFromPalette(this, "light"));
@@ -1896,6 +1989,7 @@ class ButtonObj {
         if (menuIsOpen) {return "idle";};
         const inKlickedHexes = pressedButtons.find(t => t.midiName === this.midiName && t.countdown > 0);
         const inHoverHexes = pressedButtons.find(t => t.midiName === this.midiName);
+        const inSustainedKeys = sustainedKeys.find(t => t.midiName === this.midiName);
 
         //also highlight same note in different octave.
         //in concertina layout, highlight the semitone instead.
@@ -1912,6 +2006,8 @@ class ButtonObj {
             return "hover";
         } else if (this.pitchName === currentKey && interactionMode === "key") {
             return "selected";
+        } else if (inSustainedKeys !== undefined) {
+            return "sustained";
         } else if (differentOctaveHexes !== undefined) {
             return "differentOctave";
         } else {
@@ -1944,9 +2040,15 @@ class ButtonObj {
 
     drawKeyGlow() {
         const inKlickedHexes = pressedButtons.find(t => t.midiName === this.midiName);
+        if (inKlickedHexes !== undefined ) {
+            this.renderKeyType("glow", "06");
+            return;
+        }
 
-        if (inKlickedHexes !== undefined) {
-            this.renderKeyType("glow");
+        const inSustainedKeys = sustainedKeys.find(t => t.midiName === this.midiName);
+        if (inSustainedKeys !== undefined) {
+            this.renderKeyType("glow", "03");
+            return;
         }
     }
 
@@ -2082,10 +2184,12 @@ function findNearestButton(touch, arr) {
 
     if (closestButton != undefined) {
         //print("Found " + closestButton.distanceToTouch(touch));
+        closestButton.lastTouch = {id:touch.identifier, type:touch.interactionType};
+        //print(closestButton.lastTouch);
         return closestButton;
-    } else {
-        //print("No hexagon found in reach!");
     }
+    //print("No hexagon found in reach!");
+
 }
 
 
