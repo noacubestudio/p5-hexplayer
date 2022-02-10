@@ -382,10 +382,11 @@ let currentKey = "C"; //wip store as numerical offset instead
 let currentOctave = 0;
 let labelStyle = "intervals";
 
-
+let topKeyOctave = 1; //the octave the last pressed key is in, used for recoloring the reference
 let pressedButtons = new Array;
 let lastPressedButtons = new Array;
 let sustainedKeys = new Array;
+let orderedKeys = new Array;
 
 
 // permanent key grid
@@ -967,14 +968,16 @@ function keyboardReactToTouch() {
     // every key stores:
     // .lastTouch.id and .lastTouch.type
 
-    // clean up duplicates and sort
+    // clean up duplicates if needed
     pressedButtons = uniqByKeepFirst(pressedButtons, p => p.name);
-    pressedButtons.sort((a, b) => a.name - b.name);
 
     // find unique items in each
     const attackedKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) === undefined);
     const releasedKeys = lastPressedButtons.filter(p => pressedButtons.find(l => {return l.name == p.name}) === undefined);
     const sameKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) !== undefined);
+
+    // if multipe keys are added in one frame, sort them by note height
+    attackedKeys.sort((a, b) => a.name - b.name);
 
     // find key and press
     for (let play = 0; play < attackedKeys.length; play++) {
@@ -984,6 +987,9 @@ function keyboardReactToTouch() {
                 keypressed(h);
             }
         });
+        //add attacked keys in order to a list
+        orderedKeys.push(playHex);
+
         //remove sustained keys one semitone higher or lower from the playHex
         filterSustainedKeys("inSemiToneRange", playHex);
     }
@@ -1002,16 +1008,10 @@ function keyboardReactToTouch() {
                 }
             });
 
-            if (fingerStillDown) {
-                // push to list of sustained keys, that will be released
+            if (fingerStillDown && removedHex.octave + currentOctave > 1) {
+                // push to list of sustained keys
                 print("Sustaining " + removedHex.midiName, removedHex.lastTouch.id)
                 sustainedKeys.push(removedHex);
-                // wip, currently not needed...
-                // keyArr.forEach((h) => {
-                //     if (h.name === removedHex.name) {
-                //         keysustained(h);
-                //     }
-                // });
 
             } else {
                 // actually release the note
@@ -1020,6 +1020,8 @@ function keyboardReactToTouch() {
                         playKey(h, "release");
                     }
                 });
+                // remove from list of all ordered keys
+                orderedKeys = orderedKeys.filter(o => o.name !== removedHex.name);
             }
         }
         // find sustained keys with index that doesn't match any current index, remove them
@@ -1077,6 +1079,7 @@ function filterSustainedKeys (mode, compareHex) {
         }
 
         sustainedKeys = stillSustained.slice();
+
         // release the rest
         stopSustained.forEach((n) => {
             //print("Stopping key " + n.midiName, n.lastTouch.id)
@@ -1085,6 +1088,9 @@ function filterSustainedKeys (mode, compareHex) {
                     playKey(h, "release");
                 }
             });
+
+            // remove from list of all ordered keys
+            orderedKeys = orderedKeys.filter(o => o.name !== n.name);
         });
     }
 }
@@ -1666,7 +1672,7 @@ function renderTuningReference() {
     for (let t = 0; t < 12; t++) {
         const colorId = (scaleMajor[t] == 1) ? 2 : 7;
         const lineColor = color(darkHexColors[colorId]);
-        lineColor.setAlpha((pressedButtons.length > 1) ? 90 : 110);
+        lineColor.setAlpha((orderedKeys.length > 0) ? 60 : 110);
         stroke(lineColor);
 
         const angle = map(t, 0, 12, 0, TWO_PI) - HALF_PI;
@@ -1678,69 +1684,83 @@ function renderTuningReference() {
 
     //outer lines
     const colorIdTable = generateKeyColorTable(false);
+    const offsetColorIdTable = generateKeyColorTable(true);
     const octaveLength = currentTuning.length;
-    let lastAngle;
-    let lastLineColor;
+    const offset = noteNames.indexOf(currentKey);
 
     for (let i = 0; i < octaveLength; i++) {
 
-        //line color
-        const offset = noteNames.indexOf(currentKey);
-        const inHoverHexes = pressedButtons.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength));
-        const inSustainedKeys = sustainedKeys.find(t => (t.midiName % octaveLength) === ((i+offset) % octaveLength));
-        const colorId = colorIdTable[i];
-
+        if (pressedButtons.length > 0) {
+            topKeyOctave = pressedButtons[pressedButtons.length-1].octave;
+        }
+        const colorTable = ((topKeyOctave + currentOctave) % 2 == 1) ? colorIdTable[i] : offsetColorIdTable[i];
         const freq = eval(currentTuning[i]);
         const cents = scaleFreqToCents(freq);
         const angle = map(cents, 0, 1200, 0, TWO_PI) - HALF_PI;
         const start = {x: cos(angle) * 20, y: sin(angle) * 20};
         const end = {x: cos(angle) * 28, y: sin(angle) * 28};
-
         let lineColor;
 
-        //line connecting to last line
-        if (lastAngle !== undefined && (inHoverHexes !== undefined || inSustainedKeys !== undefined)) {
-            const last = {x: cos(lastAngle) * 26, y: sin(lastAngle) * 26};
-            const now = {x: cos(angle) * 26, y: sin(angle) * 26};
+        lineColor = color(darkHexColors[colorTable]);
+        lineColor.setAlpha((orderedKeys.length > 0) ? 100 : 210);
+        strokeWeight(2);
+        stroke(lineColor);
+        line(start.x, start.y, end.x, end.y);
+    }
+
+    //draw the lines between the segments in order of playing
+    let lastKeyAngle;
+    let lastKeyColor;
+    let lastKeyOctave;
+    strokeWeight(1);
+
+    orderedKeys.forEach((o) => {
+
+        const index = ((o.midiName-offset) % octaveLength);
+        const freq = eval(currentTuning[index]);
+        const cents = scaleFreqToCents(freq);
+        const keyAngle = map(cents, 0, 1200, 0, TWO_PI) - HALF_PI;
+        const keyOctave = map(o.octave, 0, 6, 18, 28, true);
+        const colorTable = ((o.octave + currentOctave) % 2 == 1) ? colorIdTable[index] : offsetColorIdTable[index];
+        const keyColor = color(lightHexColors[colorTable]);
+
+        const now = {x: cos(keyAngle) * keyOctave, y: sin(keyAngle) * keyOctave};
+
+        // dot
+        noStroke();
+        fill(keyColor);
+        ellipse(now.x, now.y, 3);
+
+        keyColor.setAlpha(50);
+        fill(keyColor);
+        ellipse(now.x, now.y, 6);
+
+        keyColor.setAlpha(20);
+        fill(keyColor);
+        ellipse(now.x, now.y, 10);
+        keyColor.setAlpha(210);
+
+        // line between previous and this key
+        if (lastKeyAngle !== undefined) {
+
+            //line between the two angles
+            const last = {x: cos(lastKeyAngle) * lastKeyOctave, y: sin(lastKeyAngle) * lastKeyOctave};
             const halfway = {x: (last.x+now.x)/2, y: (last.y+now.y)/2};
 
-            strokeWeight(1.5);
-            stroke(lastLineColor);
+            keyColor.setAlpha(210);
+
+            stroke(lastKeyColor);
             line(last.x, last.y, halfway.x, halfway.y);
 
-            lineColor = color(lightHexColors[colorId]);
-            lineColor.setAlpha(210);
-            stroke(lineColor);
+            stroke(keyColor);
             line(halfway.x, halfway.y, now.x, now.y);
         }
 
-        if (inHoverHexes == undefined && inSustainedKeys == undefined) {
-            lineColor = color(darkHexColors[colorId]);
-            lineColor.setAlpha((pressedButtons.length > 1) ? 180 : 210);
-            strokeWeight(2);
-            stroke(lineColor);
-            line(start.x, start.y, end.x, end.y);
-        } else {
-            lineColor = color(lightHexColors[colorId]);
-            strokeWeight(3);
-            stroke(lineColor);
-            line(start.x, start.y, end.x, end.y);
+        lastKeyAngle = keyAngle;
+        lastKeyColor = keyColor;
+        lastKeyOctave = keyOctave;
+    });
 
-            lineColor.setAlpha(50);
-            strokeWeight(6);
-            stroke(lineColor);
-            line(start.x, start.y, end.x, end.y);
-
-            lineColor.setAlpha(20);
-            strokeWeight(10);
-            stroke(lineColor);
-            line(start.x, start.y, end.x, end.y);
-
-            lastAngle = angle;
-            lastLineColor = color(lightHexColors[colorId]);
-            lastLineColor.setAlpha(210);
-        }
-    }
     pop();
 }
 
@@ -2167,11 +2187,12 @@ function dragDistanceMap(center, start, drag, min, max) {
 
 function findNearestButton(touch, arr) {
 
-    //minimum distance is a weird way to measure which button is hit, wip
+    //minimum distance is a weird way to measure which button is hit
+    //WIP when the menu isn't open, do a different check instead that compares which hex is closest
     const minDistance = (isConcertina) ? gridSizeY * 0.85 : gridSizeX * 0.85;
     let closestButton;
 
-    if (!mouseUsed && touch != undefined) {
+    if (!mouseUsed && touch !== undefined) {
         arr.forEach((h) => {
             if (h.distanceToTouch(touch) < minDistance) {closestButton = h;}
         });
@@ -2182,7 +2203,7 @@ function findNearestButton(touch, arr) {
         });
     }
 
-    if (closestButton != undefined) {
+    if (closestButton !== undefined) {
         //print("Found " + closestButton.distanceToTouch(touch));
         closestButton.lastTouch = {id:touch.identifier, type:touch.interactionType};
         //print(closestButton.lastTouch);
@@ -2258,16 +2279,15 @@ function cornerText() {
 
     let playText = currentKey + (currentOctave) + "–" + capitalize(tuneMode) + " ";
     if (instrumentType == "synth") {
-        playText += Object.values(activeKeys).length + " - ";
+        playText += Object.values(activeKeys).length;
     }
-    if (pressedButtons.length > 0 && !menuIsOpen) {
-        // show which buttons are pressed
-        for (let b = 0; b < pressedButtons.length; b++) {
-            const button = pressedButtons[b];
-            playText += (button.pitchName + "(" + (button.octave + currentOctave)) + ") ";
-        }
+
+    playText += "  ";
+
+    for (let o = 0; o < orderedKeys.length; o++) {
+        const keyName = orderedKeys[o].pitchName + ":" +orderedKeys[o].midiName;
+        playText += "  " + keyName + " ";
     }
-    //playText += " " + drawMinDuration;
 
     const xOffset = 15;
     const yOffset = height - 18;
