@@ -89,10 +89,9 @@ const intervalNames19tet = [
 const intervalNames14tet = [
     "1", "1*", "2", "2*", "3", "3*", "4", "4*", "5", "5*", "6", "6*", "7", "7*",
 ];
-
-// const intervalNames19tet = [
-//    "1", "a1", "m2", "2", "s3", "m3", "3", "a3", "4", "tt", "TT", "5", "a5", "m6", "6", "M6", "m7", "7", "d8",
-// ];
+const octaveSymbols = [
+    "⁰","¹","²","³","⁴","⁵","⁶","⁷","⁸","⁹",
+];
 
 const intervalNames24tet = [
     "1", "-2", "m2", "~2", "2", "-3", "m3", "~3", "3", "+3", "4", "+4", "TT", "-5", "5", "-6", "m6", "~6", "6", "-7", "m7", "~7", "7", "-8",
@@ -383,7 +382,7 @@ let currentTuning = tuning12tet;
 let currentScale = scaleChromatic.slice();
 let currentKey = "C"; // wip store as numerical offset instead
 let currentOctave = 0;
-let labelStyle = "intervals";
+let labelStyle = "notes";
 
 // current keys
 let topKeyOctave = 1; // the octave the last pressed key is in, used for recoloring the reference
@@ -519,8 +518,8 @@ function setup() {
     makeHexagons();
 
     // create buttons with negative IDs
-    const xOffset = 740; const yOffset = 110;
-    const bWidth = gridSizeX * 3; const bHeight = gridSizeY * 1.7;
+    const xOffset = 780; const yOffset = 130;
+    const bWidth = gridSizeX * 2.9; const bHeight = gridSizeY * 1.3;
     const rows = 9;
     for (let b = 0; b < rows; b++) {
         controlsArr.push(new ButtonObj(xOffset + bWidth*0, yOffset + b*bHeight, gridSizeX, "control", -(b + 1)));
@@ -743,11 +742,11 @@ function runKeys() {
         });
 
         fill(optionsBG);
-        rect(975, 415, 320, 350, 20);
+        rect(1006, 365, 308, 274, 20);
         optionsBG.setAlpha(80);
         background(optionsBG);
 
-        // update control states
+        // updat45e control states
         updateControlStates();
 
         controlsArr.forEach((b) => {
@@ -1245,156 +1244,6 @@ function controlPressed(b) {
     if (-b.name <= rows) {
         switch (-b.name) {
             case 1:
-                print("Change key");
-                if (interactionMode === "key") {
-                    interactionMode = "play";
-                } else {
-                    interactionMode = "key";
-                }
-                break;
-            case 2:
-                print("Changed scale");
-    
-                if (scaleMode === "major") {
-                    scaleMode = "minor";
-                } else if (scaleMode === "minor") {
-                    scaleMode = "chromatic";
-                } else if (scaleMode === "chromatic") {
-                    scaleMode = "major";
-                } else {
-                    scaleMode = "chromatic";
-                }
-                pickScale(currentKey, scaleMode);
-                break;
-            case 3:
-                print("Changed octave");
-                currentOctave++;
-                if (currentOctave == 3) {currentOctave = 0;}
-                break;
-            case 4:
-                print("Changed label style");
-                if (labelStyle === "notes") {labelStyle = "intervals";}
-                else {labelStyle = "notes";}
-                break;
-            case 5:
-                print("Changed color theme!");
-                if (colorMode === "fifths") {colorMode = "major";}
-                else {colorMode = "fifths";}
-                // {colorMode = "chromatic";}
-                break;
-            case 6:
-                print("Switched to different midi to grid XY layout");
-                gridXYswapped = !gridXYswapped;
-                if (gridXYswapped) {
-                    isConcertina = false;
-                }
-                calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
-                break;
-            case 7:
-                print("switched shape of keys!");
-                roundKeyMode = !roundKeyMode;
-                break;
-            case 8:
-                print("turned semitones to whole tones!");
-                isConcertina = !isConcertina;
-                if (isConcertina) {
-                    gridXYswapped = false;
-                }
-                makeHexagons();
-                calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
-                break;
-            case 9:
-                break;
-        }
-    } else if (-b.name <= rows*2) {
-        switch (-b.name - rows) {
-            case 1:
-                print("Switched to 12 tone equal temperament");
-                tuneMode = "12tet";
-                currentTuning = tuning12tet;
-                break;
-            case 2:
-                print("Switched to simple 12 tone tuning");
-                tuneMode = "simple";
-                currentTuning = tuningSimple;
-                break;
-            case 3:
-                print("Switched to 12 tone Harmonic series segment");
-                tuneMode = "harmonic";
-                currentTuning = tuningHarmonic;
-                break;
-            case 4:
-                print("Switched to 12 tone Novemdecimal");
-                tuneMode = "novemdecimal";
-                currentTuning = tuningNovemdecimal;
-                break;
-            case 5:
-                print("Switched to 12 tone 16-NEJI");
-                tuneMode = "16neji";
-                currentTuning = tuning16neji;
-                break;
-            case 6:
-                print("Switched to 12 tone Undecimal");
-                tuneMode = "undecimal";
-                currentTuning = tuningUndecimal;
-                break;
-            case 7:
-                print("Switched to 12 tone 11-NEJI");
-                tuneMode = "11neji";
-                currentTuning = tuning11neji;
-                break;
-        }
-        currentOctave = 0;
-        calculateNewMidiGrid(4, 7);
-        playTestChord([4,7]);
-
-    } else if (-b.name <= rows*3) {
-        switch (-b.name - rows*2) {
-            case 1:
-                tuneMode = "19tet";
-                currentTuning = tuning19tet;
-                currentOctave = 0;
-                calculateNewMidiGrid(6, 11);
-                playTestChord([6, 11]);
-                break;
-            case 2:
-                tuneMode = "31ji";
-                currentTuning = tuning31ji;
-                currentOctave = 1;
-                calculateNewMidiGrid(5, 9);
-                playTestChord([10, 18]);
-                break;
-            case 3:
-                tuneMode = "21astral";
-                currentTuning = tuning21Astral;
-                currentOctave = 1;
-                calculateNewMidiGrid(5, 9);
-                playTestChord([6, 12, 18]);
-                break;
-            case 4:
-                tuneMode = "24tet";
-                currentTuning = tuning24tet;
-                currentOctave = 1;
-                calculateNewMidiGrid(4, 7);
-                playTestChord([8, 14]);
-                break;
-            case 5: 
-                tuneMode = "24ji";
-                currentTuning = tuning24ji;
-                currentOctave = 1;
-                calculateNewMidiGrid(4, 7);
-                playTestChord([8, 14]);
-                break;
-            case 6:
-                tuneMode = "14tet";
-                currentTuning = tuning14tet;
-                currentOctave = 0;
-                calculateNewMidiGrid(4, 5);
-                playTestChord([4, 8]);
-        }
-    } else if (-b.name <= rows*4) {
-        switch (-b.name - rows*3) {
-            case 1:
                 print("Switched to piano!");
                 currentInstrument = "piano";
                 instrument = pianoSampler;
@@ -1461,6 +1310,153 @@ function controlPressed(b) {
         }
         instrument.triggerAttackRelease("C3", "16n");
         instrument.triggerAttackRelease("C4", "16n");
+
+    } else if (-b.name <= rows*2) {
+        switch (-b.name - rows) {
+            case 1:
+                print("Switched to 12 tone equal temperament");
+                tuneMode = "12tet";
+                currentTuning = tuning12tet;
+                break;
+            case 2:
+                print("Switched to simple 12 tone tuning");
+                tuneMode = "simple";
+                currentTuning = tuningSimple;
+                break;
+            case 3:
+                print("Switched to 12 tone Harmonic series segment");
+                tuneMode = "harmonic";
+                currentTuning = tuningHarmonic;
+                break;
+            case 4:
+                print("Switched to 12 tone Novemdecimal");
+                tuneMode = "novemdecimal";
+                currentTuning = tuningNovemdecimal;
+                break;
+            case 5:
+                print("Switched to 12 tone 16-NEJI");
+                tuneMode = "16neji";
+                currentTuning = tuning16neji;
+                break;
+            case 6:
+                print("Switched to 12 tone Undecimal");
+                tuneMode = "undecimal";
+                currentTuning = tuningUndecimal;
+                break;
+            case 7:
+                print("Switched to 12 tone 11-NEJI");
+                tuneMode = "11neji";
+                currentTuning = tuning11neji;
+                break;
+        }
+        currentOctave = 0;
+        calculateNewMidiGrid(4, 7);
+        playTestChord([4,7]);
+
+    } else if (-b.name <= rows*3) {
+        switch (-b.name - rows*2) {
+            case 1:
+                tuneMode = "14tet";
+                currentTuning = tuning14tet;
+                currentOctave = 0;
+                calculateNewMidiGrid(4, 5);
+                playTestChord([4, 8]);
+                break;
+            case 2:
+                tuneMode = "19tet";
+                currentTuning = tuning19tet;
+                currentOctave = 0;
+                calculateNewMidiGrid(6, 11);
+                playTestChord([6, 11]);
+                break;
+            case 3:
+                tuneMode = "31ji";
+                currentTuning = tuning31ji;
+                currentOctave = 1;
+                calculateNewMidiGrid(5, 9);
+                playTestChord([10, 18]);
+                break;
+            case 4:
+                tuneMode = "21astral";
+                currentTuning = tuning21Astral;
+                currentOctave = 1;
+                calculateNewMidiGrid(5, 9);
+                playTestChord([6, 12, 18]);
+                break;
+            case 5:
+                tuneMode = "24tet";
+                currentTuning = tuning24tet;
+                currentOctave = 1;
+                calculateNewMidiGrid(4, 7);
+                playTestChord([8, 14]);
+                break;
+            case 6: 
+                tuneMode = "24ji";
+                currentTuning = tuning24ji;
+                currentOctave = 1;
+                calculateNewMidiGrid(4, 7);
+                playTestChord([8, 14]);
+                break;
+        }
+    } else if (-b.name <= rows*4) {
+        switch (-b.name - rows*3) {
+            case 1:
+                print("Changed label style");
+                if (labelStyle === "notes") {labelStyle = "intervals";}
+                else {labelStyle = "notes";}
+                break;
+            case 2:
+                print("Changed color theme!");
+                if (colorMode === "fifths") {colorMode = "major";}
+                else {colorMode = "fifths";}
+                // {colorMode = "chromatic";}
+                break;
+            case 3:
+                print("turned semitones to whole tones!");
+                isConcertina = !isConcertina;
+                if (isConcertina) {
+                    gridXYswapped = false;
+                }
+                makeHexagons();
+                calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
+                break;
+            case 4:
+                print("Switched to different midi to grid XY layout");
+                gridXYswapped = !gridXYswapped;
+                if (gridXYswapped) {
+                    isConcertina = false;
+                    makeHexagons();
+                }
+                calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
+                break;
+            case 5:
+                print("Change key");
+                if (interactionMode === "key") {
+                    interactionMode = "play";
+                } else {
+                    interactionMode = "key";
+                }
+                break;
+            case 6:
+                print("Changed octave");
+                currentOctave++;
+                if (currentOctave == 3) {currentOctave = 0;}
+                break;
+            case 7:
+                print("Changed scale");
+    
+                if (scaleMode === "major") {
+                    scaleMode = "minor";
+                } else if (scaleMode === "minor") {
+                    scaleMode = "chromatic";
+                } else if (scaleMode === "chromatic") {
+                    scaleMode = "major";
+                } else {
+                    scaleMode = "chromatic";
+                }
+                pickScale(currentKey, scaleMode);
+                break;
+        }
     }
 }
 
@@ -1652,14 +1648,14 @@ function generateKeyColorTable(isOddOctave) {
 function renderTuningReference() {
     push();
 
-    const cornerOffset = 40;
+    const cornerOffset = 42;
     translate(width-cornerOffset, cornerOffset);
-    scale(1.1)
+    scale(1.2)
 
     // round base
     noStroke();
     baseColor = color(backgroundColor);
-    baseColor.setAlpha(140);
+    baseColor.setAlpha((orderedKeys.length > 0) ? 200 : 140);
     fill(baseColor);
     ellipse(0, 0, 46);
     ellipse(0, 0, 64);
@@ -1667,16 +1663,15 @@ function renderTuningReference() {
 
 
     // 12tet lines
-    strokeWeight(1.2);
+    strokeWeight(1.3);
     for (let t = 0; t < 12; t++) {
-        const colorId = (scaleMajor[t] == 1) ? 2 : 7;
-        const lineColor = color(darkHexColors[colorId]);
-        lineColor.setAlpha((orderedKeys.length > 0) ? 60 : 110);
+        const lineColor = (orderedKeys.length > 0) ? color("#1B1446") : color("#3F2576");
         stroke(lineColor);
 
         const angle = map(t, 0, 12, 0, TWO_PI) - HALF_PI;
-        const start = {x: cos(angle) * 6, y: sin(angle) * 6};
-        const end = {x: cos(angle) * 28, y: sin(angle) * 28};
+        const innerD = (scaleMajor[t] == 1) ? 0 : 10;
+        const start = {x: cos(angle) * innerD, y: sin(angle) * innerD};
+        const end = {x: cos(angle) * 20, y: sin(angle) * 20};
         line(start.x, start.y, end.x, end.y);
     }
 
@@ -1701,7 +1696,7 @@ function renderTuningReference() {
         let lineColor;
 
         lineColor = color(darkHexColors[colorTable]);
-        lineColor.setAlpha((orderedKeys.length > 0) ? 100 : 210);
+        lineColor.setAlpha((orderedKeys.length > 0) ? 130 : 220);
         strokeWeight(2);
         stroke(lineColor);
         line(start.x, start.y, end.x, end.y);
@@ -1711,7 +1706,7 @@ function renderTuningReference() {
     let lastKeyAngle;
     let lastKeyColor;
     let lastKeyOctave;
-    strokeWeight(1);
+    strokeWeight(0.9);
 
     orderedKeys.forEach((o) => {
 
@@ -1737,24 +1732,28 @@ function renderTuningReference() {
         keyColor.setAlpha(20);
         fill(keyColor);
         ellipse(now.x, now.y, 10);
-        keyColor.setAlpha(210);
+
+        keyColor.setAlpha(255);
 
         // line between previous and this key
         if (lastKeyAngle !== undefined) {
 
             // line between the two angles
-            const last = {x: cos(lastKeyAngle) * lastKeyOctave, y: sin(lastKeyAngle) * lastKeyOctave};
-            const halfway = {x: (last.x+now.x)/2, y: (last.y+now.y)/2};
-
-            keyColor.setAlpha(210);
+            const step0 = {x: cos(lastKeyAngle) * lastKeyOctave, y: sin(lastKeyAngle) * lastKeyOctave};
+            const distX = now.x - step0.x;
+            const distY = now.y - step0.y;
+            const step1 = {x: step0.x + distX*0.4, y: step0.y + distY*0.4};
+            const step2 = {x: step0.x + distX*0.6, y: step0.y + distY*0.6};
 
             stroke(lastKeyColor);
-            line(last.x, last.y, halfway.x, halfway.y);
+            line(step0.x, step0.y, step1.x, step1.y);
+
+            stroke(lerpColor(lastKeyColor, keyColor, 0.5));
+            line(step1.x, step1.y, step2.x, step2.y);
 
             stroke(keyColor);
-            line(halfway.x, halfway.y, now.x, now.y);
+            line(step2.x, step2.y, now.x, now.y);
         }
-
         lastKeyAngle = keyAngle;
         lastKeyColor = keyColor;
         lastKeyOctave = keyOctave;
@@ -1765,14 +1764,14 @@ function renderTuningReference() {
 
 function updateControlStates() {
     menuButtons = [
-        {name:"Move Key " + currentKey, onCondition:(interactionMode === "key")},
-        {name:capitalize(scaleMode), onCondition:undefined},
-        {name:"Octave "+ currentOctave, onCondition:undefined},
-        {name:"Note Labels", onCondition:(labelStyle === "notes")},
-        {name:"Rainbow", onCondition:(colorMode === "fifths")},
-        {name:"Swap X/Y", onCondition:gridXYswapped},
-        {name:"Round Keys", onCondition:roundKeyMode},
-        {name:"Concertina", onCondition:isConcertina},
+        {name:"Piano", onCondition:(currentInstrument === "piano")},
+        {name:"Rhodes", onCondition:(currentInstrument === "rhodes")},
+        {name:"Organ", onCondition:(currentInstrument === "organ")},
+        {name:"Harp", onCondition:(currentInstrument === "harp")},
+        {name:"Sawtooth", onCondition:(currentInstrument === "sawtooth")},
+        {name:"Square", onCondition:(currentInstrument === "square")},
+        {name:"Triangle", onCondition:(currentInstrument === "triangle")},
+        {name:"Sine", onCondition:(currentInstrument === "sine")},
         {name:"", onCondition:undefined},
 
         {name:"EDO 12", onCondition:(tuneMode === "12tet")},
@@ -1785,25 +1784,25 @@ function updateControlStates() {
         {name:"", onCondition:undefined},
         {name:"", onCondition:undefined},
 
+        {name:"EDO 14", onCondition:(tuneMode === "14tet")},
         {name:"EDO 19", onCondition:(tuneMode === "19tet")},
         {name:"JI 31", onCondition:(tuneMode === "31ji")},
         {name:"Astral 21", onCondition:(tuneMode === "21astral")},
         {name:"EDO 24", onCondition:(tuneMode === "24tet")},
         {name:"JI 24", onCondition:(tuneMode === "24ji")},
-        {name:"EDO 14", onCondition:(tuneMode === "14tet")},
         {name:"", onCondition:undefined},
         {name:"", onCondition:undefined},
         {name:"", onCondition:undefined},
 
-        {name:"Piano", onCondition:(currentInstrument === "piano")},
-        {name:"Rhodes", onCondition:(currentInstrument === "rhodes")},
-        {name:"Organ", onCondition:(currentInstrument === "organ")},
-        {name:"Harp", onCondition:(currentInstrument === "harp")},
-        {name:"Sawtooth", onCondition:(currentInstrument === "sawtooth")},
-        {name:"Square", onCondition:(currentInstrument === "square")},
-        {name:"Triangle", onCondition:(currentInstrument === "triangle")},
-        {name:"Sine", onCondition:(currentInstrument === "sine")},
-        {name:"", onCondition:undefined}
+        {name:"Intervals", onCondition:(labelStyle === "intervals")},
+        {name:"Rainbow", onCondition:(colorMode === "fifths")},
+        {name:"Concertina", onCondition:isConcertina},
+        {name:"Swap X/Y", onCondition:gridXYswapped},
+        {name:"Move Key " + currentKey, onCondition:(interactionMode === "key")},
+        {name:"Octave "+ currentOctave, onCondition:undefined},
+        {name:capitalize(scaleMode), onCondition:undefined},
+        {name:"", onCondition:undefined},
+        {name:"", onCondition:undefined},
     ];
 }
 
@@ -1932,8 +1931,8 @@ class ButtonObj {
                 controlShape(this.x, this.y, this.r * 1.7);
                 fill("#3E1C8790");
                 noStroke();
-                triangle(this.x + 70, this.y, this.x + 55, this.y + 12, this.x + 55, this.y - 12);
-                triangle(this.x - 70, this.y, this.x - 55, this.y + 12, this.x - 55, this.y - 12);
+                triangle(this.x + 60, this.y, this.x + 50, this.y + 10, this.x + 50, this.y - 10);
+                triangle(this.x - 60, this.y, this.x - 50, this.y + 10, this.x - 50, this.y - 10);
                 break;
             case "active":
                 fill("#3E1C87");
@@ -2105,8 +2104,8 @@ class ButtonObj {
         const stateColor = (this.isControlOn) ? "#D5B9F2" : "#AA6EF5";
         fill(stateColor);
 
-        textSize(19);
-        text(menuButtons[-this.name-1].name, this.x, this.y);
+        textSize(18);
+        text(menuButtons[-this.name-1].name, this.x, this.y-1);
         pop();
     }
 
@@ -2117,7 +2116,9 @@ class ButtonObj {
             if (labelStyle === "notes")
             {
                 if (this.pitchName == currentKey) {
-                    keyText = this.pitchName + (this.octave + currentOctave);
+                    const octave = this.octave + currentOctave;
+                    const octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
+                    keyText = this.pitchName + octaveSymbol;
                 }
                 else {
                     keyText = this.pitchName;
@@ -2186,30 +2187,38 @@ function dragDistanceMap(center, start, drag, min, max) {
 
 function findNearestButton(touch, arr) {
 
-    // minimum distance is a weird way to measure which button is hit
-    // WIP when the menu isn't open, do a different check instead that compares which hex is closest
-    const minDistance = (isConcertina) ? gridSizeY * 0.85 : gridSizeX * 0.85;
     let closestButton;
 
     if (!mouseUsed && touch !== undefined) {
-        arr.forEach((h) => {
-            if (h.distanceToTouch(touch) < minDistance) {closestButton = h;}
-        });
-    }
-    else {
+
+        // which control is in range of the finger?
+        if (menuIsOpen) {
+            arr.forEach((h) => {
+                //if in certain X and Y distance of button center
+                if (Math.abs(touch.clientX - h.x) < 80 && Math.abs(touch.clientY - h.y) < 40) {
+                    {closestButton = h;}
+                }
+            });
+        } else {
+            //which hexagon is closest?
+            closestButton = arr[0];
+            arr.forEach((h) => {
+                if (h.distanceToTouch(touch) < closestButton.distanceToTouch(touch)) {
+                    closestButton = h;
+                  }
+            });
+        }
+    } else {
+        // mouse used
         arr.forEach((h) => {
             if (h.distanceToMouse < minDistance) {closestButton = h;}
         });
     }
 
     if (closestButton !== undefined) {
-        // print("Found " + closestButton.distanceToTouch(touch));
         closestButton.lastTouch = {id:touch.identifier, type:touch.interactionType};
-        // print(closestButton.lastTouch);
         return closestButton;
     }
-    // print("No hexagon found in reach!");
-
 }
 
 
@@ -2229,7 +2238,7 @@ function keyShape(x, y, r, lineColorolor) {
 }
 
 function controlShape(x, y, r) {
-    rect(x, y, r * 0.85, r * 0.4, r * 0.1);
+    rect(x, y, r * 0.78, r * 0.32, r * 0.1);
 }
 
 function hexagon(x, y, r, angle) {
@@ -2272,34 +2281,42 @@ function cornerText() {
 
     push();
 
-    textFont("Switzer");
-    textSize(15);
+    textFont("Satoshi");
+    textSize(16);
     textStyle(BOLD);
 
-    let playText = currentKey + (currentOctave) + "–" + capitalize(tuneMode) + " ";
-    if (instrumentType == "synth") {
+    let playText = currentKey + octaveSymbols[currentOctave] + " " + capitalize(tuneMode) + " ";
+    if (instrumentType === "synth") {
         playText += Object.values(activeKeys).length;
     }
 
-    playText += "  ";
+    playText += " ";
 
     for (let o = 0; o < orderedKeys.length; o++) {
-        const keyName = orderedKeys[o].pitchName + ":" +orderedKeys[o].midiName;
-        playText += "  " + keyName + " ";
+        let keyName;
+        const octave = orderedKeys[o].octave + currentOctave;
+        const octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
+
+        if (currentTuning.length === 12) {
+            keyName = orderedKeys[o].pitchName + octaveSymbol;
+        } else {
+            keyName = (orderedKeys[o].pitchName-1) + octaveSymbol;
+        }
+        playText += " " + keyName;
     }
 
     const xOffset = 15;
-    const yOffset = height - 18;
+    const yOffset = height - 20;
 
     textAlign(LEFT, CENTER);
 
     stroke(backgroundColor);
     strokeJoin(ROUND);
-    strokeWeight(8);
+    strokeWeight(7);
     text(playText, xOffset, yOffset);
 
     noStroke();
-    const textColor = lerpColor(color("#5027A9"), color("#FFFFFF"), drawMinDuration/20)
+    const textColor = lerpColor(color("#5940F1"), color("#8760F3"), drawMinDuration/20);
     fill(textColor);
     text(playText, xOffset, yOffset);
 
