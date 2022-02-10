@@ -1,7 +1,7 @@
 let canvas;
 let cooldownFrames = 3; // this animation time also blocks double taps
-let readyForSound = false; //only play sound when ready
-let drawMinDuration = 20; //
+let readyForSound = false; // only play sound when ready
+let drawMinDuration = 20; // 
 
 let gridBaseMidi = 24;
 let gridWidth;
@@ -90,9 +90,9 @@ const intervalNames14tet = [
     "1", "1*", "2", "2*", "3", "3*", "4", "4*", "5", "5*", "6", "6*", "7", "7*",
 ];
 
-//const intervalNames19tet = [
+// const intervalNames19tet = [
 //    "1", "a1", "m2", "2", "s3", "m3", "3", "a3", "4", "tt", "TT", "5", "a5", "m6", "6", "M6", "m7", "7", "d8",
-//];
+// ];
 
 const intervalNames24tet = [
     "1", "-2", "m2", "~2", "2", "-3", "m3", "~3", "3", "+3", "4", "+4", "TT", "-5", "5", "-6", "m6", "~6", "6", "-7", "m7", "~7", "7", "-8",
@@ -100,11 +100,11 @@ const intervalNames24tet = [
 const intervalNames31tet = [
     "1", "+1", "-2", "m2", "~2", "2", "+2", "-3", "m3", "~3", "3", "+3", "-4", "4", "+4", "tt", "TT", "-5", "5", "+5", "-6", "m6", "~6", "6", "+6", "-7", "m7", "~7", "7", "+7", "-8",
 ];
-//const intervalNames31tet = [
-//    "1", "", "", "m2", "n2", "2", "S2", "s3", "m3", "n3", "3", "", "", "4", "", "", "", "", "5", "", "s6", "m6", "n6", "6", //"", "h7", "m7", "n7", "7", "", "",
-//];
+// const intervalNames31tet = [
+//    "1", "", "", "m2", "n2", "2", "S2", "s3", "m3", "n3", "3", "", "", "4", "", "", "", "", "5", "", "s6", "m6", "n6", "6", // "", "h7", "m7", "n7", "7", "", "",
+// ];
 
-const baseFrequency = 32.70 //C1
+const baseFrequency = 32.70 // C1
 const tuning12tet = [
     1,
     2 ** (1/12),
@@ -147,7 +147,7 @@ const tuningUndecimal = [
     "39/22",
     "21/11"
 ];
-const tuning11neji = [ //snowfall
+const tuning11neji = [ // snowfall
     "1",
     "12/11",
     "25/22",
@@ -161,7 +161,7 @@ const tuning11neji = [ //snowfall
     "20/11",
     "21/11"
 ];
-const tuning16neji = [ //16:17:18:19:20:21:23:24:25:27:29:30:32
+const tuning16neji = [ // 16:17:18:19:20:21:23:24:25:27:29:30:32
     "1",
     "17/16",
     "9/8",
@@ -190,19 +190,19 @@ const tuningHarmonic = [
     "23/12"
 ];
 const tuningSimple = [
-    //https://www.huygens-fokker.org/docs/intervals.html
+    // https:// www.huygens-fokker.org/docs/intervals.html
     "1",
-    "15/14", //semitone 16/15
-    "9/8", //whole tone 8/7
-    "6/5", //minor 3rd 7/6
-    "5/4", //major 3rd
-    "4/3", //p 4th
-    "7/5", //tritone
-    "3/2", //p 5th
-    "8/5", //minor 6th
-    "5/3", //major 6th
-    "7/4", //harmonic 7th, minor 7th
-    "15/8" //major 7th 17/9
+    "15/14", // semitone 16/15
+    "9/8", // whole tone 8/7
+    "6/5", // minor 3rd 7/6
+    "5/4", // major 3rd
+    "4/3", // p 4th
+    "7/5", // tritone
+    "3/2", // p 5th
+    "8/5", // minor 6th
+    "5/3", // major 6th
+    "7/4", // harmonic 7th, minor 7th
+    "15/8" // major 7th 17/9
 ];
 const tuning19tet = [
     1,
@@ -241,7 +241,7 @@ const tuning14tet = [
     2 ** (12/14),
     2 ** (13/14),
 ];
-const tuning31ji = [ //7-limit by Adriaan Fokker
+const tuning31ji = [ // 7-limit by Adriaan Fokker
     "1/1",
     "64/63",
     "135/128",
@@ -329,11 +329,11 @@ const tuning24ji = [
     "16/15",
     "12/11",
     "9/8",
-    "7/6", //6/5, 15/13
+    "7/6", // 6/5, 15/13
     "6/5",
     "11/9",
     "5/4",
-    "9/7", //13/10
+    "9/7", // 13/10
     "4/3",
     "11/8",
     "7/5",
@@ -344,12 +344,13 @@ const tuning24ji = [
     "18/11",
     "5/3",
     "7/4",
-    "16/9", //9/5
+    "16/9", // 9/5
     "11/6",
     "15/8",
-    "35/18" //27/14
+    "35/18" // 27/14
 ];
 
+// scales - used for colors of keys and more
 const scaleMajor = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1];
 const scaleMinor = [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0];
 const scaleChromatic = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
@@ -360,8 +361,9 @@ const scaleMajor24 = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0
 const scaleMajor31 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0];
 const scalePrimal21 = [1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0];
 
-const layoutColorsFifths = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5]; //next hue after every fifth
+const layoutColorsFifths = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5]; // next hue after every fifth
 
+// colors
 const backgroundColor = "#050314";
 const outColor = "#56459A";
 const darkOutColor = "#493C94";
@@ -370,6 +372,7 @@ const midColor = hexColors[10];
 const buttonBaseColor = "#190E43A0";
 document.bgColor = backgroundColor;
 
+// modes
 let scaleMode = "chromatic";
 let roundKeyMode = false;
 let colorMode = "major";
@@ -378,16 +381,16 @@ let tuneMode = "12tet";
 let currentTuning = tuning12tet;
 
 let currentScale = scaleChromatic.slice();
-let currentKey = "C"; //wip store as numerical offset instead
+let currentKey = "C"; // wip store as numerical offset instead
 let currentOctave = 0;
 let labelStyle = "intervals";
 
-let topKeyOctave = 1; //the octave the last pressed key is in, used for recoloring the reference
+// current keys
+let topKeyOctave = 1; // the octave the last pressed key is in, used for recoloring the reference
 let pressedButtons = new Array;
 let lastPressedButtons = new Array;
 let sustainedKeys = new Array;
 let orderedKeys = new Array;
-
 
 // permanent key grid
 let gridSizeX, gridSizeY;
@@ -399,17 +402,17 @@ let interactionMode = "play";
 let menuIsOpen = false;
 let ongoingTouches = new Array;
 
-//mouse
+// mouse
 let mouseUsed = false;
 let mouseDown = false;
 
-//bridges drawn with pencil
+// bridges drawn with pencil
 let penPressure = 0;
 let penDragStartKey;
 let penDragEndKey;
 let bridgeKeyPairs = new Set();
 
-//tonejs
+// tonejs
 let synth;
 let pianoSampler;
 let rhodesSampler;
@@ -423,13 +426,12 @@ let instrumentType = "sampler";
 Tone.context.lookAhead = 0;
 
 let activeKeys = {
-    //structure:    h.name = {"synth"..., "dragValues"...}
+    // structure:    h.name = {"synth"..., "dragValues"...}
 };
 
-//const pitchShift = new Tone.PitchShift().toDestination();
 
 function preload() {
-    //custom array of polysynths that can have separate properties
+    // custom array of polysynths that can have separate properties
     for (let i = 0; i < 32; i++) {
         synthvoices.push(new Tone.Synth());
         synthvoices[i].toDestination();
@@ -445,7 +447,7 @@ function preload() {
         synthvoices[i].set({"oscillator": {"type": "sawtooth"}});
     }
 
-    //default polysynth for menu activation
+    // default polysynth for menu activation
     synth = new Tone.PolySynth().toDestination();
     synth.set({"volume": -10,
     "envelope": {
@@ -516,7 +518,7 @@ function setup() {
 
     makeHexagons();
 
-    //create buttons with negative IDs
+    // create buttons with negative IDs
     const xOffset = 740; const yOffset = 110;
     const bWidth = gridSizeX * 3; const bHeight = gridSizeY * 1.7;
     const rows = 9;
@@ -555,52 +557,51 @@ function setup() {
     el.addEventListener("touchcancel", handleCancel, false);
     el.addEventListener("gesturestart", function(e) {e.preventDefault();});
 
-    //run once to show starting screen
+    // run once to show starting screen
     noLoop();
     draw();
 }
 
 function makeHexagons() {
 
-    //empty old array first
+    // empty old array first
     keyArr = [];
 
-    //store the hexagon keys with the correct coordinates and ID
-
+    // store the hexagon keys with the correct coordinates and ID
     gridSizeX = 52; gridSizeY = 52;
     let hStartX = -0.5 * gridSizeX;
     let hStartY = 0.8 * gridSizeY;
     let id = 0;
 
-    //hexagons are less wide so they can interlock
+    // hexagons are less wide so they can interlock
     if (isConcertina == false) {
         gridSizeY = sqrt((3 * pow(gridSizeY, 2)) / 4);
-        gridWidth = 19; //how many in a row + odd row
+        gridWidth = 19; // how many in a row + odd row
 
-        //create hexagons interlocking horizontally
+        // create hexagons interlocking horizontally
         for (let y = 21 * gridSizeY; y > -50; y -= 2 * gridSizeY) {
             for (let x = 0; x < 28 * gridSizeX; x += 3 * gridSizeX) {
-                //even rows
+                // even rows
                 keyArr.push(new ButtonObj(x + hStartX, y + hStartY + gridSizeY, gridSizeX, "note", id++));
-                //odd rows
+                // odd rows
                 if (x > 25 * gridSizeX) { break;}
                 keyArr.push(new ButtonObj(x + hStartX + 1.5*gridSizeX, y + hStartY, gridSizeX, "note", id++));
             }
         }
 
     } else {
-        //concertina layout
+        // concertina layout
         gridSizeX = sqrt((3 * pow(gridSizeX, 2)) / 4);
         hStartX = 0;
         hStartY = -10;
-        gridWidth = 13; //how many in a column + odd column
+        gridWidth = 13; // how many in a column + odd column
         
-        //create hexagons interlocking vertically
+        // create hexagons interlocking vertically
         for (let x = 0; x < 32 * gridSizeX; x += 2 * gridSizeX) {
             for (let y = 18 * gridSizeY; y > -50; y -= 3 * gridSizeY) {
-                //even columns
+                // even columns
                 keyArr.push(new ButtonObj(x + hStartX, y + hStartY, gridSizeY, "note", id++));
-                //odd columns
+                // odd columns
                 if (y < 5) { break;}
                 keyArr.push(new ButtonObj(x + hStartX + gridSizeX, y + hStartY - 1.5*gridSizeY, gridSizeY, "note", id++));
             }
@@ -631,7 +632,7 @@ function handleStart(evt) {
     }
     penPressure = force;
 
-    //first tone to start audio on safari
+    // first tone to start audio on safari
     if (readyForSound === false) {
         instrument.triggerAttackRelease("C2", "8n");
         readyForSound = true;
@@ -649,7 +650,7 @@ function handleMove(evt) {
         newTouches[i].interactionType = "move";
 
         if (idx >= 0) {
-            //print("continuing touch " + idx);
+            // print("continuing touch " + idx);
             ongoingTouches.splice(idx, 1, copyTouch(newTouches[i])); // swap in the new touch record
         }
     }
@@ -665,7 +666,7 @@ function handleEnd(evt) {
         const idx = ongoingTouchIndexById(newTouches[i].identifier);
 
         if (idx >= 0) {
-            //print("removing touch " + idx);
+            // print("removing touch " + idx);
             ongoingTouches.splice(idx, 1);
         }
     }
@@ -698,6 +699,7 @@ function ongoingTouchIndexById(idToFind) {
     return -1; // not found
 }
 
+
 function draw() {
     runKeys();
 
@@ -710,11 +712,11 @@ function draw() {
 }
 
 function runKeys() {
+    //between keys
     background(backgroundColor);
     let optionsBG = color(backgroundColor);
-    //optionsBG.setAlpha(230);
 
-    //close menu if no keys pressed
+    // close menu if no keys pressed
     if (ongoingTouches.length === 0) {
         menuIsOpen = false;
     }
@@ -761,7 +763,7 @@ function runKeys() {
         });
 
     } else {
-        //menu is closed
+        // menu is closed
 
         if (mouseUsed === false) {
             reactToPressedKeys()
@@ -788,11 +790,11 @@ function runKeys() {
             h.renderText(h.findKeyVariant);
         });
 
-        //produce pitch bends from drag on keys
+        // produce pitch bends from drag on keys
         bendKeys();
     }
 
-    //visual
+    // visual
     renderTuningReference();
     cornerText();
 }
@@ -801,7 +803,7 @@ function runKeys() {
 function renderKeyBridges() {
     push();
     noStroke();
-    //lines between pressedButtons
+    // lines between pressedButtons
     if (penDragStartKey !== undefined && penDragEndKey !== undefined) {
         drawPointConnector(
             penDragStartKey.x, penDragStartKey.y,
@@ -815,7 +817,7 @@ function renderKeyBridges() {
             let hexArray = [];
             print (nameArray);
 
-            //go through hexagons to find matching ones
+            // go through hexagons to find matching ones
             keyArr.forEach((h) => {
                 if (nameArray[0] == h.name) {
                     hexArray[0] = h;
@@ -841,7 +843,7 @@ function renderKeyBridges() {
 
 
 function reactToPressedControls() {
-    //update which buttons are hovered over/ pressed
+    // update which buttons are hovered over/ pressed
     lastPressedButtons = pressedButtons.slice();
     pressedButtons = [];
 
@@ -852,7 +854,7 @@ function reactToPressedControls() {
         }
     }
 
-    //find unique items in each
+    // find unique items in each
     const attackedKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) === undefined);
 
     if (attackedKeys.length > 0)
@@ -861,7 +863,6 @@ function reactToPressedControls() {
         controlsArr.forEach((b) => {
             if (b.name === pressedButtons[0].name) {
                 controlPressed(b);
-                //b.countdown = cooldownFrames;
             }
         });
     }
@@ -898,19 +899,19 @@ function reactToPressedKeys() {
             const newNamePair = startName + " " + endName;
             const reverseNamePair = endName + " " + startName;
             if (bridgeKeyPairs.has(newNamePair)) {
-                //remove
+                // remove
                 bridgeKeyPairs.delete(newNamePair);
                 print(bridgeKeyPairs.size);
                 print("Removed " + newNamePair);
             }
             else if (bridgeKeyPairs.has(reverseNamePair)) {
-                //remove
+                // remove
                 bridgeKeyPairs.delete(reverseNamePair);
                 print(bridgeKeyPairs.size);
                 print("Removed " + reverseNamePair);
             }
             else {
-                //add
+                // add
                 bridgeKeyPairs.add(newNamePair);
                 print(bridgeKeyPairs.size);
                 print("Added " + newNamePair);
@@ -924,12 +925,12 @@ function reactToPressedKeys() {
 
 
 function detectMouse() {
-    //WIP, write new later
+    // WIP, write new later
 }
 
 
 function uniqByKeepFirst(a, key) {
-    // from https://stackoverflow.com/questions/9229645/remove-duplicate-values-from-js-array
+    // from https:// stackoverflow.com/questions/9229645/remove-duplicate-values-from-js-array
     let seen = new Set();
     return a.filter(item => {
         let k = key(item);
@@ -939,10 +940,10 @@ function uniqByKeepFirst(a, key) {
 
 
 function reactToPen() {
-    //clean up duplicates
+    // clean up duplicates
     pressedButtons = uniqByKeepFirst(pressedButtons, p => p.name);
 
-    //find unique items in each
+    // find unique items in each
     let attackedKeys = pressedButtons.filter((o) => lastPressedButtons.indexOf(o) === -1);
     let releasedKeys = lastPressedButtons.filter((o) => pressedButtons.indexOf(o) === -1);
     const unique = attackedKeys.concat(releasedKeys);
@@ -955,7 +956,7 @@ function reactToPen() {
                     penDragStartKey = h;
                 }
                 else {
-                    //there is a start hex already, update the end one instead
+                    // there is a start hex already, update the end one instead
                     penDragEndKey = h;
                 }
             }
@@ -987,10 +988,10 @@ function keyboardReactToTouch() {
                 keypressed(h);
             }
         });
-        //add attacked keys in order to a list
+        // add attacked keys in order to a list
         orderedKeys.push(playHex);
 
-        //remove sustained keys one semitone higher or lower from the playHex
+        // remove sustained keys one semitone higher or lower from the playHex
         filterSustainedKeys("inSemiToneRange", playHex);
     }
 
@@ -1000,7 +1001,7 @@ function keyboardReactToTouch() {
         for (let r = 0; r < releasedKeys.length; r++) {
             const removedHex = releasedKeys[r];
 
-            //see if finger still used (only dragged off the hexagon)
+            // see if finger still used (only dragged off the hexagon)
             let fingerStillDown = false;
             ongoingTouches.forEach((o) => {
                 if (o.identifier === removedHex.lastTouch.id) {
@@ -1029,7 +1030,7 @@ function keyboardReactToTouch() {
     }
 
     if (interactionMode === "play" && instrumentType === "synth") {
-        //detect movement on same keys
+        // detect movement on same keys
         for (let sameplay = 0; sameplay < sameKeys.length; sameplay++) {
             const sameHex = sameKeys[sameplay];
             keyArr.forEach((h) => {
@@ -1053,7 +1054,7 @@ function filterSustainedKeys (mode, compareHex) {
                 if (s.midiName < compareHex.midiName + 2 &&
                     s.midiName > compareHex.midiName - 2 &&
                     s.midiName !== compareHex.midiName) {
-                    print("Was in range: " + s.midiName, compareHex.midiName)
+                    // print("Was in range: " + s.midiName, compareHex.midiName)
                     stopSustained.push(s);
                 } else {
                     stillSustained.push(s);
@@ -1070,7 +1071,7 @@ function filterSustainedKeys (mode, compareHex) {
                 });
 
                 if (!sustainFingerStillPresent) {
-                    print("Belonged to finger that was lifted: " + s.lastTouch.id)
+                    // print("Belonged to finger that was lifted: " + s.lastTouch.id)
                     stopSustained.push(s);
                 } else {
                     stillSustained.push(s);
@@ -1082,7 +1083,7 @@ function filterSustainedKeys (mode, compareHex) {
 
         // release the rest
         stopSustained.forEach((n) => {
-            //print("Stopping key " + n.midiName, n.lastTouch.id)
+            // print("Stopping key " + n.midiName, n.lastTouch.id)
             keyArr.forEach((h) => {
                 if (h.midiName === n.midiName) {
                     playKey(h, "release");
@@ -1103,7 +1104,7 @@ function keypressed(h) {
         h.countdown = cooldownFrames;
         currentKey = h.pitchName;
         pickScale(currentKey, scaleMode);
-        print("Key mode current key: " + currentKey)
+        print("Key mode, current key: " + currentKey)
     } else {
         // play the note normally
         playKey(h);
@@ -1112,7 +1113,7 @@ function keypressed(h) {
 
 function keySustained(h) {
     // this key is still playing.
-    //could do something here, WIP.
+    // could do something here, WIP.
 }
 
 
@@ -1136,14 +1137,14 @@ function playKey(h, mode) {
                 print("No voice to release! " + h.name);
             }
         } else {
-            //play note
+            // play note
             for (let i = 0; i < 32; i++) {
                 let containsVoice = Object.values(activeKeys).find(key => {return key.voice === synthvoices[i]});
 
-                //in free slot
+                // in free slot
                 if (containsVoice == undefined) {
 
-                    //if the key was already active (played again, audio not over yet)
+                    // if the key was already active (played again, audio not over yet)
                     if (activeKeys[h.name] !== undefined) {
                         activeKeys[h.name].voice.onsilence = () => {};
                     }
@@ -1153,16 +1154,16 @@ function playKey(h, mode) {
                     print("Playing " + i + "-voice")
                     activeKeys[h.name].voice.triggerAttack(pPitch);
                     activeKeys[h.name].voice.onsilence = () => {
-                        //if not pressed anymore
-                        //if () {
+                        // if not pressed anymore
+                        // if () {
                             delete activeKeys[h.name];
                             print(i + "-voice is silent, remaining active key objects: " + Object.values(activeKeys));
                             drawMinDuration = 20;
                             loop();
-                        //} else {
-                        //    //but then, delete when not pressed and time over! somehow
+                        // } else {
+                        //    // but then, delete when not pressed and time over! somehow
                         //    print("Can't delete this on silence yet, still pressed")
-                        //}
+                        // }
                     }
                     
                     break;
@@ -1170,7 +1171,6 @@ function playKey(h, mode) {
             }
         }
         print(Object.values(activeKeys));
-        //print(activeKeys);
     }
 }
 
@@ -1181,7 +1181,7 @@ function dragValuesInActive(h) {
         return;
     }
 
-    //find touch that is in range in both X and Y
+    // find touch that is in range in both X and Y
     for (let i = 0; i < ongoingTouches.length; i++) {
 
         const touchX = ongoingTouches[i].clientX;
@@ -1189,18 +1189,18 @@ function dragValuesInActive(h) {
         const centerOffsetX = h.x - touchX;
         const centerOffsetY = h.y - touchY;
 
-        //in range
+        // in range
         if (Math.abs(centerOffsetX) < 35 && Math.abs(centerOffsetY) < 35) {
 
             if (activeKeys[h.name].dragValues !== undefined) {
-                //use start values to calculate drag offset
+                // use start values to calculate drag offset
                 const diffX = touchX - activeKeys[h.name].dragValues.startX;
                 const diffY = touchY - activeKeys[h.name].dragValues.startY;
                 activeKeys[h.name].dragValues.dragX = diffX;
                 activeKeys[h.name].dragValues.dragY = diffY;
             }
             else {
-                //set all to start value
+                // set all to start value
                 const startX = touchX;
                 const startY = touchY;
                 activeKeys[h.name].dragValues = {"startX": startX, "startY": startY};
@@ -1229,7 +1229,7 @@ function bendKeys() {
                 ellipse(a.dragValues.startX + a.dragValues.dragX, a.key.y - 50, (Math.abs(detuneCents) / 4) + 6);
                 ellipse(a.dragValues.startX, a.key.y - 50, 2);
                 ellipse(a.key.x + 40 * Math.sign(detuneCents), a.key.y - 50, 2);
-                //text(detuneCents.toFixed(1), a.key.x, a.key.y -60);
+                // text(detuneCents.toFixed(1), a.key.x, a.key.y -60);
                 pop();
             }
         }
@@ -1241,8 +1241,7 @@ function controlPressed(b) {
     instrument.releaseAll();
     const rows = 9;
 
-    //same order as menuButtons
-
+    // same order as menuButtons
     if (-b.name <= rows) {
         switch (-b.name) {
             case 1:
@@ -1281,7 +1280,7 @@ function controlPressed(b) {
                 print("Changed color theme!");
                 if (colorMode === "fifths") {colorMode = "major";}
                 else {colorMode = "fifths";}
-                //{colorMode = "chromatic";}
+                // {colorMode = "chromatic";}
                 break;
             case 6:
                 print("Switched to different midi to grid XY layout");
@@ -1466,7 +1465,7 @@ function controlPressed(b) {
 }
 
 function playTestChord(intervals) {
-    //play root
+    // play root
     const root = baseFrequency * eval(currentTuning[0]) * 2 ** 2;
     instrument.triggerAttackRelease(root, "16n");
 
@@ -1484,18 +1483,18 @@ function calculateNewMidiGrid(small, big) {
         gridBaseMidi = currentTuning.length * 2;
     }
 
-    //save for checking elsewhere
-    gridIncrement_H = 2 * small - big; //should be semitone
+    // save for checking elsewhere
+    gridIncrement_H = 2 * small - big; // should be semitone
     gridIncrement_D = small;
     gridIncrement_V = big;
 
-    //actual values take into account extra grid modes
+    // actual values take into account extra grid modes
     if (gridXYswapped) {
         newIncrement_H = big;
         newIncrement_D = small;
         newIncrement_V = 2 * small - big;
     } else if (isConcertina) {
-        newIncrement_H = currentTuning.length; //octave
+        newIncrement_H = currentTuning.length; // octave
         newIncrement_D = big;
         newIncrement_V = (2 * big) % currentTuning.length;
     } else {
@@ -1511,13 +1510,13 @@ function calculateNewMidiGrid(small, big) {
 
 
 function pickScale(pitch, mode) {
-    //start from note
+    // start from note
     const offset = noteNames.indexOf(pitch);
 
-    //WIP: make this compatible with other octave sizes
+    // WIP: make this compatible with other octave sizes
     if (mode === "chromatic" || currentTuning.length != 12) {
-        currentScale = new Array(currentTuning.length).fill(1); //all notes are on
-        scaleMode = "chromatic"; //in case it isn't already!
+        currentScale = new Array(currentTuning.length).fill(1); // all notes are on
+        scaleMode = "chromatic"; // in case it isn't already!
     } else {
         for (let i = 0; i < 12; i++) {
             if (mode === "major") {
@@ -1538,7 +1537,7 @@ function keyColorFromPalette(h, style) {
 
     if (colorMode !== "chromatic") {
 
-        //table of colors
+        // table of colors
         const isOffsetOctave = ((h.octave + currentOctave) % 2 == 0);
         const colorIds = generateKeyColorTable(isOffsetOctave);
 
@@ -1572,7 +1571,7 @@ function keyColorFromPalette(h, style) {
         offColor = lerpColor(color(backgroundColor), color(darkOutColor), 0.15);
     }
 
-    //color according to on/off state in current scale
+    // color according to on/off state in current scale
     let index = 0;
     let offset = 0;
 
@@ -1619,13 +1618,13 @@ function generateKeyColorTable(isOddOctave) {
         return layoutColorsFifths;
     }
 
-    //base color scheme on scale
+    // base color scheme on scale
     const oddOctave = {highlight:2, medium:6, default:7};
     const evenOctave = {highlight:1, medium:11, default:10};
     const colorScheme = (isOddOctave) ? evenOctave : oddOctave;
 
     let colorIdTable;
-    let tTable; //may be filled for additional colors
+    let tTable; // may be filled for additional colors
 
     if (octaveLength == 12) {colorIdTable = scaleMajor.slice();}
     else if (octaveLength == 19) {colorIdTable = scaleMajor19.slice(); tTable = scaleTop19.slice();}
@@ -1657,7 +1656,7 @@ function renderTuningReference() {
     translate(width-cornerOffset, cornerOffset);
     scale(1.1)
 
-    //round base
+    // round base
     noStroke();
     baseColor = color(backgroundColor);
     baseColor.setAlpha(140);
@@ -1667,7 +1666,7 @@ function renderTuningReference() {
     ellipse(0, 0, 66);
 
 
-    //12tet lines
+    // 12tet lines
     strokeWeight(1.2);
     for (let t = 0; t < 12; t++) {
         const colorId = (scaleMajor[t] == 1) ? 2 : 7;
@@ -1682,7 +1681,7 @@ function renderTuningReference() {
     }
 
 
-    //outer lines
+    // outer lines
     const colorIdTable = generateKeyColorTable(false);
     const offsetColorIdTable = generateKeyColorTable(true);
     const octaveLength = currentTuning.length;
@@ -1708,7 +1707,7 @@ function renderTuningReference() {
         line(start.x, start.y, end.x, end.y);
     }
 
-    //draw the lines between the segments in order of playing
+    // draw the lines between the segments in order of playing
     let lastKeyAngle;
     let lastKeyColor;
     let lastKeyOctave;
@@ -1743,7 +1742,7 @@ function renderTuningReference() {
         // line between previous and this key
         if (lastKeyAngle !== undefined) {
 
-            //line between the two angles
+            // line between the two angles
             const last = {x: cos(lastKeyAngle) * lastKeyOctave, y: sin(lastKeyAngle) * lastKeyOctave};
             const halfway = {x: (last.x+now.x)/2, y: (last.y+now.y)/2};
 
@@ -1847,7 +1846,7 @@ class ButtonObj {
         const midColor = lerpColor(innerColor, outerColor, 0.3);
         const darkerColor = lerpColor(innerColor, outerColor, 0.5);
 
-        //note states
+        // note states
         switch (state) {
             case "klicked":
                 keyShape(this.x, this.y, this.r * 1.7, innerColor);
@@ -1906,7 +1905,7 @@ class ButtonObj {
         strokeWeight(2);
         stroke("black");
 
-        //button states
+        // button states
         switch (state) {
             case "hidden":
                 fill("#17074450");
@@ -1928,7 +1927,7 @@ class ButtonObj {
                 controlShape(this.x, this.y, this.r * 1.57);
                 break;
             case "idle":
-                //more states than on/off
+                // more states than on/off
                 fill("#170744");
                 controlShape(this.x, this.y, this.r * 1.7);
                 fill("#3E1C8790");
@@ -1976,7 +1975,7 @@ class ButtonObj {
         push();
         textSize(22);
 
-        //shadow
+        // shadow
         strokeWeight(4);
         stroke("#00000050");
         strokeJoin(ROUND);
@@ -2011,8 +2010,8 @@ class ButtonObj {
         const inHoverHexes = pressedButtons.find(t => t.midiName === this.midiName);
         const inSustainedKeys = sustainedKeys.find(t => t.midiName === this.midiName);
 
-        //also highlight same note in different octave.
-        //in concertina layout, highlight the semitone instead.
+        // also highlight same note in different octave.
+        // in concertina layout, highlight the semitone instead.
         let differentOctaveHexes;
         if (isConcertina) {
             differentOctaveHexes = pressedButtons.find(t => Math.abs(t.midiName - this.midiName) === 1);
@@ -2095,7 +2094,7 @@ class ButtonObj {
                 return menuButtons[i].onCondition;
             }
         }
-        //if checking number that's too big
+        // if checking number that's too big
         return undefined;
     }
 
@@ -2150,7 +2149,7 @@ class ButtonObj {
         }
         text(keyText, this.x, this.y);
 
-        //extra text above
+        // extra text above
         push();
         textSize(11);
         fill(keyColorFromPalette(this, "dark"));
@@ -2187,8 +2186,8 @@ function dragDistanceMap(center, start, drag, min, max) {
 
 function findNearestButton(touch, arr) {
 
-    //minimum distance is a weird way to measure which button is hit
-    //WIP when the menu isn't open, do a different check instead that compares which hex is closest
+    // minimum distance is a weird way to measure which button is hit
+    // WIP when the menu isn't open, do a different check instead that compares which hex is closest
     const minDistance = (isConcertina) ? gridSizeY * 0.85 : gridSizeX * 0.85;
     let closestButton;
 
@@ -2204,12 +2203,12 @@ function findNearestButton(touch, arr) {
     }
 
     if (closestButton !== undefined) {
-        //print("Found " + closestButton.distanceToTouch(touch));
+        // print("Found " + closestButton.distanceToTouch(touch));
         closestButton.lastTouch = {id:touch.identifier, type:touch.interactionType};
-        //print(closestButton.lastTouch);
+        // print(closestButton.lastTouch);
         return closestButton;
     }
-    //print("No hexagon found in reach!");
+    // print("No hexagon found in reach!");
 
 }
 
@@ -2243,7 +2242,7 @@ function hexagon(x, y, r, angle) {
     endShape(CLOSE);
 }
 
-//function hexagonTop(x, y, r) {
+// function hexagonTop(x, y, r) {
 //    beginShape();
 //    for (let a = 1 * PI; a < 2 * PI; a += (2 * PI) / 6) {
 //        let x2 = cos(a) * r;
@@ -2251,7 +2250,7 @@ function hexagon(x, y, r, angle) {
 //        vertex(x + x2, y + y2);
 //    }
 //    endShape();
-//}
+// }
 
 function gradientCircle(cInner, sInner, cOuter, sOuter, x, y, steps) {
     push();
