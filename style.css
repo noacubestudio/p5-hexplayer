@@ -13,6 +13,8 @@ body {
   -webkit-user-select: none;
   user-select: none;
   /* prevent copy paste, to allow, change 'none' to 'text' */
+
+  background-color: #362D95;
 }
 
 *{touch-action: none;}

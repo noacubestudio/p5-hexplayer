@@ -9,79 +9,17 @@ let gridWidth;
 let gridIncrement_H = 1;
 let gridIncrement_D = 4;
 let gridIncrement_V = 7;
-let gridXYswapped = false;
-let isConcertina = false;
+let noteLayout = "concertina";
 
-const hexColors = [
-    "#DE4D44",
-    "#EE7A39",
-    "#EEA435",
-    "#EFC738",
-    "#C2EC4D",
-    "#82DC3B",
-
-    "#4AD679",
-    "#3CC5CE",
-    "#51B6FF",
-    "#7976FF",
-    "#9E7CFF",
-    "#CD6ABD",
-];
-const darkHexColors = [
-    "#CE2A2A",
-    "#D1551F",
-    "#D77F19",
-    "#D18F2C",
-    "#A8CD3D",
-    "#52C02B",
-
-    "#31A97E",
-    "#30A0B9",
-    "#3889D3",
-    "#575EFF",
-    "#745EF9",
-    "#AF50B7",
-];
-const lightHexColors = [
-    "#FFB993",
-    "#F89A66",
-    "#F4BC4E",
-    "#F5DC54",
-    "#DAF17D",
-    "#AEEA62",
-
-    "#7FE489",
-    "#64E5CE",
-    "#78D7FF",
-    "#AB9DFF",
-    "#C68EFE",
-    "#E493C4",
-];
-
-const darkerHexColors = [
-    "#200303",
-    "#260B02",
-    "#290F03",
-    "#221203",
-    "#0F1E05",
-    "#031D14",
-
-    "#031819",
-    "#031322",
-    "#050F29",
-    "#060A32",
-    "#100930",
-    "#1E051F",
-];
-
-const rootColor = "#FFD0B6";
+let theme = new Object; //Filled in setup() with p5 colors
 
 // list of all menu buttons, gets updated with visual state and name
 let menuButtons = new Array;
 
-const noteNames = ["C","C#","D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-const octaveSymbols = ["⁰","¹","²","³","⁴","⁵","⁶","⁷","⁸","⁹",];
-
+const octaveSymbols = [
+    "⁰","¹","²","³","⁴","⁵","⁶","⁷","⁸","⁹",];
+const noteNames = [
+    "C","C#","D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const intervalNames = [
     "1", "m2", "2", "m3", "3", "4", "TT", "5", "m6", "6", "m7", "7",];
 const intervalNames19tet = [
@@ -92,6 +30,14 @@ const intervalNames24tet = [
     "1", "-2", "m2", "~2", "2", "-3", "m3", "~3", "3", "+3", "4", "+4", "TT", "-5", "5", "-6", "m6", "~6", "6", "-7", "m7", "~7", "7", "-8",];
 const intervalNames31tet = [
     "1", "+1", "-2", "m2", "~2", "2", "+2", "-3", "m3", "~3", "3", "+3", "-4", "4", "+4", "tt", "TT", "-5", "5", "+5", "-6", "m6", "~6", "6", "+6", "-7", "m7", "~7", "7", "+7", "-8",];
+
+// scales - used for colors of keys and more
+const scaleMajor12 = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1];
+const scaleMajor19 = [1, 0, 0, 1, 0, 0, 1, -1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, -1];
+const scaleMajor14 = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0];
+const scaleMajor24 = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0];
+const scaleMajor31 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0];
+const scalePrimal21 = [1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0];
 
 const baseFrequency = 32.70 // C1
 const tuning12tet = [
@@ -328,44 +274,17 @@ const tuning24ji = [
     "35/18" // 27/14
 ];
 
-// scales - used for colors of keys and more
-const scaleMajor = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1];
-const scaleMinor = [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0];
-const scaleChromatic = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-
-const scaleMajor19 = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0];
-const scaleTop19 =   [0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0];
-const scaleMajor14 = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0];
-const scaleMajor24 = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0];
-const scaleMajor31 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0];
-const scalePrimal21 = [1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0];
-
-const layoutColorsFifths = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5]; // next hue after every fifth
-
-// colors
-const backgroundColor = "#050314";
-const outColor = "#56459A";
-const darkOutColor = "#493C94";
-const lightOutColor = "#E8D1FF";
-const midColor = hexColors[10];
-const buttonBaseColor = "#190E43A0";
-document.bgColor = backgroundColor;
-
 // modes
-let scaleMode = "chromatic";
-let colorMode = "major";
 let pitchBend = false;
-
 let tuneMode = "12tet";
 let currentTuning = tuning12tet;
 
-let currentScale = scaleChromatic.slice();
+let currentScale = scaleMajor12.slice();
 let currentKey = "C"; // wip store as numerical offset instead
 let currentOctave = 0;
-let labelStyle = "notes";
+let labelStyle = "none";
 
 // current keys
-let topKeyOctave = 1; // the octave the last pressed key is in, used for recoloring the reference
 let pressedButtons = new Array;
 let lastPressedButtons = new Array;
 let sustainedKeys = new Array;
@@ -397,7 +316,7 @@ let pianoSampler;
 let rhodesSampler;
 let organSampler;
 let harpSampler;
-let synthvoices = [];
+let synthvoices = new Array;
 
 let instrument;
 let currentInstrument = "piano";
@@ -489,6 +408,35 @@ function setup() {
     canvas.parent("canvasContainer");
     strokeWeight(2);
 
+    theme = {
+        highlight:color("#FFEECD"),
+        bg:color("#362D95"),
+        bgdark:color("#160E48"),
+        blue:[
+            color("#1D40BF"),
+            color("#2B66DE"),
+            color("#21A2E3"),
+            color("#25DCCD"),
+            color("#34F4AF")
+        ],
+        green:[
+            color("#006A71"),
+            color("#018D6C"),
+            color("#2AC84C"),
+            color("#ABE95C"),
+            color("#F3F567")
+        ],
+        red:[
+            color("#5E1F7B"),
+            color("#8E2F99"),
+            color("#C645A0"),
+            color("#F36D64"),
+            color("#FF9F76")
+        ],
+        text:color("#B7A0F8"),
+        textdark:color("#8F68FF")
+    };
+
     textAlign(CENTER, CENTER);
     textSize(22);
     textFont("Satoshi");
@@ -496,19 +444,20 @@ function setup() {
     rectMode(RADIUS);
 
     makeHexagons();
+    calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
 
     // create buttons with negative IDs
     const xOffset = width - 586; 
     const yOffset = 130;
-    const bWidth = gridSizeX * 2.9;
-    const bHeight = gridSizeY * 1.3;
+    const bWidth = 151;
+    const bHeight = 59;
     const rows = 9;
     const columns = 4;
 
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < columns; x++) {
             controlsArr.push(
-                new ButtonObj(xOffset + bWidth*x, yOffset + y*bHeight, gridSizeX, "control", -(y + 1 + rows*x))
+                new ButtonObj(xOffset + bWidth*x, yOffset + y*bHeight, "control", -(y + 1 + rows*x))
             );
         }
     }
@@ -559,7 +508,7 @@ function makeHexagons() {
     let id = 0;
 
     // hexagons are less wide so they can interlock
-    if (isConcertina == false) {
+    if (noteLayout !== "concertina") {
         gridSizeY = sqrt((3 * pow(gridSizeY, 2)) / 4);
         gridWidth = 19; // how many in a row + odd row
 
@@ -567,13 +516,12 @@ function makeHexagons() {
         for (let y = 21 * gridSizeY; y > -50; y -= 2 * gridSizeY) {
             for (let x = 0; x < 28 * gridSizeX; x += 3 * gridSizeX) {
                 // even rows
-                keyArr.push(new ButtonObj(x + hStartX, y + hStartY + gridSizeY, gridSizeX, "note", id++));
+                keyArr.push(new ButtonObj(x + hStartX, y + hStartY + gridSizeY, "note", id++));
                 // odd rows
                 if (x > 25 * gridSizeX) { break;}
-                keyArr.push(new ButtonObj(x + hStartX + 1.5*gridSizeX, y + hStartY, gridSizeX, "note", id++));
+                keyArr.push(new ButtonObj(x + hStartX + 1.5*gridSizeX, y + hStartY, "note", id++));
             }
         }
-
     } else {
         // concertina layout
         gridSizeX = sqrt((3 * pow(gridSizeX, 2)) / 4);
@@ -585,10 +533,10 @@ function makeHexagons() {
         for (let x = 0; x < 32 * gridSizeX; x += 2 * gridSizeX) {
             for (let y = 18 * gridSizeY; y > -50; y -= 3 * gridSizeY) {
                 // even columns
-                keyArr.push(new ButtonObj(x + hStartX, y + hStartY, gridSizeY, "note", id++));
+                keyArr.push(new ButtonObj(x + hStartX, y + hStartY, "note", id++));
                 // odd columns
                 if (y < 5) {break;}
-                keyArr.push(new ButtonObj(x + hStartX + gridSizeX, y + hStartY - 1.5*gridSizeY, gridSizeY, "note", id++));
+                keyArr.push(new ButtonObj(x + hStartX + gridSizeX, y + hStartY - 1.5*gridSizeY, "note", id++));
             }
         }
     }
@@ -706,8 +654,8 @@ function draw() {
 
 function runKeys() {
     //between keys
-    background(backgroundColor);
-    let optionsBG = color(backgroundColor);
+    background(theme.bg);
+    noStroke();
 
     if (menuIsOpen) {
         if (mouseUsed === false) {
@@ -730,10 +678,9 @@ function runKeys() {
             h.renderText(h.findKeyVariant);
         });
 
-        fill(optionsBG);
-        rect(1006, 365, 308, 274, 20);
-        optionsBG.setAlpha(80);
-        background(optionsBG);
+        background(atAlpha(theme.bgdark, 60));
+        fill(theme.bgdark);
+        rect(1006, 366, 308, 278, 20);
 
         // update control states
         updateControlStates();
@@ -795,15 +742,16 @@ function renderKeyBridges() {
     noStroke();
     // lines between pressedButtons
     if (penDragStartKey !== undefined && penDragEndKey !== undefined) {
-        drawPointConnector(
+        renderBridge(
             penDragStartKey.x, penDragStartKey.y,
             penDragEndKey.x, penDragEndKey.y,
-            color(keyColorFromPalette(penDragStartKey, "dark")),
-            color(keyColorFromPalette(penDragEndKey, "dark")));
+            penDragStartKey.keyColorFromPalette(1),
+            penDragEndKey.keyColorFromPalette(2)
+        );
     }
     if (bridgeKeyPairs.size > 0) {
-        bridgeKeyPairs.forEach((hexpair) => {
-            const nameArray = hexpair.split(" ");
+        for (let b = bridgeKeyPairs.size - 1; b >= 0; b--) {
+            const nameArray = Array.from(bridgeKeyPairs)[b].split(" ");
             let hexArray = [];
             print (nameArray);
 
@@ -811,22 +759,22 @@ function renderKeyBridges() {
             keyArr.forEach((h) => {
                 if (nameArray[0] == h.name) {
                     hexArray[0] = h;
-                }
-                else if (nameArray[1] == h.name) {
+                } else if (nameArray[1] == h.name) {
                     hexArray[1] = h;
                 }
             });
 
             if (hexArray[0] !== undefined && hexArray[1] !== undefined) {
-                print(hexArray)
+                print(hexArray);
 
-                drawPointConnector(
+                renderBridge(
                     hexArray[0].x, hexArray[0].y,
                     hexArray[1].x, hexArray[1].y,
-                    color(keyColorFromPalette(hexArray[0], "dark")),
-                    color(keyColorFromPalette(hexArray[1], "dark")));
+                    hexArray[0].keyColorFromPalette(1),
+                    hexArray[1].keyColorFromPalette(2)
+                );
             }
-        });
+        }
     }
     pop();
 }
@@ -981,18 +929,8 @@ function keyboardReactToTouch() {
         keyArr.forEach((h) => {
             if (h.name === playHex.name) {
                 
-                //key attacked 
-                if (interactionMode === "key") {
-                    // change key with to note, or change scale
-                    h.countdown = cooldownFrames;
-                    currentKey = h.pitchName;
-                    pickScale(currentKey, scaleMode);
-                    print("Key mode, current key: " + currentKey)
-                } else {
-                    // play the note normally
-                    playKey(h);
-                }
-
+                // could have other modes here
+                playKey(h);
             }
         });
         // add attacked keys in order to a list
@@ -1334,6 +1272,8 @@ function controlPressed(b) {
                 break;
         }
         currentOctave = 0;
+        currentScale = scaleMajor12;
+        noteLayout = "concertina"; makeHexagons();
         calculateNewMidiGrid(4, 7);
         playTestChord([4,7]);
 
@@ -1343,6 +1283,8 @@ function controlPressed(b) {
                 tuneMode = "14tet";
                 currentTuning = tuning14tet;
                 currentOctave = 0;
+                currentScale = scaleMajor14;
+                noteLayout = "harmonic"; makeHexagons();
                 calculateNewMidiGrid(4, 5);
                 playTestChord([4, 8]);
                 break;
@@ -1350,6 +1292,8 @@ function controlPressed(b) {
                 tuneMode = "19tet";
                 currentTuning = tuning19tet;
                 currentOctave = 0;
+                currentScale = scaleMajor19;
+                noteLayout = "concertina"; makeHexagons();
                 calculateNewMidiGrid(6, 11);
                 playTestChord([6, 11]);
                 break;
@@ -1357,6 +1301,8 @@ function controlPressed(b) {
                 tuneMode = "31ji";
                 currentTuning = tuning31ji;
                 currentOctave = 1;
+                currentScale = scaleMajor31;
+                noteLayout = "harmonic"; makeHexagons();
                 calculateNewMidiGrid(5, 9);
                 playTestChord([10, 18]);
                 break;
@@ -1364,6 +1310,8 @@ function controlPressed(b) {
                 tuneMode = "21astral";
                 currentTuning = tuning21Astral;
                 currentOctave = 1;
+                currentScale = scalePrimal21;
+                noteLayout = "harmonic"; makeHexagons();
                 calculateNewMidiGrid(5, 9);
                 playTestChord([6, 12, 18]);
                 break;
@@ -1371,6 +1319,8 @@ function controlPressed(b) {
                 tuneMode = "24tet";
                 currentTuning = tuning24tet;
                 currentOctave = 1;
+                currentScale = scaleMajor24;
+                noteLayout = "harmonic"; makeHexagons();
                 calculateNewMidiGrid(4, 7);
                 playTestChord([8, 14]);
                 break;
@@ -1378,6 +1328,8 @@ function controlPressed(b) {
                 tuneMode = "24ji";
                 currentTuning = tuning24ji;
                 currentOctave = 1;
+                currentScale = scaleMajor24;
+                noteLayout = "harmonic"; makeHexagons();
                 calculateNewMidiGrid(4, 7);
                 playTestChord([8, 14]);
                 break;
@@ -1387,62 +1339,29 @@ function controlPressed(b) {
             case 1:
                 print("Changed label style");
                 if (labelStyle === "notes") {labelStyle = "intervals";}
+                else if (labelStyle === "intervals") {labelStyle = "none";}
                 else {labelStyle = "notes";}
                 break;
             case 2:
-                print("Changed color theme!");
-                if (colorMode === "fifths") {colorMode = "major";}
-                else {colorMode = "fifths";}
-                // {colorMode = "chromatic";}
+                print("Switched to different layout");
+                if (noteLayout === "concertina") {
+                    noteLayout = "harmonic";
+                } else if (noteLayout === "harmonic") {
+                    noteLayout = "swapped";
+                } else {
+                    noteLayout = "concertina";
+                }
+                makeHexagons(); calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
                 break;
             case 3:
-                print("turned semitones to whole tones!");
-                isConcertina = !isConcertina;
-                if (isConcertina) {
-                    gridXYswapped = false;
-                }
-                makeHexagons();
-                calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
-                break;
-            case 4:
-                print("Switched to different midi to grid XY layout");
-                gridXYswapped = !gridXYswapped;
-                if (gridXYswapped) {
-                    isConcertina = false;
-                    makeHexagons();
-                }
-                calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
-                break;
-            case 5:
-                print("Change key");
-                if (interactionMode === "key") {
-                    interactionMode = "play";
-                } else {
-                    interactionMode = "key";
-                }
-                break;
-            case 6:
                 print("Changed octave");
                 currentOctave++;
                 if (currentOctave == 3) {currentOctave = 0;}
                 break;
-            case 7:
-                print("Changed scale");
-    
-                if (scaleMode === "major") {
-                    scaleMode = "minor";
-                } else if (scaleMode === "minor") {
-                    scaleMode = "chromatic";
-                } else if (scaleMode === "chromatic") {
-                    scaleMode = "major";
-                } else {
-                    scaleMode = "chromatic";
-                }
-                pickScale(currentKey, scaleMode);
-                break;
-            case 8:
+            case 4:
                 print("Toggled pitch bend");
                 pitchBend = !pitchBend;
+                break;
         }
     }
 }
@@ -1460,7 +1379,7 @@ function playTestChord(intervals) {
 
 function calculateNewMidiGrid(small, big) {
 
-    if (isConcertina) {
+    if (noteLayout === "concertina") {
         gridBaseMidi = Math.floor(currentTuning.length * 1.5);
     } else {
         gridBaseMidi = currentTuning.length * 2;
@@ -1472,11 +1391,11 @@ function calculateNewMidiGrid(small, big) {
     gridIncrement_V = big;
 
     // actual values take into account extra grid modes
-    if (gridXYswapped) {
+    if (noteLayout === "swapped") {
         newIncrement_H = big;
         newIncrement_D = small;
         newIncrement_V = 2 * small - big;
-    } else if (isConcertina) {
+    } else if (noteLayout === "concertina") {
         newIncrement_H = currentTuning.length; // octave
         newIncrement_D = big;
         newIncrement_V = (2 * big) % currentTuning.length;
@@ -1492,99 +1411,16 @@ function calculateNewMidiGrid(small, big) {
 }
 
 
-function pickScale(pitch, mode) {
-    // start from note
-    const offset = noteNames.indexOf(pitch);
-
-    // WIP: make this compatible with other octave sizes
-    if (mode === "chromatic" || currentTuning.length != 12) {
-        currentScale = new Array(currentTuning.length).fill(1); // all notes are on
-        scaleMode = "chromatic"; // in case it isn't already!
-    } else {
-        for (let i = 0; i < 12; i++) {
-            if (mode === "major") {
-                currentScale[(i + offset) % 12] = scaleMajor[i];
-            } else if (mode === "minor") {
-                currentScale[(i + offset) % 12] = scaleMinor[i];
-            }
-        }
-    }
-}
-
-
-function keyColorFromPalette(h, style) {
-    let palette = new Array;
-    let darkPalette = new Array;
-    let darkerPalette = new Array;
-    let lightPalette = new Array;
-
-    if (colorMode !== "chromatic") {
-
-        // table of colors
-        const isOffsetOctave = ((h.octave + currentOctave) % 2 == 0);
-        const colorIds = generateKeyColorTable(isOffsetOctave);
-
-        for (let i = 0; i < colorIds.length; i++) {
-            let id = colorIds[i];
-
-            palette.push(hexColors[id]);
-            darkPalette.push(darkHexColors[id]);
-            darkerPalette.push(darkerHexColors[id]);
-            lightPalette.push(lightHexColors[id]);
-        }
-    } else {
-        palette = hexColors.slice();
-        darkPalette = darkHexColors.slice();
-        darkerPalette = darkerHexColors.slice();
-        lightPalette = lightHexColors.slice();
-    }
-
-    let offColor = outColor;
-
-    if (style === "dark") {
-        palette = darkPalette;
-        offColor = darkOutColor;
-    }
-    else if (style === "light") {
-        palette = lightPalette;
-        offColor = lightOutColor;
-    }
-    else if (style === "darker") {
-        palette = darkerPalette;
-        offColor = lerpColor(color(backgroundColor), color(darkOutColor), 0.15);
-    }
-
-    // color according to on/off state in current scale
-    let index = 0;
-    let offset = 0;
-
-    if (currentTuning.length !== 12) {
-        offset = noteNames.indexOf(currentKey);
-        const shiftedColor = palette[(h.midiName - offset) % currentTuning.length];
-        return shiftedColor;
-    } else {
-        index = noteNames.indexOf(h.pitchName);
-        offset = noteNames.indexOf(currentKey);
-        if (currentScale[index] == 1) {
-            const shiftedColor = palette[(h.midiName - offset) % 12];
-            return shiftedColor;
-        } else {
-            return offColor;
-        }
-    }
-}
-
-
-function drawPointConnector(x1, y1, x2, y2, c1, c2) {
-    const steps = 20;
+function renderBridge(x1, y1, x2, y2, c1, c2) {
+    const steps = 50;
 
     for (let gridDistanceY = 0; gridDistanceY < steps + 1; gridDistanceY++) {
         const mixColor = lerpColor(c1, c2, gridDistanceY / steps);
         const mixX = lerp(x1, x2, gridDistanceY / steps);
         const mixY = lerp(y1, y2, gridDistanceY / steps);
 
-        const size = map(gridDistanceY, 0, steps, 6, 14);
-        const alpha = map(gridDistanceY, 0, steps, 60, 255);
+        const size = map(gridDistanceY, 0, steps, 12, 36);
+        const alpha = map(gridDistanceY, 0, steps, 255, 255);
 
         mixColor.setAlpha(alpha);
         fill(mixColor);
@@ -1592,43 +1428,16 @@ function drawPointConnector(x1, y1, x2, y2, c1, c2) {
     }
 }
 
-function generateKeyColorTable(isOddOctave) {
 
-    const octaveLength = currentTuning.length;
+function valueFromScale(scaleIndex) {
+    //minor note
+    if (currentScale[scaleIndex] === 0) return [1,2,3];
 
-    // just use fifth layout colors
-    if (octaveLength == 12 && colorMode === "fifths") {
-        return layoutColorsFifths;
-    }
+    //major note
+    if (currentScale[scaleIndex] === 1) return [2,3,4];
 
-    // base color scheme on scale
-    const oddOctave = {highlight:2, medium:6, default:7};
-    const evenOctave = {highlight:1, medium:11, default:10};
-    const colorScheme = (isOddOctave) ? evenOctave : oddOctave;
-
-    let colorIdTable;
-    let tTable; // may be filled for additional colors
-
-    if (octaveLength == 12) {colorIdTable = scaleMajor.slice();}
-    else if (octaveLength == 19) {colorIdTable = scaleMajor19.slice(); tTable = scaleTop19.slice();}
-    else if (octaveLength == 14) {colorIdTable = scaleMajor14.slice();}
-    else if (octaveLength == 24) {colorIdTable = scaleMajor24.slice();}
-    else if (octaveLength == 31) {colorIdTable = scaleMajor31.slice();}
-    else if (currentTuning == tuning21Astral) {colorIdTable = scalePrimal21.slice();}
-    else {colorIdTable = new Array(octaveLength).fill(0);}
-
-    for (let c = 0; c < colorIdTable.length; c++) {
-
-        let color = colorScheme.default;
-
-        if (colorIdTable[c] == 1) {
-            color = colorScheme.highlight;
-        } else if (tTable !== undefined && tTable[c] == 1) {
-            color = colorScheme.medium;
-        }
-        colorIdTable[c] = color;
-    }
-    return colorIdTable;
+    //ambiguous
+    if (currentScale[scaleIndex] === -1) return [0,1,2];
 }
 
 
@@ -1640,50 +1449,52 @@ function renderTuningReference() {
     scale(1.2)
 
     // round base
-    noStroke();
-    baseColor = color(backgroundColor);
-    baseColor.setAlpha((orderedKeys.length > 0) ? 200 : 140);
-    fill(baseColor);
-    ellipse(0, 0, 46);
-    ellipse(0, 0, 64);
-    ellipse(0, 0, 66);
+    strokeWeight(16);
+    const baseSize = 26;
+    for (let t = 0; t < currentTuning.length; t++) {
+        const angle = map(t, 0, currentTuning.length, 0, TWO_PI) - HALF_PI;
+        const start = {x: cos(angle) * 0, y: sin(angle) * 0};
+        const end = {x: cos(angle) * baseSize, y: sin(angle) * baseSize};
+        stroke(lerpColor(theme.bg, color("black"), 0.5));
+        line(start.x, start.y, end.x, end.y);
+    }
 
 
     // 12tet lines
     strokeWeight(1.3);
     for (let t = 0; t < 12; t++) {
-        const lineColor = (orderedKeys.length > 0) ? color("#1B1446") : color("#3F2576");
-        stroke(lineColor);
 
         const angle = map(t, 0, 12, 0, TWO_PI) - HALF_PI;
-        const innerD = (scaleMajor[t] == 1) ? 0 : 10;
+        const innerD = (scaleMajor12[t] == 1) ? 0 : 10;
         const start = {x: cos(angle) * innerD, y: sin(angle) * innerD};
         const end = {x: cos(angle) * 20, y: sin(angle) * 20};
+
+        //const lineColor = (orderedKeys.length > 0) ? theme.bg : color("#00000080");
+        stroke(theme.bg);
         line(start.x, start.y, end.x, end.y);
     }
 
 
     // outer lines
-    const colorIdTable = generateKeyColorTable(false);
-    const offsetColorIdTable = generateKeyColorTable(true);
     const octaveLength = currentTuning.length;
     const offset = noteNames.indexOf(currentKey);
 
     for (let i = 0; i < octaveLength; i++) {
 
-        if (pressedButtons.length > 0) {
-            topKeyOctave = pressedButtons[pressedButtons.length-1].octave;
-        }
-        const colorTable = ((topKeyOctave + currentOctave) % 2 == 1) ? colorIdTable[i] : offsetColorIdTable[i];
         const freq = eval(currentTuning[i]);
         const cents = scaleFreqToCents(freq);
         const angle = map(cents, 0, 1200, 0, TWO_PI) - HALF_PI;
         const start = {x: cos(angle) * 20, y: sin(angle) * 20};
         const end = {x: cos(angle) * 28, y: sin(angle) * 28};
-        let lineColor;
 
-        lineColor = color(darkHexColors[colorTable]);
-        lineColor.setAlpha((orderedKeys.length > 0) ? 130 : 220);
+        let col = theme.blue[2]
+        if (currentScale[i] === 1) {
+            col = theme.blue[3]
+        } else if (currentScale[i] === -1) {
+            col = theme.blue[1]
+        }
+        const lineAlpha = (orderedKeys.length > 0) ? 70 : 90;
+        const lineColor = color(atAlpha(col, lineAlpha));
         strokeWeight(2);
         stroke(lineColor);
         line(start.x, start.y, end.x, end.y);
@@ -1701,9 +1512,8 @@ function renderTuningReference() {
         const freq = eval(currentTuning[index]);
         const cents = scaleFreqToCents(freq);
         const keyAngle = map(cents, 0, 1200, 0, TWO_PI) - HALF_PI;
+        const keyColor = o.keyColorFromPalette(2);
         const keyOctave = map(o.octave, 0, 6, 18, 28, true);
-        const colorTable = ((o.octave + currentOctave) % 2 == 1) ? colorIdTable[index] : offsetColorIdTable[index];
-        const keyColor = color(lightHexColors[colorTable]);
 
         const now = {x: cos(keyAngle) * keyOctave, y: sin(keyAngle) * keyOctave};
 
@@ -1712,15 +1522,11 @@ function renderTuningReference() {
         fill(keyColor);
         ellipse(now.x, now.y, 3);
 
-        keyColor.setAlpha(50);
-        fill(keyColor);
+        fill(color(atAlpha(keyColor, 30)));
         ellipse(now.x, now.y, 6);
 
-        keyColor.setAlpha(20);
-        fill(keyColor);
+        fill(color(atAlpha(keyColor, 10)));
         ellipse(now.x, now.y, 10);
-
-        keyColor.setAlpha(255);
 
         // line between previous and this key
         if (lastKeyAngle !== undefined) {
@@ -1781,24 +1587,23 @@ function updateControlStates() {
         {name:"", onCondition:undefined},
         {name:"", onCondition:undefined},
 
-        {name:"Intervals", onCondition:(labelStyle === "intervals")},
-        {name:"Rainbow", onCondition:(colorMode === "fifths")},
-        {name:"Concertina", onCondition:isConcertina},
-        {name:"Swap X/Y", onCondition:gridXYswapped},
-        {name:"Move Key " + currentKey, onCondition:(interactionMode === "key")},
+        {name:capitalize(labelStyle), onCondition:undefined}, //onCondition:(labelStyle === "intervals")
+        {name:capitalize(noteLayout), onCondition:undefined},
         {name:"Octave "+ currentOctave, onCondition:undefined},
-        {name:capitalize(scaleMode), onCondition:undefined},
         {name:"Pitchbend", onCondition:pitchBend},
         {name:"", onCondition:undefined},
+        {name:"", onCondition:undefined},
+        {name:"", onCondition:undefined},
+        {name:"", onCondition:undefined},
+        {name:"", onCondition:undefined}
     ];
 }
 
 class ButtonObj {
-    constructor(x, y, r, type, name) {
+    constructor(x, y, type, name) {
 
         this.x = x;
         this.y = y;
-        this.r = r;
         this.type = type;
         this.name = name;
         this.countdown = 0;
@@ -1820,66 +1625,80 @@ class ButtonObj {
         this.octave = floor(this.midiName / currentTuning.length) - 2;
     }
 
+    keyColorFromPalette(v) {
+        const octaveColors = [theme.red, theme.green, theme.blue];
+        const hue = octaveColors[(this.octave + 3 + currentOctave) % 3];
+        const value = valueFromScale(this.midiName % currentTuning.length)[v]
+        return hue[value];
+    }
+
     renderKeyType(state, strength) {
         push();
         noStroke();
 
-        const highlightColor = color(keyColorFromPalette(this, "light"));
-        const innerColor = color(keyColorFromPalette(this, "dark"));
-        const outerColor = color(keyColorFromPalette(this, "darker"));
+        const baseColor = this.keyColorFromPalette(0);
+        const lightColor = this.keyColorFromPalette(1);
+        const glowColor = this.keyColorFromPalette(2);
+        const lightColor50 = color(atAlpha(lightColor, 50));
+        const hexSize = 34;
+        const hexInner = 30;
+        const circleSize = 36;
+        const circleInner = ((this.midiName) % currentTuning.length == 0) ? 0 : 18;
 
-        const brighterColor = lerpColor(color("#FFFFFF"), highlightColor, 0.9);
-        const midColor = lerpColor(innerColor, outerColor, 0.3);
-        const darkerColor = lerpColor(innerColor, outerColor, 0.5);
+        const someNotesOverlay = (orderedKeys.length > 0) ? color(atAlpha(theme.bgdark, 10)) : color("#00000000");
 
         // note states
         switch (state) {
-            case "klicked":
-                keyShape(this.x, this.y, this.r * 1.7, innerColor);
-                gradientCircle(
-                    color("#FFFFFF80"), 0,
-                    color("#FFFFFF00"), this.r * 1.59,
-                    this.x, this.y, 12);
-                break;
-            case "hover":
-                keyShape(this.x, this.y, this.r * 1.7, midColor);
-                gradientCircle(
-                    highlightColor, 0,
-                    midColor, this.r * 1.45,
-                    this.x, this.y, 18);
-                break;
-            case "sustained":
-                keyShape(this.x, this.y, this.r * 1.7, darkerColor);
-                gradientCircle(
-                    highlightColor, 0,
-                    darkerColor, this.r * 1.45,
-                    this.x, this.y, 18);
-                break;
             case "idle":
-                keyShape(this.x, this.y, this.r * 1.7, outerColor);
-                gradientCircle(
-                    lerpColor(innerColor, outerColor, 0.2), 0,
-                    outerColor, this.r * 1.45,
-                    this.x, this.y, 18);
+                keyShape(this.x+1, this.y+3, hexSize+1, color("#00000040"));
+                keyShape(this.x, this.y, hexSize, baseColor);
+                centerShape(this.x, this.y, circleSize, lightColor50);
+                centerShape(this.x, this.y, circleInner, baseColor);
+                keyShapeOverlay(this.x, this.y, hexSize, someNotesOverlay);
                 break;
             case "differentOctave":
-                keyShape(this.x, this.y, this.r * 1.7, lerpColor(innerColor, outerColor, 0.90));
-                gradientCircle(
-                    lerpColor(innerColor, outerColor, 0), 0,
-                    lerpColor(innerColor, outerColor, 0.90), this.r * 1.45,
-                    this.x, this.y, 18);
+                keyShape(this.x+1, this.y+3, hexSize+1, color("#00000030"));
+                keyShape(this.x, this.y, hexSize, baseColor);
+                centerShape(this.x, this.y, circleSize* 1.05, lightColor50);
+                centerShape(this.x, this.y, circleInner* 1.2, baseColor);
                 break;
-            case "selected":
-                keyShape(this.x, this.y, this.r * 1.7, "white");
-                gradientCircle(
-                    innerColor, 0,
-                    color("white"), this.r * 1.59,
-                    this.x, this.y, 12);
+            case "stepHigher":
+                keyShape(this.x+1, this.y+3, hexSize+1, color("#00000030"));
+                keyShape(this.x, this.y, hexSize, baseColor);
+                centerShape(this.x-3, this.y, circleSize, lightColor50);
+                centerShape(this.x-4, this.y, circleInner, baseColor);
+                break;
+            case "stepLower":
+                keyShape(this.x+1, this.y+3, hexSize+1, color("#00000030"));
+                keyShape(this.x, this.y, hexSize, baseColor);
+                centerShape(this.x+3, this.y, circleSize, lightColor50);
+                centerShape(this.x+4, this.y, circleInner, baseColor);
+                break;
+            case "klicked":
+                keyShape(this.x, this.y+1, hexSize, theme.highlight);
+                keyShape(this.x, this.y+1, hexInner, lightColor);
+                centerShape(this.x, this.y+1, circleInner * 1.3, baseColor);
+                centerShape(this.x, this.y+1, circleInner * 1.3, lightColor50);
+                break;
+            case "hover":
+                keyShape(this.x, this.y+1, hexSize, theme.highlight);
+                keyShape(this.x, this.y+1, hexInner, lightColor);
+                centerShape(this.x, this.y+1, circleInner * 1.3, baseColor);
+                centerShape(this.x, this.y+1, circleInner * 1.3, lightColor50);
+                break;
+            case "sustained":
+                keyShape(this.x, this.y+0.5, hexSize, theme.highlight);
+                keyShape(this.x, this.y+0.5, hexSize, color(atAlpha(lightColor, 30)));
+                keyShape(this.x, this.y+0.5, hexInner, lightColor);
+                centerShape(this.x, this.y+0.5, circleInner* 1.2, baseColor);
+                centerShape(this.x, this.y+0.5, circleInner* 1.2, lightColor50);
                 break;
             case "glow":
+                const rgb = glowColor;
+                const glowColorStrength = color(atAlpha(rgb, strength));
                 gradientCircle(
-                    color(keyColorFromPalette(this, "light") + strength), this.r * 0.5,
-                    color(keyColorFromPalette(this, "light") + strength), this.r * 2.6,
+                    glowColorStrength, hexSize * 0.5,
+                    glowColorStrength, hexSize * 4,
                     this.x, this.y, 14);
                 break;
         }
@@ -1888,69 +1707,44 @@ class ButtonObj {
 
     renderControlType(state) {
         push();
-        strokeWeight(2);
-        stroke("black");
+        noStroke();
+        const baseSize = 86;
+        const onColor = theme.textdark;
 
         // button states
         switch (state) {
             case "hidden":
-                fill("#17074450");
-                controlShape(this.x, this.y, this.r * 1.7);
+                fill(atAlpha(theme.bg, 30));
+                controlShape(this.x, this.y, baseSize);
                 break;
             case "klicked":
-                fill(buttonBaseColor);
-                controlShape(this.x, this.y, this.r * 1.7);
-                fill(midColor);
-                noStroke();
-                controlShape(this.x, this.y, this.r * 1.5);
+                fill(onColor);
+                controlShape(this.x, this.y, baseSize*0.9);
                 break;
             case "hover":
-                fill(outColor);
-                controlShape(this.x, this.y, this.r * 1.7);
-                noStroke();
-                fill("#00000040");
-                controlShape(this.x, this.y, this.r * 1.7);
-                controlShape(this.x, this.y, this.r * 1.57);
+                fill(onColor);
+                controlShape(this.x, this.y, baseSize*0.9);
+                break;
+            case "activehover":
+                fill(theme.textdark);
+                controlShape(this.x, this.y, baseSize*0.9);
                 break;
             case "idle":
                 // more states than on/off
-                fill("#170744");
-                controlShape(this.x, this.y, this.r * 1.7);
-                fill("#3E1C8790");
-                noStroke();
+                fill(theme.bg);
+                controlShape(this.x, this.y, baseSize);
+                fill(onColor);
                 triangle(this.x + 60, this.y, this.x + 50, this.y + 10, this.x + 50, this.y - 10);
                 triangle(this.x - 60, this.y, this.x - 50, this.y + 10, this.x - 50, this.y - 10);
                 break;
             case "active":
-                fill("#3E1C87");
-                controlShape(this.x, this.y, this.r * 1.7);
+                fill(onColor);
+                controlShape(this.x, this.y, baseSize);
                 break;
             case "inactive":
-                fill("#170744");
-                controlShape(this.x, this.y, this.r * 1.7);
+                fill(theme.bg);
+                controlShape(this.x, this.y, baseSize);
                 break;
-            case "activehover":
-                fill(darkHexColors[10]);
-                controlShape(this.x, this.y, this.r * 1.7);
-                noStroke();
-                fill("#ffffff30");
-                controlShape(this.x, this.y, this.r * 1.57);
-                controlShape(this.x, this.y, this.r * 1.4);
-                break;
-            case "glow":
-                fill("#00000030");
-                noStroke();
-                controlShape(this.x, this.y, this.r * 1.9);
-                break;
-            case "secondaryOn":
-                gradientCircle(
-                    color("#361976"), 0,
-                    color("#000000"), this.r * 1.30,
-                    this.x, this.y, 12);
-                noFill();
-                stroke(midColor);
-                controlShape(this.x, this.y, this.r * 1.7);
-            break;
         }
         this.renderControlText();
         pop();
@@ -1968,25 +1762,56 @@ class ButtonObj {
         fill("#00000050");
         this.renderKeyText();
 
+        const darkTextColor = lerpColor(this.keyColorFromPalette(2), theme.highlight, 0.5);
+        const lightTextColor = lerpColor(this.keyColorFromPalette(2), color("white"), 0.8);
+
         noStroke();
         if (state === "hover" || state === "sustained") {
-            fill("white");
-        } else if (state === "differentOctave"){
-            const base = color(keyColorFromPalette(this, "light"));
-            const bright = color("#FFFFFF");
-            fill(lerpColor(base, bright, 0.5));
+            fill(lightTextColor);
         } else if (this.pitchName === currentKey || this.pitchName === 1) { 
-            fill(rootColor); 
+            fill(lightTextColor); 
+        } else if (currentScale[this.midiName % currentTuning.length] !== 1) {
+            fill(darkTextColor);
         } else {
-            fill(keyColorFromPalette(this, "light"));
-
-            const offset = noteNames.indexOf(this.pitchName);
-            if (currentScale[offset] == 0) {
-                fill(keyColorFromPalette(this));
-            }
+            fill(lightTextColor);
         }
 
         this.renderKeyText();
+
+        if (state === "idle") {
+            const someNotesOverlay = (orderedKeys.length > 0) ? color(atAlpha(theme.bgdark, 10)) : color("#00000000");
+            fill(someNotesOverlay);
+            this.renderKeyText();
+        }
+        pop();
+
+
+        // extra text above
+        push();
+        if (currentTuning != tuning12tet &&
+                currentTuning != tuning19tet &&
+                currentTuning != tuning24tet &&
+                currentTuning != tuning14tet) {
+            const offset = noteNames.indexOf(currentKey);
+            const intervalName = currentTuning[(this.midiName - offset) % currentTuning.length];
+
+            let topText = intervalName;
+            if (topText == 1) {topText = "";}
+
+            textSize(11);
+            strokeWeight(3);
+            stroke(this.keyColorFromPalette(0));
+            fill(this.keyColorFromPalette(2));
+
+            text(topText, this.x, this.y - 25);
+
+            if (orderedKeys.length > 0 && state === "idle") {
+                noStroke();
+                const someNotesOverlay = color(atAlpha(theme.bgdark, 10));
+                fill(someNotesOverlay);
+                text(topText, this.x, this.y - 25);
+            }
+        }
         pop();
     }
 
@@ -1998,9 +1823,10 @@ class ButtonObj {
 
         // also highlight same note in different octave.
         // in concertina layout, highlight the semitone instead.
-        let differentOctaveHexes;
-        if (isConcertina) {
-            differentOctaveHexes = pressedButtons.find(t => Math.abs(t.midiName - this.midiName) === 1);
+        let higherHexes; let lowerHexes; let differentOctaveHexes;
+        if (noteLayout === "concertina") {
+            higherHexes = pressedButtons.find(t => t.midiName - this.midiName === 1);
+            lowerHexes = pressedButtons.find(t => t.midiName - this.midiName === -1);
         } else {
             differentOctaveHexes = pressedButtons.find(t => t.midiName % currentTuning.length === this.midiName % currentTuning.length);
         }
@@ -2015,6 +1841,10 @@ class ButtonObj {
             return "sustained";
         } else if (differentOctaveHexes !== undefined) {
             return "differentOctave";
+        } else if (higherHexes !== undefined) {
+            return "stepHigher";
+        } else if (lowerHexes !== undefined) {
+            return "stepLower";
         } else {
             return "idle";
         }
@@ -2035,8 +1865,6 @@ class ButtonObj {
             this.renderControlType("inactive");
         } else if (inHoverButtons !== undefined) {
             this.renderControlType("hover");
-        } else if (this.secondaryOn){
-            this.renderControlType("secondaryOn");
         } else {
             this.renderControlType("idle");
         }
@@ -2046,13 +1874,13 @@ class ButtonObj {
     drawKeyGlow() {
         const inKlickedHexes = pressedButtons.find(t => t.midiName === this.midiName);
         if (inKlickedHexes !== undefined ) {
-            this.renderKeyType("glow", "06");
+            this.renderKeyType("glow", "05");
             return;
         }
 
         const inSustainedKeys = sustainedKeys.find(t => t.midiName === this.midiName);
         if (inSustainedKeys !== undefined) {
-            this.renderKeyType("glow", "03");
+            this.renderKeyType("glow", "02");
             return;
         }
     }
@@ -2088,7 +1916,7 @@ class ButtonObj {
     renderControlText() {
         push();
         noStroke();
-        const stateColor = (this.isControlOn) ? "#D5B9F2" : "#AA6EF5";
+        const stateColor = (this.isControlOn) ? theme.highlight : theme.text;
         fill(stateColor);
 
         textSize(18);
@@ -2098,64 +1926,47 @@ class ButtonObj {
 
     renderKeyText() {
         const octaveLength = currentTuning.length;
-        let keyText = this.name;
-        if (octaveLength == 12) {
+        let keyText = "";
 
-            if (labelStyle === "notes") {
+        if (labelStyle !== "none") {
 
+            if (octaveLength == 12) {
+                if (labelStyle === "notes") {
+    
                     keyText = this.pitchName;
-
-            } else if (labelStyle === "intervals") {
-
-                const offset = noteNames.indexOf(currentKey);
-                const intervalName = intervalNames[(this.midiName - offset) % 12];
-                keyText = intervalName;
-            }
-        } else {
-            if (labelStyle === "intervals") {
-                const offset = noteNames.indexOf(currentKey);
-                let intervalNamesTable;
-                if (octaveLength == 19) {intervalNamesTable = intervalNames19tet.slice();}
-                else if (octaveLength == 14) {intervalNamesTable = intervalNames14tet.slice();}
-                else if (octaveLength == 24) {intervalNamesTable = intervalNames24tet.slice();}
-                else if (octaveLength == 31) {intervalNamesTable = intervalNames31tet.slice();}
-                else {intervalNamesTable = new Array(octaveLength).fill((this.midiName - offset) % octaveLength + 1);}
-                
-                const intervalName = intervalNamesTable[(this.midiName - offset) % octaveLength];
-                keyText = intervalName;
+    
+                } else if (labelStyle === "intervals") {
+    
+                    const offset = noteNames.indexOf(currentKey);
+                    const intervalName = intervalNames[(this.midiName - offset) % 12];
+                    keyText = intervalName;
+                }
             } else {
-                keyText = this.pitchName - 1;
+                // other octave lengths
+                if (labelStyle === "intervals") {
+                    const offset = noteNames.indexOf(currentKey);
+                    let intervalNamesTable;
+                    if (octaveLength == 19) {intervalNamesTable = intervalNames19tet.slice();}
+                    else if (octaveLength == 14) {intervalNamesTable = intervalNames14tet.slice();}
+                    else if (octaveLength == 24) {intervalNamesTable = intervalNames24tet.slice();}
+                    else if (octaveLength == 31) {intervalNamesTable = intervalNames31tet.slice();}
+                    else {intervalNamesTable = new Array(octaveLength).fill((this.midiName - offset) % octaveLength + 1);}
+                    
+                    const intervalName = intervalNamesTable[(this.midiName - offset) % octaveLength];
+                    keyText = intervalName;
+                } else {
+                    keyText = this.pitchName - 1;
+                }
             }
-        }
 
-        // Add symbol for octave only on first note of each
-        if (this.pitchName == currentKey || this.pitchName == 1) {
-            const octave = this.octave + currentOctave;
-            const octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
-            keyText += octaveSymbol;
-        }
-
-        text(keyText, this.x, this.y);
-
-        // extra text above
-        push();
-        textSize(11);
-        fill(keyColorFromPalette(this, "dark"));
-
-        if (currentTuning != tuning12tet &&
-                currentTuning != tuning19tet &&
-                currentTuning != tuning24tet &&
-                currentTuning != tuning14tet) {
-            const offset = noteNames.indexOf(currentKey);
-            const intervalName = currentTuning[(this.midiName - offset) % octaveLength];
-
-            let topText = intervalName;
-            if (topText == 1) {
-                topText = "";
+            // Add symbol for octave only on first note of each
+            if (this.pitchName == currentKey || this.pitchName == 1) {
+                const octave = this.octave + currentOctave;
+                const octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
+                keyText = " " + keyText + octaveSymbol;
             }
-            text(topText, this.x, this.y - 25);
+            text(keyText, this.x, this.y);
         }
-        pop();
     }
 }
 
@@ -2209,20 +2020,47 @@ function findNearestButton(touch, arr) {
 }
 
 
-function keyShape(x, y, r, lineColorolor) {
-    push()
+function keyShape (x, y, r, color) {
+    push();
 
-    fill(lineColorolor)
-    strokeWeight(r * 0.3);
-    stroke(lineColorolor);
+    fill(color);
+    strokeWeight(r * 0.8);
+    stroke(color);
     strokeJoin(ROUND);
 
-    if (isConcertina) {
-        hexagon(x, y, r * 0.38, 1/2 * PI);
+    if (noteLayout === "concertina") {
+        hexagon(x, y, r, 1/2 * PI);
     } else {
-        hexagon(x, y, r * 0.38, 0);
+        hexagon(x, y, r, 0);
     }
-    pop()
+    pop();
+}
+
+
+function keyShapeOverlay (x, y, r, color) {
+    push();
+
+    fill(color);
+    noStroke();
+
+    if (noteLayout === "concertina") {
+        hexagon(x, y, r*1.5, 1/2 * PI);
+    } else {
+        hexagon(x, y, r*1.5, 0);
+    }
+
+    pop();
+}
+
+function centerShape(x, y, r, color) {
+    push();
+
+    fill(color);
+    noStroke();
+
+    ellipse(x, y, r*2);
+    
+    pop();
 }
 
 function controlShape(x, y, r) {
@@ -2298,14 +2136,14 @@ function cornerText() {
     const yOffset = height - 20;
 
     textAlign(LEFT, CENTER);
-
-    stroke(backgroundColor);
     strokeJoin(ROUND);
-    strokeWeight(7);
+
+    strokeWeight(5);
+    stroke(color(atAlpha(theme.bgdark,90)));
     text(playText, xOffset, yOffset);
 
     noStroke();
-    const textColor = lerpColor(color("#5940F1"), color("#8760F3"), drawMinDuration/20);
+    const textColor = lerpColor(theme.textdark, theme.text, drawMinDuration/20);
     fill(textColor);
     text(playText, xOffset, yOffset);
 
@@ -2315,6 +2153,15 @@ function cornerText() {
 function scaleFreqToCents(freq) {
     return Math.log2(freq) * 1200;
 }
+
+function atAlpha (color, percent) {
+    const r = red(color);
+    const g = green(color);
+    const b = blue(color);
+    const a = percent / 100;
+    return 'rgba('+r+','+g+','+b+','+a+')';
+}
+
 
 function mousePressed() {
     if (ongoingTouches.length <= 0) {
