@@ -3,6 +3,7 @@ let cooldownFrames = 3; // this animation time also blocks double taps
 let readyForSound = false; // only play sound when ready
 let drawMinDuration = 20; // 
 
+//for constructing the hexagons
 let gridBaseMidi = 24;
 let gridWidth;
 let gridIncrement_H = 1;
@@ -75,33 +76,22 @@ const darkerHexColors = [
 
 const rootColor = "#FFD0B6";
 
-let menuButtons = [];
+// list of all menu buttons, gets updated with visual state and name
+let menuButtons = new Array;
 
-const noteNames = [
-    "C","C#","D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
-];
+const noteNames = ["C","C#","D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const octaveSymbols = ["⁰","¹","²","³","⁴","⁵","⁶","⁷","⁸","⁹",];
+
 const intervalNames = [
-    "1", "m2", "2", "m3", "3", "4", "TT", "5", "m6", "6", "m7", "7",
-];
+    "1", "m2", "2", "m3", "3", "4", "TT", "5", "m6", "6", "m7", "7",];
 const intervalNames19tet = [
-    "1", "»1", "2«", "2", "»2", "3«", "3", "›34‹", "4", "»4", "5«", "5", "»5", "6«", "6", "»6", "7«", "7", "›71‹",
-];
+    "1", "1a", "m2", "2", "2a", "m3", "3", "3›‹4", "4", "4a", "m5", "5", "5a", "m6", "6", "6a", "m7", "7", "7›‹1",];
 const intervalNames14tet = [
-    "1", "1*", "2", "2*", "3", "3*", "4", "4*", "5", "5*", "6", "6*", "7", "7*",
-];
-const octaveSymbols = [
-    "⁰","¹","²","³","⁴","⁵","⁶","⁷","⁸","⁹",
-];
-
+    "1", "1*", "2", "2*", "3", "3*", "4", "4*", "5", "5*", "6", "6*", "7", "7*",];
 const intervalNames24tet = [
-    "1", "-2", "m2", "~2", "2", "-3", "m3", "~3", "3", "+3", "4", "+4", "TT", "-5", "5", "-6", "m6", "~6", "6", "-7", "m7", "~7", "7", "-8",
-];
+    "1", "-2", "m2", "~2", "2", "-3", "m3", "~3", "3", "+3", "4", "+4", "TT", "-5", "5", "-6", "m6", "~6", "6", "-7", "m7", "~7", "7", "-8",];
 const intervalNames31tet = [
-    "1", "+1", "-2", "m2", "~2", "2", "+2", "-3", "m3", "~3", "3", "+3", "-4", "4", "+4", "tt", "TT", "-5", "5", "+5", "-6", "m6", "~6", "6", "+6", "-7", "m7", "~7", "7", "+7", "-8",
-];
-// const intervalNames31tet = [
-//    "1", "", "", "m2", "n2", "2", "S2", "s3", "m3", "n3", "3", "", "", "4", "", "", "", "", "5", "", "s6", "m6", "n6", "6", // "", "h7", "m7", "n7", "7", "", "",
-// ];
+    "1", "+1", "-2", "m2", "~2", "2", "+2", "-3", "m3", "~3", "3", "+3", "-4", "4", "+4", "tt", "TT", "-5", "5", "+5", "-6", "m6", "~6", "6", "+6", "-7", "m7", "~7", "7", "+7", "-8",];
 
 const baseFrequency = 32.70 // C1
 const tuning12tet = [
@@ -116,8 +106,7 @@ const tuning12tet = [
     2 ** (8/12),
     2 ** (9/12),
     2 ** (10/12),
-    2 ** (11/12)
-];
+    2 ** (11/12)];
 const tuningNovemdecimal = [
     "1",
     "20/19",
@@ -130,8 +119,7 @@ const tuningNovemdecimal = [
     "61/38",
     "32/19",
     "34/19",
-    "36/19"
-];
+    "36/19"];
 const tuningUndecimal = [
     "1",
     "23/22",
@@ -144,8 +132,7 @@ const tuningUndecimal = [
     "35/22",
     "37/22",
     "39/22",
-    "21/11"
-];
+    "21/11"];
 const tuning11neji = [ // snowfall
     "1",
     "12/11",
@@ -158,8 +145,7 @@ const tuning11neji = [ // snowfall
     "18/11",
     "19/11",
     "20/11",
-    "21/11"
-];
+    "21/11"];
 const tuning16neji = [ // 16:17:18:19:20:21:23:24:25:27:29:30:32
     "1",
     "17/16",
@@ -172,8 +158,7 @@ const tuning16neji = [ // 16:17:18:19:20:21:23:24:25:27:29:30:32
     "25/16",
     "27/16",
     "29/16",
-    "15/8"
-];
+    "15/8"];
 const tuningHarmonic = [
     "1",
     "13/12",
@@ -186,8 +171,7 @@ const tuningHarmonic = [
     "5/3",
     "7/4",
     "11/6",
-    "23/12"
-];
+    "23/12"];
 const tuningSimple = [
     // https:// www.huygens-fokker.org/docs/intervals.html
     "1",
@@ -222,8 +206,7 @@ const tuning19tet = [
     2 ** (15/19),
     2 ** (16/19),
     2 ** (17/19),
-    2 ** (18/19)
-];
+    2 ** (18/19)];
 const tuning14tet = [
     1,
     2 ** (1/14),
@@ -238,8 +221,7 @@ const tuning14tet = [
     2 ** (10/14),
     2 ** (11/14),
     2 ** (12/14),
-    2 ** (13/14),
-];
+    2 ** (13/14),];
 const tuning31ji = [ // 7-limit by Adriaan Fokker
     "1/1",
     "64/63",
@@ -271,8 +253,7 @@ const tuning31ji = [ // 7-limit by Adriaan Fokker
     "945/512",
     "15/8",
     "40/21",
-    "63/32"
-];
+    "63/32"];
 const tuning21Astral = [
     "1/1",
     "33/32",
@@ -294,8 +275,7 @@ const tuning21Astral = [
     "7/4",
     "231/128",
     "21/11",
-    "64/33",
-];
+    "64/33",];
 const tuning24tet = [
     1,
     2 ** (1/24),
@@ -320,8 +300,7 @@ const tuning24tet = [
     2 ** (20/24),
     2 ** (21/24),
     2 ** (22/24),
-    2 ** (23/24),
-];
+    2 ** (23/24),];
 const tuning24ji = [
     "1/1",
     "33/32",
@@ -353,9 +332,10 @@ const tuning24ji = [
 const scaleMajor = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1];
 const scaleMinor = [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0];
 const scaleChromatic = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+
 const scaleMajor19 = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0];
-const scaleMajor14 = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0];
 const scaleTop19 =   [0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0];
+const scaleMajor14 = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0];
 const scaleMajor24 = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0];
 const scaleMajor31 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0];
 const scalePrimal21 = [1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0];
@@ -373,8 +353,8 @@ document.bgColor = backgroundColor;
 
 // modes
 let scaleMode = "chromatic";
-let roundKeyMode = false;
 let colorMode = "major";
+let pitchBend = false;
 
 let tuneMode = "12tet";
 let currentTuning = tuning12tet;
@@ -518,14 +498,19 @@ function setup() {
     makeHexagons();
 
     // create buttons with negative IDs
-    const xOffset = 780; const yOffset = 130;
-    const bWidth = gridSizeX * 2.9; const bHeight = gridSizeY * 1.3;
+    const xOffset = width - 586; 
+    const yOffset = 130;
+    const bWidth = gridSizeX * 2.9;
+    const bHeight = gridSizeY * 1.3;
     const rows = 9;
-    for (let b = 0; b < rows; b++) {
-        controlsArr.push(new ButtonObj(xOffset + bWidth*0, yOffset + b*bHeight, gridSizeX, "control", -(b + 1)));
-        controlsArr.push(new ButtonObj(xOffset + bWidth*1, yOffset + b*bHeight, gridSizeX, "control", -(b + 1 + rows)));
-        controlsArr.push(new ButtonObj(xOffset + bWidth*2, yOffset + b*bHeight, gridSizeX, "control", -(b + 1 + rows*2)));
-        controlsArr.push(new ButtonObj(xOffset + bWidth*3, yOffset + b*bHeight, gridSizeX, "control", -(b + 1 + rows*3)));
+    const columns = 4;
+
+    for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < columns; x++) {
+            controlsArr.push(
+                new ButtonObj(xOffset + bWidth*x, yOffset + y*bHeight, gridSizeX, "control", -(y + 1 + rows*x))
+            );
+        }
     }
 
     let style = document.createElement("style");
@@ -567,7 +552,8 @@ function makeHexagons() {
     keyArr = [];
 
     // store the hexagon keys with the correct coordinates and ID
-    gridSizeX = 52; gridSizeY = 52;
+    gridSizeX = 52; 
+    gridSizeY = 52;
     let hStartX = -0.5 * gridSizeX;
     let hStartY = 0.8 * gridSizeY;
     let id = 0;
@@ -601,7 +587,7 @@ function makeHexagons() {
                 // even columns
                 keyArr.push(new ButtonObj(x + hStartX, y + hStartY, gridSizeY, "note", id++));
                 // odd columns
-                if (y < 5) { break;}
+                if (y < 5) {break;}
                 keyArr.push(new ButtonObj(x + hStartX + gridSizeX, y + hStartY - 1.5*gridSizeY, gridSizeY, "note", id++));
             }
         }
@@ -617,10 +603,10 @@ function handleStart(evt) {
         newTouches[i].interactionType = "start";
         ongoingTouches.push(copyTouch(newTouches[i]));
 
-        // Render buttons when left icon pressed
+        // Render menu when corner button pressed
         if (newTouches[i].clientX > width-72 && newTouches[i].clientY < 72)
         {
-            menuIsOpen = true;
+            menuIsOpen = !menuIsOpen;
         }
     }
 
@@ -668,6 +654,14 @@ function handleEnd(evt) {
             // print("removing touch " + idx);
             ongoingTouches.splice(idx, 1);
         }
+
+        // Hide open menu when finger last finger is lifted & NOT on the button
+        if (newTouches[i].clientX < width-72 || newTouches[i].clientY > 72) {
+            if (ongoingTouches.length === 0) {
+                menuIsOpen = false;
+            }
+        };
+
     }
     drawMinDuration = 20;
     loop();
@@ -715,11 +709,6 @@ function runKeys() {
     background(backgroundColor);
     let optionsBG = color(backgroundColor);
 
-    // close menu if no keys pressed
-    if (ongoingTouches.length === 0) {
-        menuIsOpen = false;
-    }
-
     if (menuIsOpen) {
         if (mouseUsed === false) {
             reactToPressedControls();
@@ -746,7 +735,7 @@ function runKeys() {
         optionsBG.setAlpha(80);
         background(optionsBG);
 
-        // updat45e control states
+        // update control states
         updateControlStates();
 
         controlsArr.forEach((b) => {
@@ -790,7 +779,9 @@ function runKeys() {
         });
 
         // produce pitch bends from drag on keys
-        bendKeys();
+        if (pitchBend) {
+            bendKeys();
+        }
     }
 
     // visual
@@ -874,9 +865,14 @@ function reactToPressedKeys() {
     pressedButtons = [];
 
     for (let i = 0; i < ongoingTouches.length; i++) {
-        const nearestHex = findNearestButton(ongoingTouches[i], keyArr);
-        if (nearestHex !== undefined) {
-            pressedButtons.push(nearestHex);
+        //if not on menu button
+        if (ongoingTouches[i].clientX < width-72 || ongoingTouches[i].clientY > 72) {
+
+            const nearestHex = findNearestButton(ongoingTouches[i], keyArr);
+            if (nearestHex !== undefined) {
+                pressedButtons.push(nearestHex);
+            }
+
         }
     }
 
@@ -984,7 +980,19 @@ function keyboardReactToTouch() {
         const playHex = attackedKeys[play];
         keyArr.forEach((h) => {
             if (h.name === playHex.name) {
-                keypressed(h);
+                
+                //key attacked 
+                if (interactionMode === "key") {
+                    // change key with to note, or change scale
+                    h.countdown = cooldownFrames;
+                    currentKey = h.pitchName;
+                    pickScale(currentKey, scaleMode);
+                    print("Key mode, current key: " + currentKey)
+                } else {
+                    // play the note normally
+                    playKey(h);
+                }
+
             }
         });
         // add attacked keys in order to a list
@@ -1096,26 +1104,6 @@ function filterSustainedKeys (mode, compareHex) {
 }
 
 
-function keypressed(h) {
-
-    if (interactionMode === "key") {
-        // change key with to note, or change scale
-        h.countdown = cooldownFrames;
-        currentKey = h.pitchName;
-        pickScale(currentKey, scaleMode);
-        print("Key mode, current key: " + currentKey)
-    } else {
-        // play the note normally
-        playKey(h);
-    }
-}
-
-function keySustained(h) {
-    // this key is still playing.
-    // could do something here, WIP.
-}
-
-
 function playKey(h, mode) {
     const pOctave = h.octave + currentOctave;
     const freq = eval(currentTuning[h.midiName % currentTuning.length]);
@@ -1128,14 +1116,16 @@ function playKey(h, mode) {
             instrument.triggerAttack(pPitch);
         }
     } else {
-        if (mode === "release") {
-            if (activeKeys[h.name] !== undefined) {
-                activeKeys[h.name].voice.triggerRelease();
-                delete activeKeys[h.name].dragValues;
-            } else {
-                print("No voice to release! " + h.name);
-            }
-        } else {
+        // in synth mode, using activekeys to store all the voices
+
+        // release if there is something to release
+        if (activeKeys[h.name] !== undefined) {
+            activeKeys[h.name].voice.triggerRelease();
+            delete activeKeys[h.name].dragValues;
+        }
+
+        // attack again if mode is not 'relase'
+        if (mode !== "release") {
             // play note
             for (let i = 0; i < 32; i++) {
                 let containsVoice = Object.values(activeKeys).find(key => {return key.voice === synthvoices[i]});
@@ -1153,16 +1143,10 @@ function playKey(h, mode) {
                     print("Playing " + i + "-voice")
                     activeKeys[h.name].voice.triggerAttack(pPitch);
                     activeKeys[h.name].voice.onsilence = () => {
-                        // if not pressed anymore
-                        // if () {
-                            delete activeKeys[h.name];
-                            print(i + "-voice is silent, remaining active key objects: " + Object.values(activeKeys));
-                            drawMinDuration = 20;
-                            loop();
-                        // } else {
-                        //    // but then, delete when not pressed and time over! somehow
-                        //    print("Can't delete this on silence yet, still pressed")
-                        // }
+                        delete activeKeys[h.name];
+                        print(i + "-voice is silent, remaining active key objects: " + Object.values(activeKeys));
+                        drawMinDuration = 20;
+                        loop();
                     }
                     
                     break;
@@ -1456,6 +1440,9 @@ function controlPressed(b) {
                 }
                 pickScale(currentKey, scaleMode);
                 break;
+            case 8:
+                print("Toggled pitch bend");
+                pitchBend = !pitchBend;
         }
     }
 }
@@ -1801,7 +1788,7 @@ function updateControlStates() {
         {name:"Move Key " + currentKey, onCondition:(interactionMode === "key")},
         {name:"Octave "+ currentOctave, onCondition:undefined},
         {name:capitalize(scaleMode), onCondition:undefined},
-        {name:"", onCondition:undefined},
+        {name:"Pitchbend", onCondition:pitchBend},
         {name:"", onCondition:undefined},
     ];
 }
@@ -2113,21 +2100,13 @@ class ButtonObj {
         const octaveLength = currentTuning.length;
         let keyText = this.name;
         if (octaveLength == 12) {
-            if (labelStyle === "notes")
-            {
-                if (this.pitchName == currentKey) {
-                    const octave = this.octave + currentOctave;
-                    const octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
-                    keyText = this.pitchName + octaveSymbol;
-                }
-                else {
+
+            if (labelStyle === "notes") {
+
                     keyText = this.pitchName;
-                }
-            }
-            else if (labelStyle === "midi") {
-                keyText = this.midiName + octaveLength * currentOctave;
-            }
-            else if (labelStyle === "intervals") {
+
+            } else if (labelStyle === "intervals") {
+
                 const offset = noteNames.indexOf(currentKey);
                 const intervalName = intervalNames[(this.midiName - offset) % 12];
                 keyText = intervalName;
@@ -2148,6 +2127,14 @@ class ButtonObj {
                 keyText = this.pitchName - 1;
             }
         }
+
+        // Add symbol for octave only on first note of each
+        if (this.pitchName == currentKey || this.pitchName == 1) {
+            const octave = this.octave + currentOctave;
+            const octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
+            keyText += octaveSymbol;
+        }
+
         text(keyText, this.x, this.y);
 
         // extra text above
@@ -2224,15 +2211,16 @@ function findNearestButton(touch, arr) {
 
 function keyShape(x, y, r, lineColorolor) {
     push()
+
     fill(lineColorolor)
-    if (roundKeyMode === true) {
-        ellipse(x, y, r * 0.99);
+    strokeWeight(r * 0.3);
+    stroke(lineColorolor);
+    strokeJoin(ROUND);
+
+    if (isConcertina) {
+        hexagon(x, y, r * 0.38, 1/2 * PI);
     } else {
-        strokeWeight(r * 0.3);
-        stroke(lineColorolor);
-        strokeJoin(ROUND)
-        if (isConcertina) hexagon(x, y, r * 0.38, 1/2 * PI);
-        else hexagon(x, y, r * 0.38, 0);
+        hexagon(x, y, r * 0.38, 0);
     }
     pop()
 }
@@ -2285,12 +2273,13 @@ function cornerText() {
     textSize(16);
     textStyle(BOLD);
 
-    let playText = currentKey + octaveSymbols[currentOctave] + " " + capitalize(tuneMode) + " ";
+    let playText = currentKey + octaveSymbols[currentOctave] + " " + capitalize(tuneMode);
+
     if (instrumentType === "synth") {
-        playText += Object.values(activeKeys).length;
+        playText += " " + Object.values(activeKeys).length + "/32";
     }
 
-    playText += " ";
+    playText += "  ";
 
     for (let o = 0; o < orderedKeys.length; o++) {
         let keyName;
