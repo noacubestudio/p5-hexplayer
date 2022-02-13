@@ -1,6 +1,8 @@
 html, body {
   margin: 0;
   padding: 0;
+  background-color: #362D95;
+  height: 100%;
 }
 
 body {
@@ -14,7 +16,8 @@ body {
   user-select: none;
   /* prevent copy paste, to allow, change 'none' to 'text' */
 
-  background-color: #362D95;
+  overflow: hidden;
+  position: fixed;
 }
 
 *{touch-action: none;}

@@ -272,7 +272,7 @@ let currentOctave = 0;
 let labelStyle = "none";
 
 // colors
-let theme = new Object; //Filled in setup() with p5 colors
+let theme = new Object; // Filled with p5 color()s
 
 
 // current keys
@@ -280,6 +280,7 @@ let pressedButtons = new Array;
 let lastPressedButtons = new Array;
 let sustainedKeys = new Array;
 let orderedKeys = new Array; //sustained and pressed, in order
+let hoverButton; // for when mouse is used
 
 
 //for constructing the hexagons
@@ -289,23 +290,23 @@ let gridIncrement_H = 1;
 let gridIncrement_D = 4;
 let gridIncrement_V = 7;
 let noteLayout = "concertina";
-let keyGridOffset = {}; //gets x and y
+let keyGridOffset = {}; // gets x and y
 
 // permanent key grid
 let gridSizeX, gridSizeY;
 let keyArr = new Array;
 let controlsArr = new Array;
 // buttons
-let menuButtons = new Array; //stores visual state and name for each menu button
+let menuButtons = new Array; // stores visual state and name for each menu button
 
 // detect playing
 let interactionMode = "play";
 let menuIsOpen = false;
 let ongoingTouches = new Array;
+let ongoingHover = {};
 
 // mouse
-let mouseUsed = false;
-let mouseDown = false;
+let mouseUsed;
 
 // bridges drawn with pencil
 let penPressure = 0;
@@ -415,6 +416,12 @@ function windowResized () {
 }
 
 function setup () {
+    //is mouse used, true or false
+    //mouseUsed = !(window.matchMedia("(any-hover: none)").matches);
+    //print("Mouse detected:" + mouseUsed);
+
+    mouseUsed = false; //gets turned to true if mouse moved
+
     canvas = createCanvas(windowWidth, windowHeight); //1366, 1000 on my iPad
     canvas.parent("canvasContainer");
     strokeWeight(2);
@@ -455,9 +462,8 @@ function setup () {
     textStyle(BOLD);
     rectMode(RADIUS);
 
-    makeHexagons();
+    makeKeys();
     calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
-
     makeControls();
 
     let style = document.createElement("style");
@@ -493,7 +499,7 @@ function setup () {
     draw();
 }
 
-function makeHexagons() {
+function makeKeys () {
 
     // empty old array first
     keyArr = [];
@@ -505,10 +511,11 @@ function makeHexagons() {
 
     // hexagons are less wide so they can interlock
     if (noteLayout !== "concertina") {
-        keyGridOffset.x = -26;
-        keyGridOffset.y = 42;
         gridSizeY = sqrt((3 * pow(gridSizeY, 2)) / 4);
         gridWidth = 19; // how many in a row + odd row
+
+        keyGridOffset.x = (width - 31*gridSizeY) / 2 //-26;
+        keyGridOffset.y = (height - 20.5*gridSizeY) / 2 //42;
 
         // create hexagons interlocking horizontally
         for (let y = 21 * gridSizeY; y > -50; y -= 2 * gridSizeY) {
@@ -523,9 +530,10 @@ function makeHexagons() {
     } else {
         // concertina layout
         gridSizeX = sqrt((3 * pow(gridSizeX, 2)) / 4);
-        keyGridOffset.x = 0;
-        keyGridOffset.y = -10;
         gridWidth = 13; // how many in a column + odd column
+
+        keyGridOffset.x = (width - 26.5*gridSizeY) / 2;
+        keyGridOffset.y = (height - 18*gridSizeY) / 2;
         
         // create hexagons interlocking vertically
         for (let x = 0; x < 32 * gridSizeX; x += 2 * gridSizeX) {
@@ -571,8 +579,7 @@ function handleStart (evt) {
         ongoingTouches.push(copyTouch(newTouches[i]));
 
         // Render menu when corner button pressed
-        if (newTouches[i].clientX > width-72 && newTouches[i].clientY < 72)
-        {
+        if (newTouches[i].clientX > width-72 && newTouches[i].clientY < 72) {
             menuIsOpen = !menuIsOpen;
         }
     }
@@ -593,6 +600,27 @@ function handleStart (evt) {
     loop();
 }
 
+function mousePressed () {
+    if (mouseUsed) {
+        newPress = {
+            identifier:1,
+            clientX:mouseX,
+            clientY:mouseY,
+            force:0,
+            interactionType:"start"
+        };
+        ongoingTouches = [copyTouch(newPress)];
+    
+        // Render menu when corner button pressed
+        if (newPress.clientX > width-72 && newPress.clientY < 72) {
+            menuIsOpen = !menuIsOpen;
+        }
+    
+        frameCountdown = 20;
+        loop();
+    }
+}
+
 function handleMove (evt) {
     const newTouches = evt.changedTouches;
 
@@ -602,10 +630,40 @@ function handleMove (evt) {
         newTouches[i].interactionType = "move";
 
         if (idx >= 0) {
-            // print("continuing touch " + idx);
             ongoingTouches.splice(idx, 1, copyTouch(newTouches[i])); // swap in the new touch record
         }
     }
+    frameCountdown = 20;
+    loop();
+}
+
+function mouseDragged () {
+    if (mouseUsed) {
+        newPress = {
+            identifier:1,
+            clientX:mouseX,
+            clientY:mouseY,
+            force:0,
+            interactionType:"move"
+        };
+        ongoingTouches = [copyTouch(newPress)];
+
+        frameCountdown = 20;
+        loop();
+    }
+}
+
+function mouseMoved() {
+    mouseUsed = true;
+    newHover = {
+        identifier:0,
+        clientX:mouseX,
+        clientY:mouseY,
+        force:0,
+        interactionType:"hover"
+    };
+    ongoingHover = copyTouch(newHover);
+
     frameCountdown = 20;
     loop();
 }
@@ -618,11 +676,10 @@ function handleEnd (evt) {
         const idx = ongoingTouchIndexById(newTouches[i].identifier);
 
         if (idx >= 0) {
-            // print("removing touch " + idx);
             ongoingTouches.splice(idx, 1);
         }
 
-        // Hide open menu when finger last finger is lifted & NOT on the button
+        // Hide open menu when last finger is lifted & NOT on the button
         if (newTouches[i].clientX < width-72 || newTouches[i].clientY > 72) {
             if (ongoingTouches.length === 0) {
                 menuIsOpen = false;
@@ -636,6 +693,20 @@ function handleEnd (evt) {
 
 function handleCancel (evt) {
     handleEnd(evt)
+}
+
+function mouseReleased () {
+    if (mouseUsed) {
+        ongoingTouches = [];
+
+        // Hide open menu when last finger is lifted & NOT on the button
+        if (mouseX < width-72 || mouseY > 72) {
+            menuIsOpen = false;
+        };
+
+        frameCountdown = 20;
+        loop();
+    }
 }
 
 function copyTouch (touch) {
@@ -676,11 +747,8 @@ function runKeys () {
     background(theme.bg);
     noStroke();
 
-
-    if (mouseUsed === false) {
-        if (menuIsOpen) reactToPressedControls();
-        else reactToPressedKeys();
-    }
+    if (menuIsOpen) reactToPressedControls();
+    else reactToPressedKeys();
 
     //translate to center the hexagons and such on screen
     push();
@@ -692,7 +760,7 @@ function runKeys () {
     });
 
     // Render extra glow
-    if (!menuIsOpen && pressedButtons.length > 0) {
+    if (!menuIsOpen && (pressedButtons.length > 0 || hoverButton !== undefined)) {
         keyArr.forEach((g) => {
             g.drawKeyGlow();
         });
@@ -724,6 +792,13 @@ function runKeys () {
         controlsArr.forEach((b) => {
             b.renderControlVariant();
         });
+
+        // Render extra glow
+        if (hoverButton !== undefined) {
+            controlsArr.forEach((b) => {
+                b.drawControlGlow();
+            });
+        }
     }
 
     // HUD
@@ -779,6 +854,7 @@ function reactToPressedControls () {
     // update which buttons are hovered over/ pressed
     lastPressedButtons = pressedButtons.slice();
     pressedButtons = [];
+    hoverButton = undefined;
 
     for (let i = 0; i < ongoingTouches.length; i++) {
         const nearestHex = findNearestButton(ongoingTouches[i], controlsArr);
@@ -786,12 +862,14 @@ function reactToPressedControls () {
             pressedButtons.push(nearestHex);
         }
     }
+    if (mouseUsed && ongoingTouches.length === 0) {
+        hoverButton = findNearestButton(ongoingHover, controlsArr);
+    }
 
     // find unique items in each
     const attackedKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) === undefined);
 
-    if (attackedKeys.length > 0)
-    {
+    if (attackedKeys.length > 0) {
         // see if a button is hovered closest
         controlsArr.forEach((b) => {
             if (b.name === pressedButtons[0].name) {
@@ -806,6 +884,7 @@ function reactToPressedKeys () {
     // update which buttons are hovered over/ pressed
     lastPressedButtons = pressedButtons.slice();
     pressedButtons = [];
+    hoverButton = undefined;
 
     for (let i = 0; i < ongoingTouches.length; i++) {
         //if not on menu button
@@ -815,8 +894,10 @@ function reactToPressedKeys () {
             if (nearestHex !== undefined) {
                 pressedButtons.push(nearestHex);
             }
-
         }
+    }
+    if (mouseUsed && ongoingTouches.length === 0) {
+        hoverButton = findNearestButton(ongoingHover, keyArr);
     }
 
     // check if apple pencil or touch was used
@@ -951,7 +1032,6 @@ function keyboardReactToTouch () {
 
             if (fingerStillDown && removedHex.octave + currentOctave > 1) {
                 // push to list of sustained keys
-                print("Sustaining " + removedHex.midiName, removedHex.lastTouch.id)
                 sustainedKeys.push(removedHex);
 
             } else {
@@ -1268,7 +1348,7 @@ function controlPressed (b) {
         }
         currentOctave = 0;
         currentScale = scaleMajor12;
-        noteLayout = "concertina"; makeHexagons();
+        noteLayout = "concertina"; makeKeys();
         calculateNewMidiGrid(4, 7);
         playTestChord([4,7]);
 
@@ -1279,7 +1359,7 @@ function controlPressed (b) {
                 currentTuning = tuning14tet;
                 currentOctave = 0;
                 currentScale = scaleMajor14;
-                noteLayout = "harmonic"; makeHexagons();
+                noteLayout = "harmonic"; makeKeys();
                 calculateNewMidiGrid(4, 5);
                 playTestChord([4, 8]);
                 break;
@@ -1288,7 +1368,7 @@ function controlPressed (b) {
                 currentTuning = tuning19tet;
                 currentOctave = 0;
                 currentScale = scaleMajor19;
-                noteLayout = "concertina"; makeHexagons();
+                noteLayout = "concertina"; makeKeys();
                 calculateNewMidiGrid(6, 11);
                 playTestChord([6, 11]);
                 break;
@@ -1297,7 +1377,7 @@ function controlPressed (b) {
                 currentTuning = tuning31ji;
                 currentOctave = 1;
                 currentScale = scaleMajor31;
-                noteLayout = "harmonic"; makeHexagons();
+                noteLayout = "harmonic"; makeKeys();
                 calculateNewMidiGrid(5, 9);
                 playTestChord([10, 18]);
                 break;
@@ -1306,7 +1386,7 @@ function controlPressed (b) {
                 currentTuning = tuning21Astral;
                 currentOctave = 1;
                 currentScale = scalePrimal21;
-                noteLayout = "harmonic"; makeHexagons();
+                noteLayout = "harmonic"; makeKeys();
                 calculateNewMidiGrid(5, 9);
                 playTestChord([6, 12, 18]);
                 break;
@@ -1315,7 +1395,7 @@ function controlPressed (b) {
                 currentTuning = tuning24tet;
                 currentOctave = 1;
                 currentScale = scaleMajor24;
-                noteLayout = "harmonic"; makeHexagons();
+                noteLayout = "harmonic"; makeKeys();
                 calculateNewMidiGrid(4, 7);
                 playTestChord([8, 14]);
                 break;
@@ -1324,7 +1404,7 @@ function controlPressed (b) {
                 currentTuning = tuning24ji;
                 currentOctave = 1;
                 currentScale = scaleMajor24;
-                noteLayout = "harmonic"; makeHexagons();
+                noteLayout = "harmonic"; makeKeys();
                 calculateNewMidiGrid(4, 7);
                 playTestChord([8, 14]);
                 break;
@@ -1346,7 +1426,7 @@ function controlPressed (b) {
                 } else {
                     noteLayout = "concertina";
                 }
-                makeHexagons(); calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
+                makeKeys(); calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
                 break;
             case 3:
                 print("Changed octave");
@@ -1439,7 +1519,7 @@ function valueFromScale (scaleIndex) {
 function renderTuningReference () {
     push();
 
-    const cornerOffset = 42;
+    const cornerOffset = map(width, 1200, 2200, 40, 60, true);
     translate(width-cornerOffset, cornerOffset);
     scale(1.2)
 
@@ -1473,13 +1553,15 @@ function renderTuningReference () {
     // outer lines
     const octaveLength = currentTuning.length;
     const offset = noteNames.indexOf(currentKey);
+    strokeWeight(map(currentTuning.length, 12, 24, 3, 2, true)); //2 or more
+    const endScale = map(currentTuning.length, 12, 24, 26, 28, true);
 
     for (let i = 0; i < octaveLength; i++) {
         const freq = eval(currentTuning[i]);
         const cents = scaleFreqToCents(freq);
         const angle = map(cents, 0, 1200, 0, TWO_PI) - HALF_PI;
         const start = {x: cos(angle) * 19, y: sin(angle) * 19};
-        const end = {x: cos(angle) * 28, y: sin(angle) * 28};
+        const end = {x: cos(angle) * endScale, y: sin(angle) * endScale};
 
         let col = theme.textdark;
         if (currentScale[i] === 1) {
@@ -1639,7 +1721,8 @@ class ButtonObj {
         const nearOctave = ((this.midiName) % currentTuning.length) / currentTuning.length;
         const circleInner = sqrt(1 - pow(nearOctave - 1, 2)) * 24;
 
-        const someNotesOverlay = (orderedKeys.length > 0) ? color(atAlpha(theme.bgdark, 8)) : color(atAlpha(theme.bgdark, 4));
+        // if keys are being pressed, dim the other keys
+        const idleOverlay = (orderedKeys.length > 0) ? color(atAlpha(theme.bgdark, 8)) : color(atAlpha(theme.bgdark, 4));
 
         // note states
         switch (state) {
@@ -1648,38 +1731,35 @@ class ButtonObj {
                 keyShape(this.x, this.y, hexSize, baseColor);
                 centerShape(this.x, this.y, circleSize, lightColor50);
                 centerShape(this.x, this.y, circleInner, baseColor);
-                keyShapeOverlay(this.x, this.y, hexSize, someNotesOverlay);
+                keyShapeOverlay(this.x, this.y, hexSize, idleOverlay);
                 break;
             case "differentOctave":
                 keyShape(this.x+1, this.y+3, hexSize+1, color("#00000030"));
                 keyShape(this.x, this.y, hexSize, baseColor);
                 centerShape(this.x, this.y, circleSize* 1.05, lightColor50);
                 centerShape(this.x, this.y, circleInner* 1.2, baseColor);
-                keyShapeOverlay(this.x, this.y, hexSize, someNotesOverlay);
+                keyShapeOverlay(this.x, this.y, hexSize, idleOverlay);
                 break;
             case "stepHigher":
                 keyShape(this.x+1, this.y+3, hexSize+1, color("#00000030"));
                 keyShape(this.x, this.y, hexSize, baseColor);
                 centerShape(this.x-3, this.y, circleSize, lightColor50);
                 centerShape(this.x-4, this.y, circleInner, baseColor);
-                keyShapeOverlay(this.x, this.y, hexSize, someNotesOverlay);
+                keyShapeOverlay(this.x, this.y, hexSize, idleOverlay);
                 break;
             case "stepLower":
                 keyShape(this.x+1, this.y+3, hexSize+1, color("#00000030"));
                 keyShape(this.x, this.y, hexSize, baseColor);
                 centerShape(this.x+3, this.y, circleSize, lightColor50);
                 centerShape(this.x+4, this.y, circleInner, baseColor);
-                keyShapeOverlay(this.x, this.y, hexSize, someNotesOverlay);
+                keyShapeOverlay(this.x, this.y, hexSize, idleOverlay);
                 break;
             case "stepHigherAndLower":
                 keyShape(this.x+1, this.y+3, hexSize+1, color("#00000030"));
                 keyShape(this.x, this.y, hexSize, baseColor);
                 centerShape(this.x, this.y, circleSize, lightColor50, "wide");
                 centerShape(this.x, this.y, circleInner, baseColor, "wide");
-                keyShapeOverlay(this.x, this.y, hexSize, someNotesOverlay);
-                break;
-            case "klicked":
-                //unused
+                keyShapeOverlay(this.x, this.y, hexSize, idleOverlay);
                 break;
             case "pressed":
                 keyShape(this.x, this.y+1, hexSize, theme.highlight);
@@ -1702,6 +1782,10 @@ class ButtonObj {
                     glowColorStrength, hexSize * 4,
                     this.x, this.y, 14);
                 break;
+            case "hover":
+                const hoverColor = color(atAlpha(glowColor, 30));
+                centerShape(this.x, this.y, 42, hoverColor);
+                break;
         }
         pop();
     }
@@ -1717,9 +1801,6 @@ class ButtonObj {
             case "hidden":
                 fill(atAlpha(theme.bg, 30));
                 controlShape(this.x, this.y, baseSize);
-                break;
-            case "klicked":
-                //unused
                 break;
             case "pressed":
                 fill(onColor);
@@ -1745,6 +1826,11 @@ class ButtonObj {
                 fill(theme.bg);
                 controlShape(this.x, this.y, baseSize);
                 break;
+            case "hover":
+                const hoverColor = color(atAlpha(theme.text, 20));
+                fill(hoverColor);
+                controlShape(this.x, this.y, baseSize);
+                break;
         }
         this.renderControlText();
         pop();
@@ -1766,7 +1852,7 @@ class ButtonObj {
         const lightTextColor = lerpColor(this.keyColorFromPalette(2), color("white"), 0.8);
 
         noStroke();
-        if (state === "hover" || state === "sustained") {
+        if (state === "hover" || state === "klicked" || state === "sustained") {
             fill(lightTextColor);
         } else if (this.pitchName === currentKey || this.pitchName === 1) { 
             fill(lightTextColor); 
@@ -1779,8 +1865,8 @@ class ButtonObj {
         this.renderKeyText();
 
         if (state === "idle") {
-            const someNotesOverlay = (orderedKeys.length > 0) ? color(atAlpha(theme.bgdark, 4)) : color("#00000000");
-            fill(someNotesOverlay);
+            const idleOverlay = (orderedKeys.length > 0) ? color(atAlpha(theme.bgdark, 4)) : color("#00000000");
+            fill(idleOverlay);
             this.renderKeyText();
         }
         pop();
@@ -1807,8 +1893,8 @@ class ButtonObj {
 
             if (orderedKeys.length > 0 && state === "idle") {
                 noStroke();
-                const someNotesOverlay = color(atAlpha(theme.bgdark, 10));
-                fill(someNotesOverlay);
+                const idleOverlay = color(atAlpha(theme.bgdark, 10));
+                fill(idleOverlay);
                 text(topText, this.x, this.y - 25);
             }
         }
@@ -1871,12 +1957,7 @@ class ButtonObj {
         } else {
             this.renderControlType("idle");
         }
-
-        //else if (this.countdown > 0) {
-        //    this.renderControlType("klicked");
-        //} 
     }
-
 
     drawKeyGlow () {
         const inKlickedHexes = pressedButtons.find(t => t.midiName === this.midiName);
@@ -1890,10 +1971,22 @@ class ButtonObj {
             this.renderKeyType("glow", "02");
             return;
         }
+
+        if (hoverButton !== undefined && hoverButton.midiName === this.midiName) {
+            this.renderKeyType("hover");
+            return;
+        }
+    }
+
+    drawControlGlow () {
+        if (hoverButton !== undefined && hoverButton.name === this.name) {
+            this.renderControlType("hover");
+            return;
+        }
     }
 
 
-    get distanceToMouse () {
+    get keyDistanceToMouse () {
         return dist(mouseX, mouseY, this.x, this.y);
     }
 
@@ -1971,56 +2064,6 @@ class ButtonObj {
     }
 }
 
-
-function dragDistanceMap (center, start, drag, min, max) {
-    if (drag > min) {
-        return map(start + drag, start + min, center + max, 0, 1, true);
-    } else if (-drag > min) {
-        return map(start + drag, start - min, center - max, 0, -1, true);
-    }
-    else {
-        return 0;
-    }
-}
-
-
-function findNearestButton (touch, arr) {
-
-    let closestButton;
-
-    if (!mouseUsed && touch !== undefined) {
-
-        // which control is in range of the finger?
-        if (menuIsOpen) {
-            arr.forEach((h) => {
-                //if in certain X and Y distance of button center
-                if (Math.abs(touch.clientX - h.x) < 80 && Math.abs(touch.clientY - h.y) < 40) {
-                    {closestButton = h;}
-                }
-            });
-        } else {
-            //which hexagon is closest?
-            closestButton = arr[0];
-            arr.forEach((h) => {
-                if (h.keyDistanceToTouch(touch) < closestButton.keyDistanceToTouch(touch)) {
-                    closestButton = h;
-                  }
-            });
-        }
-    } else {
-        // mouse used
-        arr.forEach((h) => {
-            if (h.distanceToMouse < minDistance) {closestButton = h;}
-        });
-    }
-
-    if (closestButton !== undefined) {
-        closestButton.lastTouch = {id:touch.identifier, type:touch.interactionType};
-        return closestButton;
-    }
-}
-
-
 function keyShape (x, y, r, color) {
     push();
 
@@ -2053,6 +2096,7 @@ function keyShapeOverlay (x, y, r, color) {
     pop();
 }
 
+
 function centerShape (x, y, r, color, variant) {
     push();
     fill(color);
@@ -2079,16 +2123,6 @@ function hexagon (x, y, r, angle) {
     endShape(CLOSE);
 }
 
-// function hexagonTop(x, y, r) {
-//    beginShape();
-//    for (let a = 1 * PI; a < 2 * PI; a += (2 * PI) / 6) {
-//        let x2 = cos(a) * r;
-//        let y2 = sin(a) * r;
-//        vertex(x + x2, y + y2);
-//    }
-//    endShape();
-// }
-
 function gradientCircle (cInner, sInner, cOuter, sOuter, x, y, steps) {
     push();
     noStroke();
@@ -2101,12 +2135,50 @@ function gradientCircle (cInner, sInner, cOuter, sOuter, x, y, steps) {
     pop();
 }
 
-function capitalize (string) {
-    return string.charAt(0).toUpperCase() + string.slice(1);
+
+function dragDistanceMap (center, start, drag, min, max) {
+    if (drag > min) {
+        return map(start + drag, start + min, center + max, 0, 1, true);
+    } else if (-drag > min) {
+        return map(start + drag, start - min, center - max, 0, -1, true);
+    }
+    else {
+        return 0;
+    }
 }
 
-function cornerText () {
+function findNearestButton (touch, arr) {
 
+    let closestButton;
+
+    if (touch !== undefined) {
+        // which control is in range of the finger?
+        if (menuIsOpen) {
+            arr.forEach((h) => {
+                //if in certain X and Y distance of button center
+                if (Math.abs(touch.clientX - h.x) < 80 && Math.abs(touch.clientY - h.y) < 40) {
+                    {closestButton = h;}
+                }
+            });
+        } else {
+            //which hexagon is closest?
+            closestButton = arr[0];
+            arr.forEach((h) => {
+                if (h.keyDistanceToTouch(touch) < closestButton.keyDistanceToTouch(touch)) {
+                    closestButton = h;
+                  }
+            });
+        }
+    }
+
+    if (closestButton !== undefined) {
+        closestButton.lastTouch = {id:touch.identifier, type:touch.interactionType};
+        return closestButton;
+    }
+}
+
+
+function cornerText () {
     push();
 
     textFont("Satoshi");
@@ -2152,6 +2224,10 @@ function cornerText () {
     pop();
 }
 
+function capitalize (string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 function scaleFreqToCents (freq) {
     return Math.log2(freq) * 1200;
 }
@@ -2162,39 +2238,4 @@ function atAlpha (color, percent) {
     const b = blue(color);
     const a = percent / 100;
     return 'rgba('+r+','+g+','+b+','+a+')';
-}
-
-
-function mousePressed () {
-    if (ongoingTouches.length <= 0) {
-        mouseUsed = true;
-        mouseDown = true;
-        readyForSound = true;
-        detectMouse();
-    }
-    else {
-        return false;
-    }
-}
-
-function mouseDragged () {
-    // there was no touch, an actual mouse was dragged;
-    if (ongoingTouches.length <= 0) {
-        mouseUsed = true;
-        mouseDown = true;
-        readyForSound = true;
-        detectMouse();
-    }
-    else {
-        return false;
-    }
-}
-
-function mouseReleased () {
-    if (ongoingTouches.length <= 0) {
-        mouseDown = false;
-    }
-    else {
-        return false;
-    }
 }
