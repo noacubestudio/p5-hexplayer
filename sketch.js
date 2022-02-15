@@ -315,7 +315,7 @@ let penDragEndKey;
 let bridgeKeyPairs = new Set();
 
 // tonejs
-let synth;
+let menuSynth;
 let pianoSampler;
 let rhodesSampler;
 let organSampler;
@@ -326,6 +326,7 @@ let instrument;
 let currentInstrument = "piano";
 let instrumentType = "sampler";
 Tone.context.lookAhead = 0;
+let vol;
 
 let activeKeys = {
     // structure:    h.name = {"synth"..., "dragValues"...}
@@ -333,32 +334,39 @@ let activeKeys = {
 
 
 function preload() {
+
+    vol = new Tone.Volume().toDestination();
+    vol.volume.value = -7; //starting value for the piano
+
     // custom array of polysynths that can have separate properties
     for (let i = 0; i < 32; i++) {
         synthvoices.push(new Tone.Synth());
-        synthvoices[i].toDestination();
+        synthvoices[i].connect(vol);
         synthvoices[i].set({
-            "volume": -10,
             "envelope": {
                 "attack": 0,
                 "decay": 0,
                 "sustain": 0.3,
                 "release": 1,
-                }
-            });
-        synthvoices[i].set({"oscillator": {"type": "sawtooth"}});
+            }
+        });
+        synthvoices[i].set({
+            "oscillator": {"type": "sawtooth"}
+        });
     }
 
     // default polysynth for menu activation
-    synth = new Tone.PolySynth().toDestination();
-    synth.set({"volume": -10,
-    "envelope": {
-        "attack": 0,
-        "decay": 0,
-        "sustain": 0.3,
-        "release": 1,
-        }});
-    synth.set({"oscillator": {"type": "sawtooth"}});
+    menuSynth = new Tone.PolySynth().connect(vol);
+    menuSynth.set({
+        "envelope": {
+            "attack": 0,
+            "decay": 0,
+            "sustain": 0.3,
+            "release": 1,
+            }});
+    menuSynth.set({
+        "oscillator": {"type": "sawtooth"}
+    });
 
     pianoSampler = new Tone.Sampler({
         urls: {
@@ -369,7 +377,7 @@ function preload() {
         },
         release: 1.5,
         baseUrl: "sounds/",
-    }).toDestination();
+    }).connect(vol);
 
     rhodesSampler = new Tone.Sampler({
         urls: {
@@ -380,7 +388,7 @@ function preload() {
         },
         release: 1,
         baseUrl: "sounds/",
-    }).toDestination();
+    }).connect(vol);
 
     organSampler = new Tone.Sampler({
         urls: {
@@ -391,7 +399,7 @@ function preload() {
         },
         release: 1,
         baseUrl: "sounds/",
-    }).toDestination();
+    }).connect(vol);
 
     harpSampler = new Tone.Sampler({
         urls: {
@@ -402,7 +410,7 @@ function preload() {
         },
         release: 2,
         baseUrl: "sounds/",
-    }).toDestination();
+    }).connect(vol);
 
     instrument = pianoSampler;
 }
@@ -521,10 +529,10 @@ function makeKeys () {
         for (let y = 21 * gridSizeY; y > -50; y -= 2 * gridSizeY) {
             for (let x = 0; x < 28 * gridSizeX; x += 3 * gridSizeX) {
                 // even rows
-                keyArr.push(new ButtonObj(x, y + gridSizeY, "note", id++));
+                keyArr.push(new KeyClass(x, y + gridSizeY, id++));
                 // odd rows
                 if (x > 25 * gridSizeX) { break;}
-                keyArr.push(new ButtonObj(x + 1.5*gridSizeX, y, "note", id++));
+                keyArr.push(new KeyClass(x + 1.5*gridSizeX, y, id++));
             }
         }
     } else {
@@ -539,10 +547,10 @@ function makeKeys () {
         for (let x = 0; x < 32 * gridSizeX; x += 2 * gridSizeX) {
             for (let y = 18 * gridSizeY; y > -50; y -= 3 * gridSizeY) {
                 // even columns
-                keyArr.push(new ButtonObj(x, y, "note", id++));
+                keyArr.push(new KeyClass(x, y, id++));
                 // odd columns
                 if (y < 5) {break;}
-                keyArr.push(new ButtonObj(x + gridSizeX, y - 1.5*gridSizeY, "note", id++));
+                keyArr.push(new KeyClass(x + gridSizeX, y - 1.5*gridSizeY, id++));
             }
         }
     }
@@ -562,9 +570,9 @@ function makeControls () {
 
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < columns; x++) {
-            controlsArr.push(
-                new ButtonObj(xOffset + bWidth*x, yOffset + y*bHeight, "control", -(y + 1 + rows*x))
-            );
+            const xPos = xOffset + bWidth*x
+            const yPos = yOffset + y*bHeight
+            controlsArr.push(new ControlClass(xPos, yPos, -(y + 1 + rows*x)));
         }
     }
 }
@@ -803,7 +811,7 @@ function runKeys () {
 
     // HUD
     renderTuningReference();
-    cornerText();
+    renderCornerText();
 }
 
 
@@ -904,7 +912,7 @@ function reactToPressedKeys () {
     if (penPressure > 0.0 && menuIsOpen == false) {
         reactToPen();
     } else {
-        keyboardReactToTouch();
+        keysReactToTouch();
     }
 
     // when last finger or pen is lifted
@@ -984,7 +992,7 @@ function reactToPen () {
 }
 
 
-function keyboardReactToTouch () {
+function keysReactToTouch () {
     // every key stores:
     // .lastTouch.id and .lastTouch.type
 
@@ -1051,11 +1059,11 @@ function keyboardReactToTouch () {
 
     if (interactionMode === "play" && instrumentType === "synth") {
         // detect movement on same keys
-        for (let sameplay = 0; sameplay < sameKeys.length; sameplay++) {
-            const sameHex = sameKeys[sameplay];
+        for (let s = 0; s < sameKeys.length; s++) {
+            const sameHex = sameKeys[s];
             keyArr.forEach((h) => {
                 if (h.name === sameHex.name) {
-                    dragValuesInActive(h);
+                    setDragValueToActiveVoice(h);
                 }
             });
         }
@@ -1170,47 +1178,11 @@ function playKey (h, mode) {
     }
 }
 
-function dragValuesInActive (h) {
 
-    if (activeKeys[h.name] == undefined) {
-        print("No active note to apply key drag on!")
-        return;
-    }
-
-    // find touch that is in range in both X and Y
-    for (let i = 0; i < ongoingTouches.length; i++) {
-
-        const touchX = ongoingTouches[i].clientX;
-        const touchY = ongoingTouches[i].clientY;
-        const centerOffsetX = h.x - touchX;
-        const centerOffsetY = h.y - touchY;
-
-        // in range
-        if (Math.abs(centerOffsetX) < 35 && Math.abs(centerOffsetY) < 35) {
-
-            if (activeKeys[h.name].dragValues !== undefined) {
-                // use start values to calculate drag offset
-                const diffX = touchX - activeKeys[h.name].dragValues.startX;
-                const diffY = touchY - activeKeys[h.name].dragValues.startY;
-                activeKeys[h.name].dragValues.dragX = diffX;
-                activeKeys[h.name].dragValues.dragY = diffY;
-            }
-            else {
-                // set all to start value
-                const startX = touchX;
-                const startY = touchY;
-                activeKeys[h.name].dragValues = {"startX": startX, "startY": startY};
-            }
-            print("Drag values set to: " + activeKeys[h.name].dragValues);
-            return;
-        }
-    }
-    return ("No touch found in range!");
-}
 
 function dragToPitchBend () {
+    //go through voices that are still playing
     Object.values(activeKeys).forEach(a => {
-
         const keyHasBeenDragged = (a.dragValues !== undefined && a.dragValues.dragX !== undefined);
         if (keyHasBeenDragged) {
             const maxDetuneCents = 1200 / currentTuning.length;
@@ -1232,6 +1204,17 @@ function dragToPitchBend () {
     });
 }
 
+function dragDistanceMap (center, start, drag, min, max) {
+    if (drag > min) {
+        return map(start + drag, start + min, center + max, 0, 1, true);
+    } else if (-drag > min) {
+        return map(start + drag, start - min, center - max, 0, -1, true);
+    }
+    else {
+        return 0;
+    }
+}
+
 
 function controlPressed (b) {
     instrument.releaseAll();
@@ -1245,64 +1228,72 @@ function controlPressed (b) {
                 currentInstrument = "piano";
                 instrument = pianoSampler;
                 instrumentType = "sampler";
+                vol.volume.value = -7;
                 break;
             case 2:
                 print("Switched to Rhodes!");
                 currentInstrument = "rhodes";
                 instrument = rhodesSampler;
                 instrumentType = "sampler";
+                vol.volume.value = -10;
                 break;
             case 3:
                 print("Switched to organ!");
                 currentInstrument = "organ";
                 instrument = organSampler;
                 instrumentType = "sampler";
+                vol.volume.value = -12;
                 break;
             case 4:
                 print("Switched to harp!");
                 currentInstrument = "harp";
                 instrument = harpSampler;
                 instrumentType = "sampler";
+                vol.volume.value = -10;
                 break;
             case 5:
                 print("Switched to saw wave!");
                 currentInstrument = "sawtooth";
-                synth.set({"oscillator": {"type": "sawtooth"}});
+                menuSynth.set({"oscillator": {"type": "sawtooth"}});
                 for (let i = 0; i < 32; i++) {
                     synthvoices[i].set({"oscillator": {"type": "sawtooth"}});
                 }
-                instrument = synth;
+                instrument = menuSynth;
                 instrumentType = "synth";
+                vol.volume.value = -28;
                 break;
             case 6:
                 print("Switched to square wave!");
                 currentInstrument = "square";
-                synth.set({"oscillator": {"type": "square"}});
+                menuSynth.set({"oscillator": {"type": "square"}});
                 for (let i = 0; i < 32; i++) {
                     synthvoices[i].set({"oscillator": {"type": "square"}});
                 }
-                instrument = synth;
+                instrument = menuSynth;
                 instrumentType = "synth";
+                vol.volume.value = -31;
                 break;
             case 7:
                 print("Switched to triangle wave!");
                 currentInstrument = "triangle";
-                synth.set({"oscillator": {"type": "triangle"}});
+                menuSynth.set({"oscillator": {"type": "triangle"}});
                 for (let i = 0; i < 32; i++) {
                     synthvoices[i].set({"oscillator": {"type": "triangle"}});
                 }
-                instrument = synth;
+                instrument = menuSynth;
                 instrumentType = "synth";
+                vol.volume.value = -20;
                 break;
             case 8:
                 print("Switched to sine wave!");
                 currentInstrument = "sine";
-                synth.set({"oscillator": {"type": "sine"}});
+                menuSynth.set({"oscillator": {"type": "sine"}});
                 for (let i = 0; i < 32; i++) {
                     synthvoices[i].set({"oscillator": {"type": "sine"}});
                 }
-                instrument = synth;
+                instrument = menuSynth;
                 instrumentType = "synth";
+                vol.volume.value = -30;
                 break;
         }
         instrument.triggerAttackRelease("C3", "16n");
@@ -1479,10 +1470,9 @@ function calculateNewMidiGrid (small, big) {
         newIncrement_D = small;
         newIncrement_V = big;
     }
-
-        keyArr.forEach((h) => {
-            h.setMidiFromGrid(gridBaseMidi, gridWidth, newIncrement_H, newIncrement_D, newIncrement_V);
-        });
+    keyArr.forEach((h) => {
+        h.setMidiFromGrid(gridBaseMidi, gridWidth, newIncrement_H, newIncrement_D, newIncrement_V);
+    });
 }
 
 
@@ -1504,21 +1494,8 @@ function renderBridge (x1, y1, x2, y2, c1, c2) {
 }
 
 
-function valueFromScale (scaleIndex) {
-    //minor note
-    if (currentScale[scaleIndex] === 0) return [1,2,3];
-
-    //major note
-    if (currentScale[scaleIndex] === 1) return [2,3,4];
-
-    //ambiguous
-    if (currentScale[scaleIndex] === -1) return [0,1,2];
-}
-
-
 function renderTuningReference () {
     push();
-
     const cornerOffset = map(width, 1200, 2200, 40, 60, true);
     translate(width-cornerOffset, cornerOffset);
     scale(1.2)
@@ -1533,7 +1510,6 @@ function renderTuningReference () {
         stroke(lerpColor(theme.bg, color("black"), 0.5));
         line(start.x, start.y, end.x, end.y);
     }
-
 
     // 12tet lines
     const lineAlpha = (orderedKeys.length > 0) ? 70 : 100;
@@ -1586,7 +1562,14 @@ function renderTuningReference () {
 
         const index = ((o.midiName-offset) % octaveLength);
         const freq = eval(currentTuning[index]);
-        const cents = scaleFreqToCents(freq);
+        let cents = scaleFreqToCents(freq);
+
+        const matchingVoice = activeKeys[o.name];
+        if (matchingVoice !== undefined) {
+            const bendcents = matchingVoice.voice.get().detune;
+            cents += bendcents;
+        }
+
         const keyAngle = map(cents, 0, 1200, 0, TWO_PI) - HALF_PI;
         const keyColor = o.keyColorFromPalette(2);
         const keyOctave = map(o.octave, 0, 6, 18, 28, true);
@@ -1627,6 +1610,51 @@ function renderTuningReference () {
         lastKeyColor = keyColor;
         lastKeyOctave = keyOctave;
     });
+
+    pop();
+}
+
+function renderCornerText () {
+    push();
+    textFont("Satoshi");
+    textSize(16);
+    textStyle(BOLD);
+
+    let playText = currentKey + octaveSymbols[currentOctave] + " " + capitalize(tuneMode);
+
+    if (instrumentType === "synth") {
+        playText += " " + Object.values(activeKeys).length + "/32";
+    }
+
+    playText += "  ";
+
+    for (let o = 0; o < orderedKeys.length; o++) {
+        let keyName;
+        const octave = orderedKeys[o].octave + currentOctave;
+        const octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
+
+        if (currentTuning.length === 12) {
+            keyName = orderedKeys[o].pitchName + octaveSymbol;
+        } else {
+            keyName = (orderedKeys[o].pitchName-1) + octaveSymbol;
+        }
+        playText += " " + keyName;
+    }
+
+    const xOffset = 15;
+    const yOffset = height - 20;
+
+    textAlign(LEFT, CENTER);
+    strokeJoin(ROUND);
+
+    strokeWeight(5);
+    stroke(color(atAlpha(theme.bgdark,90)));
+    text(playText, xOffset, yOffset);
+
+    noStroke();
+    const textColor = lerpColor(theme.textdark, theme.text, frameCountdown/20);
+    fill(textColor);
+    text(playText, xOffset, yOffset);
 
     pop();
 }
@@ -1675,13 +1703,45 @@ function updateControlStates () {
     ];
 }
 
-class ButtonObj {
-    constructor(x, y, type, name) {
+
+function findNearestButton (touch, arr) {
+    let closestButton;
+    if (touch === undefined) return;
+
+    if (menuIsOpen) {
+        arr.forEach((h) => {
+            //if in certain X and Y distance of button center
+            if (Math.abs(touch.clientX - h.x) < 80 && Math.abs(touch.clientY - h.y) < 40) {
+                {closestButton = h;}
+            }
+        });
+    } else {
+        //which hexagon is closest?
+        closestButton = arr[0];
+        arr.forEach((h) => {
+            if (h.keyDistanceToTouch(touch) < closestButton.keyDistanceToTouch(touch)) {
+                closestButton = h;
+              }
+        });
+    }
+
+    if (closestButton !== undefined) {
+        closestButton.lastTouch = {id:touch.identifier, type:touch.interactionType};
+        return closestButton;
+    }
+}
+
+
+class ButtonClass {
+    // anything shared by keys and menu buttons can go here
+}
+
+class KeyClass extends ButtonClass {
+    constructor (x, y, name) {
+        super();
         this.x = x;
         this.y = y;
-        this.type = type;
         this.name = name;
-
         this.setMidiFromGrid(gridBaseMidi, gridWidth, gridIncrement_H, gridIncrement_D, gridIncrement_V);
     }
 
@@ -1697,13 +1757,6 @@ class ButtonObj {
             this.pitchName = noteNames[this.midiName % 12];
         }
         this.octave = floor(this.midiName / currentTuning.length) - 2;
-    }
-
-    keyColorFromPalette (v) {
-        const octaveColors = [theme.red, theme.green, theme.blue];
-        const hue = octaveColors[(this.octave + 3 + currentOctave) % 3];
-        const value = valueFromScale(this.midiName % currentTuning.length)[v]
-        return hue[value];
     }
 
     renderKeyType (state, strength) {
@@ -1790,50 +1843,25 @@ class ButtonObj {
         pop();
     }
 
-    renderControlType (state) {
-        push();
-        noStroke();
-        const baseSize = 86;
-        const onColor = theme.textdark;
-
-        // button states
-        switch (state) {
-            case "hidden":
-                fill(atAlpha(theme.bg, 30));
-                controlShape(this.x, this.y, baseSize);
-                break;
-            case "pressed":
-                fill(onColor);
-                controlShape(this.x, this.y, baseSize*0.9);
-                break;
-            case "activepressed":
-                fill(theme.textdark);
-                controlShape(this.x, this.y, baseSize*0.9);
-                break;
-            case "idle":
-                // more states than on/off
-                fill(theme.bg);
-                controlShape(this.x, this.y, baseSize);
-                fill(onColor);
-                triangle(this.x + 60, this.y, this.x + 50, this.y + 10, this.x + 50, this.y - 10);
-                triangle(this.x - 60, this.y, this.x - 50, this.y + 10, this.x - 50, this.y - 10);
-                break;
-            case "active":
-                fill(onColor);
-                controlShape(this.x, this.y, baseSize);
-                break;
-            case "inactive":
-                fill(theme.bg);
-                controlShape(this.x, this.y, baseSize);
-                break;
-            case "hover":
-                const hoverColor = color(atAlpha(theme.text, 20));
-                fill(hoverColor);
-                controlShape(this.x, this.y, baseSize);
-                break;
+    drawKeyGlow () {
+        const inKlickedHexes = pressedButtons.find(t => t.midiName === this.midiName);
+        if (inKlickedHexes !== undefined ) {
+            this.renderKeyType("glow", "05"); return;
         }
-        this.renderControlText();
-        pop();
+        const inSustainedKeys = sustainedKeys.find(t => t.midiName === this.midiName);
+        if (inSustainedKeys !== undefined) {
+            this.renderKeyType("glow", "02"); return;
+        }
+        if (hoverButton !== undefined && hoverButton.midiName === this.midiName) {
+            this.renderKeyType("hover"); return;
+        }
+    }
+
+    keyColorFromPalette (v) {
+        const octaveColors = [theme.red, theme.green, theme.blue];
+        const hue = octaveColors[(this.octave + 3 + currentOctave) % 3];
+        const value = valueFromScale(this.midiName % currentTuning.length)[v]
+        return hue[value];
     }
 
     renderText (state) {
@@ -1901,123 +1929,6 @@ class ButtonObj {
         pop();
     }
 
-    get findKeyVariant () {
-        if (menuIsOpen) return "idle";
-
-        //const inKlickedHexes = pressedButtons.find(t => t.midiName === this.midiName && t.countdown > 0);
-        const inPressedKeys = pressedButtons.find(t => t.midiName === this.midiName);
-        const inSustainedKeys = sustainedKeys.find(t => t.midiName === this.midiName);
-
-        // also highlight same note in different octave.
-        // in concertina layout, highlight the semitone instead.
-        let higherHexes; let lowerHexes; let differentOctaveHexes;
-        if (noteLayout === "concertina") {
-            higherHexes = pressedButtons.find(t => t.midiName - this.midiName === 1);
-            lowerHexes = pressedButtons.find(t => t.midiName - this.midiName === -1);
-        } else {
-            differentOctaveHexes = pressedButtons.find(t => t.midiName % currentTuning.length === this.midiName % currentTuning.length);
-        }
-
-        if (inPressedKeys !== undefined) {
-            return "pressed";
-        } else if (this.pitchName === currentKey && interactionMode === "key") {
-            return "selected";
-        } else if (inSustainedKeys !== undefined) {
-            return "sustained";
-        } else if (differentOctaveHexes !== undefined) {
-            return "differentOctave";
-        } else if (higherHexes !== undefined && lowerHexes !== undefined) {
-            return "stepHigherAndLower";
-        } else if (higherHexes !== undefined) {
-            return "stepHigher";
-        } else if (lowerHexes !== undefined) {
-            return "stepLower";
-        } else {
-            return "idle";
-        }
-
-        //if (inKlickedHexes !== undefined) {
-        //    return "klicked";
-        //} else 
-    }
-
-    renderControlVariant () {
-        const inPressedButtons = pressedButtons.find(t => t.name === this.name);
-
-        if (menuButtons[-this.name - 1] !== undefined && menuButtons[-this.name - 1].name === "") {
-            this.renderControlType("hidden");
-        } else if (this.isControlOn && inPressedButtons !== undefined) {
-            this.renderControlType("activepressed");
-        } else if (this.isControlOn) {
-            this.renderControlType("active");
-        } else if (this.isControlOn === false) {
-            this.renderControlType("inactive");
-        } else if (inPressedButtons !== undefined) {
-            this.renderControlType("pressed");
-        } else {
-            this.renderControlType("idle");
-        }
-    }
-
-    drawKeyGlow () {
-        const inKlickedHexes = pressedButtons.find(t => t.midiName === this.midiName);
-        if (inKlickedHexes !== undefined ) {
-            this.renderKeyType("glow", "05");
-            return;
-        }
-
-        const inSustainedKeys = sustainedKeys.find(t => t.midiName === this.midiName);
-        if (inSustainedKeys !== undefined) {
-            this.renderKeyType("glow", "02");
-            return;
-        }
-
-        if (hoverButton !== undefined && hoverButton.midiName === this.midiName) {
-            this.renderKeyType("hover");
-            return;
-        }
-    }
-
-    drawControlGlow () {
-        if (hoverButton !== undefined && hoverButton.name === this.name) {
-            this.renderControlType("hover");
-            return;
-        }
-    }
-
-
-    get keyDistanceToMouse () {
-        return dist(mouseX, mouseY, this.x, this.y);
-    }
-
-    keyDistanceToTouch (touch) {
-        if (touch !== undefined) {
-             return dist(touch.clientX, touch.clientY, this.x + keyGridOffset.x, this.y + keyGridOffset.y);
-        }
-    }
-
-    get isControlOn () {
-        for (let i = 0; i < menuButtons.length; i++) {
-            if (i == -this.name-1) {
-                return menuButtons[i].onCondition;
-            }
-        }
-        // if checking number that's too big
-        return undefined;
-    }
-
-
-    renderControlText () {
-        push();
-        noStroke();
-        const stateColor = (this.isControlOn) ? theme.highlight : theme.text;
-        fill(stateColor);
-
-        textSize(18);
-        text(menuButtons[-this.name-1].name, this.x, this.y-1);
-        pop();
-    }
-
     renderKeyText () {
         const octaveLength = currentTuning.length;
         let keyText = "";
@@ -2062,6 +1973,191 @@ class ButtonObj {
             text(keyText, this.x, this.y);
         }
     }
+
+    get findKeyVariant () {
+        if (menuIsOpen) return "idle";
+
+        //const inKlickedHexes = pressedButtons.find(t => t.midiName === this.midiName && t.countdown > 0);
+        const inPressedKeys = pressedButtons.find(t => t.midiName === this.midiName);
+        const inSustainedKeys = sustainedKeys.find(t => t.midiName === this.midiName);
+
+        // also highlight same note in different octave.
+        // in concertina layout, highlight the semitone instead.
+        let higherHexes; let lowerHexes; let differentOctaveHexes;
+        if (noteLayout === "concertina") {
+            higherHexes = pressedButtons.find(t => t.midiName - this.midiName === 1);
+            lowerHexes = pressedButtons.find(t => t.midiName - this.midiName === -1);
+        } else {
+            differentOctaveHexes = pressedButtons.find(t => t.midiName % currentTuning.length === this.midiName % currentTuning.length);
+        }
+
+        if (inPressedKeys !== undefined) {
+            return "pressed";
+        } else if (this.pitchName === currentKey && interactionMode === "key") {
+            return "selected";
+        } else if (inSustainedKeys !== undefined) {
+            return "sustained";
+        } else if (differentOctaveHexes !== undefined) {
+            return "differentOctave";
+        } else if (higherHexes !== undefined && lowerHexes !== undefined) {
+            return "stepHigherAndLower";
+        } else if (higherHexes !== undefined) {
+            return "stepHigher";
+        } else if (lowerHexes !== undefined) {
+            return "stepLower";
+        } else {
+            return "idle";
+        }
+    }
+
+    keyDistanceToTouch (touch) {
+        if (touch !== undefined) {
+             return dist(touch.clientX, touch.clientY, this.x + keyGridOffset.x, this.y + keyGridOffset.y);
+        }
+    }
+}
+function valueFromScale (scaleIndex) {
+    //minor note
+    if (currentScale[scaleIndex] === 0) return [1,2,3];
+    //major note
+    if (currentScale[scaleIndex] === 1) return [2,3,4];
+    //ambiguous
+    if (currentScale[scaleIndex] === -1) return [0,1,2];
+}
+
+function setDragValueToActiveVoice (h) {
+    if (activeKeys[h.name] === undefined) {
+        print("No active note to apply key drag on!");
+        return;
+    }
+
+    // find touch that is in range in both X and Y
+    for (let i = 0; i < ongoingTouches.length; i++) {
+
+        const touchX = ongoingTouches[i].clientX;
+        const touchY = ongoingTouches[i].clientY;
+        const centerOffsetX = h.x - touchX;
+        const centerOffsetY = h.y - touchY;
+
+        // in range
+        if (Math.abs(centerOffsetX) < 35 && Math.abs(centerOffsetY) < 35) {
+
+            if (activeKeys[h.name].dragValues !== undefined) {
+                // use start values to calculate drag offset
+                const diffX = touchX - activeKeys[h.name].dragValues.startX;
+                const diffY = touchY - activeKeys[h.name].dragValues.startY;
+                activeKeys[h.name].dragValues.dragX = diffX;
+                activeKeys[h.name].dragValues.dragY = diffY;
+            }
+            else {
+                // set all to start value
+                const startX = touchX;
+                const startY = touchY;
+                activeKeys[h.name].dragValues = {"startX": startX, "startY": startY};
+            }
+            print("Drag values set to: " + activeKeys[h.name].dragValues);
+            return;
+        }
+    }
+    return ("No touch found in range!");
+}
+
+class ControlClass extends ButtonClass {
+    constructor(x, y, name) {
+        super();
+        this.x = x;
+        this.y = y;
+        this.name = name;
+    }
+
+    renderControlVariant () {
+        const inPressedButtons = pressedButtons.find(t => t.name === this.name);
+
+        if (menuButtons[-this.name - 1] !== undefined && menuButtons[-this.name - 1].name === "") {
+            this.renderControlType("hidden");
+        } else if (this.isControlOn && inPressedButtons !== undefined) {
+            this.renderControlType("activepressed");
+        } else if (this.isControlOn) {
+            this.renderControlType("active");
+        } else if (this.isControlOn === false) {
+            this.renderControlType("inactive");
+        } else if (inPressedButtons !== undefined) {
+            this.renderControlType("pressed");
+        } else {
+            this.renderControlType("idle");
+        }
+    }
+
+    renderControlType (state) {
+        push();
+        noStroke();
+        const baseSize = 86;
+        const onColor = theme.textdark;
+
+        // button states
+        switch (state) {
+            case "hidden":
+                fill(atAlpha(theme.bg, 30));
+                controlShape(this.x, this.y, baseSize);
+                break;
+            case "pressed":
+                fill(onColor);
+                controlShape(this.x, this.y, baseSize*0.9);
+                break;
+            case "activepressed":
+                fill(theme.textdark);
+                controlShape(this.x, this.y, baseSize*0.9);
+                break;
+            case "idle":
+                // more states than on/off
+                fill(theme.bg);
+                controlShape(this.x, this.y, baseSize);
+                fill(onColor);
+                triangle(this.x + 60, this.y, this.x + 50, this.y + 10, this.x + 50, this.y - 10);
+                triangle(this.x - 60, this.y, this.x - 50, this.y + 10, this.x - 50, this.y - 10);
+                break;
+            case "active":
+                fill(onColor);
+                controlShape(this.x, this.y, baseSize);
+                break;
+            case "inactive":
+                fill(theme.bg);
+                controlShape(this.x, this.y, baseSize);
+                break;
+            case "hover":
+                const hoverColor = color(atAlpha(theme.text, 20));
+                fill(hoverColor);
+                controlShape(this.x, this.y, baseSize);
+                break;
+        }
+        this.renderControlText();
+        pop();
+    }
+
+    drawControlGlow () {
+        if (hoverButton !== undefined && hoverButton.name === this.name) {
+            this.renderControlType("hover"); return;
+        }
+    }
+
+    get isControlOn () {
+        for (let i = 0; i < menuButtons.length; i++) {
+            if (i == -this.name-1) {
+                return menuButtons[i].onCondition;
+            }
+        }
+    }
+
+    renderControlText () {
+        push();
+        noStroke();
+        const stateColor = (this.isControlOn) ? theme.highlight : theme.text;
+        fill(stateColor);
+
+        textSize(18);
+        text(menuButtons[-this.name-1].name, this.x, this.y-1);
+        pop();
+    }
 }
 
 function keyShape (x, y, r, color) {
@@ -2080,7 +2176,6 @@ function keyShape (x, y, r, color) {
     pop();
 }
 
-
 function keyShapeOverlay (x, y, r, color) {
     push();
 
@@ -2092,10 +2187,8 @@ function keyShapeOverlay (x, y, r, color) {
     } else {
         hexagon(x, y, r*1.5, 0);
     }
-
     pop();
 }
-
 
 function centerShape (x, y, r, color, variant) {
     push();
@@ -2132,95 +2225,6 @@ function gradientCircle (cInner, sInner, cOuter, sOuter, x, y, steps) {
         fill(mixColor);
         ellipse(x, y, mixSize*1);
     }
-    pop();
-}
-
-
-function dragDistanceMap (center, start, drag, min, max) {
-    if (drag > min) {
-        return map(start + drag, start + min, center + max, 0, 1, true);
-    } else if (-drag > min) {
-        return map(start + drag, start - min, center - max, 0, -1, true);
-    }
-    else {
-        return 0;
-    }
-}
-
-function findNearestButton (touch, arr) {
-
-    let closestButton;
-
-    if (touch !== undefined) {
-        // which control is in range of the finger?
-        if (menuIsOpen) {
-            arr.forEach((h) => {
-                //if in certain X and Y distance of button center
-                if (Math.abs(touch.clientX - h.x) < 80 && Math.abs(touch.clientY - h.y) < 40) {
-                    {closestButton = h;}
-                }
-            });
-        } else {
-            //which hexagon is closest?
-            closestButton = arr[0];
-            arr.forEach((h) => {
-                if (h.keyDistanceToTouch(touch) < closestButton.keyDistanceToTouch(touch)) {
-                    closestButton = h;
-                  }
-            });
-        }
-    }
-
-    if (closestButton !== undefined) {
-        closestButton.lastTouch = {id:touch.identifier, type:touch.interactionType};
-        return closestButton;
-    }
-}
-
-
-function cornerText () {
-    push();
-
-    textFont("Satoshi");
-    textSize(16);
-    textStyle(BOLD);
-
-    let playText = currentKey + octaveSymbols[currentOctave] + " " + capitalize(tuneMode);
-
-    if (instrumentType === "synth") {
-        playText += " " + Object.values(activeKeys).length + "/32";
-    }
-
-    playText += "  ";
-
-    for (let o = 0; o < orderedKeys.length; o++) {
-        let keyName;
-        const octave = orderedKeys[o].octave + currentOctave;
-        const octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
-
-        if (currentTuning.length === 12) {
-            keyName = orderedKeys[o].pitchName + octaveSymbol;
-        } else {
-            keyName = (orderedKeys[o].pitchName-1) + octaveSymbol;
-        }
-        playText += " " + keyName;
-    }
-
-    const xOffset = 15;
-    const yOffset = height - 20;
-
-    textAlign(LEFT, CENTER);
-    strokeJoin(ROUND);
-
-    strokeWeight(5);
-    stroke(color(atAlpha(theme.bgdark,90)));
-    text(playText, xOffset, yOffset);
-
-    noStroke();
-    const textColor = lerpColor(theme.textdark, theme.text, frameCountdown/20);
-    fill(textColor);
-    text(playText, xOffset, yOffset);
-
     pop();
 }
 
