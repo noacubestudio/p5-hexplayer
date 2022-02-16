@@ -3,6 +3,7 @@ html, body {
   padding: 0;
   background-color: #362D95;
   height: 100%;
+  scrollbar-width: none;
 }
 
 body {
