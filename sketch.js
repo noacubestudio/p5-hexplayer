@@ -293,10 +293,6 @@ let gridIncrement_V = 7;
 let noteLayout = "concertina";
 let keyGridOffset = {}; // gets x and y
 
-//for construction of buttons
-const controlRows = 9;
-const controlColumns = 4;
-
 // permanent key grid
 let gridSizeX, gridSizeY;
 let keyArr = new Array;
@@ -336,6 +332,361 @@ let vol;
 let activeKeys = {
     // structure:    h.name = {"synth"..., "dragValues"...}
 };
+
+const controlFunctions = [
+    [
+        //1st column
+        {
+            type:"label",
+            label:() => "Samplers"
+        },
+        {
+            type:"button",
+            label:() => "Piano",
+            onCondition:() => (currentInstrument === "piano"),
+            function:function() {
+                print("Switched to piano!");
+                currentInstrument = "piano";
+                instrument = pianoSampler;
+                instrumentType = "sampler";
+                vol.volume.value = -7;
+            },
+        },
+        {
+            type:"button",
+            label:() => "Rhodes",
+            onCondition:() => (currentInstrument === "rhodes"),
+            function:function() {
+                print("Switched to Rhodes!");
+                currentInstrument = "rhodes";
+                instrument = rhodesSampler;
+                instrumentType = "sampler";
+                vol.volume.value = -10;
+            },
+        },
+        {
+            type:"button",
+            label:() => "Organ",
+            onCondition:() => (currentInstrument === "organ"),
+            function:function() {
+                print("Switched to organ!");
+                currentInstrument = "organ";
+                instrument = organSampler;
+                instrumentType = "sampler";
+                vol.volume.value = -12;
+            },
+        },
+        {
+            type:"button",
+            label:() => "Harp",
+            onCondition:() => (currentInstrument === "harp"),
+            function:function() {
+                print("Switched to harp!");
+                currentInstrument = "harp";
+                instrument = harpSampler;
+                instrumentType = "sampler";
+                vol.volume.value = -10;
+            },
+        },
+        {
+            type:"label",
+            label:() => "Oscillators"
+        },
+        {
+            type:"button",
+            label:() => "Sawtooth",
+            onCondition:() => (currentInstrument === "sawtooth"),
+            function:function() {
+                print("Switched to saw wave!");
+                currentInstrument = "sawtooth";
+                menuSynth.set({"oscillator": {"type": "sawtooth"}});
+                for (let i = 0; i < 32; i++) {
+                    synthvoices[i].set({"oscillator": {"type": "sawtooth"}});
+                }
+                instrument = menuSynth;
+                instrumentType = "synth";
+                vol.volume.value = -28;
+            },
+        },
+        {
+            type:"button",
+            label:() => "Square",
+            onCondition:() => (currentInstrument === "square"),
+            function:function() {
+                print("Switched to square wave!");
+                currentInstrument = "square";
+                menuSynth.set({"oscillator": {"type": "square"}});
+                for (let i = 0; i < 32; i++) {
+                    synthvoices[i].set({"oscillator": {"type": "square"}});
+                }
+                instrument = menuSynth;
+                instrumentType = "synth";
+                vol.volume.value = -31;
+            },
+        },
+        {
+            type:"button",
+            label:() => "Triangle",
+            onCondition:() => (currentInstrument === "triangle"),
+            function:function() {
+                print("Switched to triangle wave!");
+                currentInstrument = "triangle";
+                menuSynth.set({"oscillator": {"type": "triangle"}});
+                for (let i = 0; i < 32; i++) {
+                    synthvoices[i].set({"oscillator": {"type": "triangle"}});
+                }
+                instrument = menuSynth;
+                instrumentType = "synth";
+                vol.volume.value = -20;
+            },
+        },
+        {
+            type:"button",
+            label:() => "Sine",
+            onCondition:() => (currentInstrument === "sine"),
+            function:function() {
+                print("Switched to sine wave!");
+                currentInstrument = "sine";
+                menuSynth.set({"oscillator": {"type": "sine"}});
+                for (let i = 0; i < 32; i++) {
+                    synthvoices[i].set({"oscillator": {"type": "sine"}});
+                }
+                instrument = menuSynth;
+                instrumentType = "synth";
+                vol.volume.value = -30;
+            },
+        },
+    ],
+    [
+        //2nd column
+        {
+            type:"label",
+            label:() => "12 Note Tunings"
+        },
+        {
+            type:"button",
+            label:() => "12 EDO",
+            onCondition:() => (tuneMode === "12tet"),
+            function:function() {
+                print("Switched to 12 tone equal temperament");
+                tuneMode = "12tet";
+                currentTuning = tuning12tet;
+            },
+        },
+        {
+            type:"button",
+            label:() => "Simple Fractions",
+            onCondition:() => (tuneMode === "simple"),
+            function:function() {
+                print("Switched to simple 12 tone tuning");
+                tuneMode = "simple";
+                currentTuning = tuningSimple;
+            },
+        },
+        {
+            type:"button",
+            label:() => "Harmonic",
+            onCondition:() => (tuneMode === "harmonic"),
+            function:function() {
+                print("Switched to 12 tone Harmonic series segment");
+                tuneMode = "harmonic";
+                currentTuning = tuningHarmonic;
+            },
+        },
+        {
+            type:"button",
+            label:() => "/19 Novemdec",
+            onCondition:() => (tuneMode === "novemdecimal"),
+            function:function() {
+                print("Switched to 12 tone Novemdecimal");
+                tuneMode = "novemdecimal";
+                currentTuning = tuningNovemdecimal;
+            },
+        },
+        {
+            type:"button",
+            label:() => "/16",
+            onCondition:() => (tuneMode === "16neji"),
+            function:function() {
+                print("Switched to 12 tone 16-NEJI");
+                tuneMode = "16neji";
+                currentTuning = tuning16neji;
+            },
+        },
+        {
+            type:"button",
+            label:() => "/11 Undecimal",
+            onCondition:() => (tuneMode === "undecimal"),
+            function:function() {
+                print("Switched to 12 tone Undecimal");
+                tuneMode = "undecimal";
+                currentTuning = tuningUndecimal;
+            },
+        },
+        {
+            type:"button",
+            label:() => "/11 Snow",
+            onCondition:() => (tuneMode === "11neji"),
+            function:function() {
+                print("Switched to 12 tone 11-NEJI");
+                tuneMode = "11neji";
+                currentTuning = tuning11neji;
+            },
+        },
+    ],
+    [
+        //3rd column
+        {
+            type:"label",
+            label:() => "Bigger Octaves",
+        },
+        {
+            type:"button",
+            label:() => "14 EDO",
+            onCondition:() => (tuneMode === "14tet"),
+            function:function() {
+                tuneMode = "14tet";
+                currentTuning = tuning14tet;
+                currentOctave = 0;
+                currentScale = scaleMajor14;
+                noteLayout = "harmonic"; makeKeys();
+                calculateNewMidiGrid(4, 5);
+                playTestChord([4, 8]);
+            },
+        },
+        {
+            type:"button",
+            label:() => "19 EDO",
+            onCondition:() => (tuneMode === "19tet"),
+            function:function() {
+                tuneMode = "19tet";
+                currentTuning = tuning19tet;
+                currentOctave = 0;
+                currentScale = scaleMajor19;
+                noteLayout = "concertina"; makeKeys();
+                calculateNewMidiGrid(6, 11);
+                playTestChord([6, 11]);
+            },
+        },
+        {
+            type:"button",
+            label:() => "31 JI",
+            onCondition:() => (tuneMode === "31ji"),
+            function:function() {
+                tuneMode = "31ji";
+                currentTuning = tuning31ji;
+                currentOctave = 1;
+                currentScale = scaleMajor31;
+                noteLayout = "harmonic"; makeKeys();
+                calculateNewMidiGrid(5, 9);
+                playTestChord([10, 18]);
+            },
+        },
+        {
+            type:"button",
+            label:() => "21 JI Astral",
+            onCondition:() => (tuneMode === "21astral"),
+            function:function() {
+                tuneMode = "21astral";
+                currentTuning = tuning21Astral;
+                currentOctave = 1;
+                currentScale = scalePrimal21;
+                noteLayout = "harmonic"; makeKeys();
+                calculateNewMidiGrid(5, 9);
+                playTestChord([6, 12, 18]);
+            },
+        },
+        {
+            type:"button",
+            label:() => "24 EDO",
+            onCondition:() => (tuneMode === "24tet"),
+            function:function() {
+                tuneMode = "24tet";
+                currentTuning = tuning24tet;
+                currentOctave = 1;
+                currentScale = scaleMajor24;
+                noteLayout = "harmonic"; makeKeys();
+                calculateNewMidiGrid(4, 7);
+                playTestChord([8, 14]);
+            },
+        },
+        {
+            type:"button",
+            label:() => "24 JI",
+            onCondition:() => (tuneMode === "24ji"),
+            function:function() {
+                tuneMode = "24ji";
+                currentTuning = tuning24ji;
+                currentOctave = 1;
+                currentScale = scaleMajor24;
+                noteLayout = "harmonic"; makeKeys();
+                calculateNewMidiGrid(4, 7);
+                playTestChord([8, 14]);
+            },
+        },
+    ],
+    [
+        //4th column
+        {
+            type:"label",
+            label:() => "Note Labels"
+        },
+        {
+            type:"stepper",
+            label:() => capitalize(labelStyle),
+            onCondition:() => undefined,
+            function:function() {
+                print("Changed label style");
+                if (labelStyle === "notes") {labelStyle = "intervals";}
+                else if (labelStyle === "intervals") {labelStyle = "none";}
+                else {labelStyle = "notes";}
+            },
+        },
+        {
+            type:"label",
+            label:() => "Note Layout"
+        },
+        {
+            type:"stepper",
+            label:() => capitalize(noteLayout),
+            onCondition:() => undefined,
+            function:function() {
+                print("Switched to different layout");
+                if (noteLayout === "concertina") noteLayout = "harmonic";
+                else if (noteLayout === "harmonic") noteLayout = "swapped";
+                else noteLayout = "concertina";
+                makeKeys(); calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
+            },
+        },
+        {
+            type:"label",
+            label:() => "Lowest Octave"
+        },
+        {
+            type:"stepper",
+            label:() => currentOctave,
+            onCondition:() => undefined,
+            function:function() {
+                print("Changed octave");
+                currentOctave++;
+                if (currentOctave == 3) {currentOctave = 0;}
+            },
+        },
+        {
+            type:"label",
+            label:() => "(Osc. only)"
+        },
+        {
+            type:"button",
+            label:() => "Pitchbend",
+            onCondition:() => pitchBend,
+            function:function() {
+                print("Toggled pitch bend");
+                pitchBend = !pitchBend;
+            },
+        },
+    ],
+];
 
 
 function preload() {
@@ -509,6 +860,7 @@ function setup () {
 
     Tone.loaded().then(() => {
         toneReady = true;
+        console.log("Tone has loaded!")
     });
 
     // run once to show starting screen
@@ -568,18 +920,24 @@ function makeKeys () {
 function makeControls () {
     // empty old array first
     controlsArr = [];
+    let id = 0;
 
-    // create buttons with negative IDs
-    const xOffset = width - 586; //1366, 1000 on my iPad
-    const yOffset = 130;
-    const bWidth = 151;
+    const xOffset = width - 620;
+    const yOffset = 124;
+    const bWidth = 170;
     const bHeight = 59;
+    let columnHeight = 0;
 
-    for (let y = 0; y < controlRows; y++) {
-        for (let x = 0; x < controlColumns; x++) {
-            const xPos = xOffset + bWidth*x
-            const yPos = yOffset + y*bHeight
-            controlsArr.push(new ControlClass(xPos, yPos, x, y));
+    for (let x = 0; x < controlFunctions.length; x++) {
+        columnHeight = 0;
+        for (let y = 0; y < controlFunctions[x].length; y++) {
+            const xPos = xOffset + bWidth*x;
+
+            const yPos = yOffset + columnHeight;
+            const elementHeight = (controlFunctions[x][y].type === "label") ? 32 : bHeight;
+            columnHeight += elementHeight;
+
+            controlsArr.push(new ControlClass(xPos, yPos, x, y, id++));
         }
     }
 }
@@ -587,17 +945,18 @@ function makeControls () {
 
 function handleStart (evt) {
     // first tone to start audio on safari
+    console.log(readyForSound, toneReady)
     if (readyForSound === false) {
         if (toneReady) {
-            instrument.start();
-            Tone.Volume().start();
+            Tone.start();
             print("Audio is ready!");
-            instrument.triggerAttackRelease("C2", "8n");
+            //instrument.triggerAttackRelease("C2", "8n");
             readyForSound = true;
         } else {
             return;
         }
     }
+    
 
     const newTouches = evt.changedTouches;
 
@@ -624,6 +983,17 @@ function handleStart (evt) {
 }
 
 function mousePressed () {
+    if (readyForSound === false) {
+        if (toneReady) {
+            Tone.start();
+            print("Audio is ready!");
+            //instrument.triggerAttackRelease("C2", "8n");
+            readyForSound = true;
+        } else {
+            return;
+        }
+    }
+
     if (mouseUsed) {
         newPress = {
             identifier:1,
@@ -645,6 +1015,7 @@ function mousePressed () {
 }
 
 function handleMove (evt) {
+    if (!toneReady) return;
     const newTouches = evt.changedTouches;
 
     for (let i = 0; i < newTouches.length; i++) {
@@ -661,6 +1032,7 @@ function handleMove (evt) {
 }
 
 function mouseDragged () {
+    if (!toneReady) return;
     if (mouseUsed) {
         newPress = {
             identifier:1,
@@ -677,6 +1049,7 @@ function mouseDragged () {
 }
 
 function mouseMoved() {
+    if (!toneReady) return;
     mouseUsed = true;
     newHover = {
         identifier:0,
@@ -692,6 +1065,7 @@ function mouseMoved() {
 }
 
 function handleEnd (evt) {
+    if (!toneReady) return;
     const newTouches = evt.changedTouches;
 
     for (let i = 0; i < newTouches.length; i++) {
@@ -715,10 +1089,12 @@ function handleEnd (evt) {
 }
 
 function handleCancel (evt) {
+    if (!toneReady) return;
     handleEnd(evt)
 }
 
 function mouseReleased () {
+    if (!toneReady) return;
     if (mouseUsed) {
         ongoingTouches = [];
 
@@ -807,7 +1183,7 @@ function runKeys () {
     if (menuIsOpen) {
         background(atAlpha(theme.bgdark, 60));
         fill(theme.bgdark);
-        rect(width - 360, 366, 308, 278, 20);
+        rect(width - 366, 374, 350, 282, 20);
 
         controlsArr.forEach((b) => {
             b.renderControlVariant();
@@ -1239,398 +1615,9 @@ function dragDistanceMap (center, start, drag, min, max) {
     }
 }
 
-const controlFunctions = [
-    [
-        //1st column
-        {
-            type:"button",
-            label:function() {return "Piano"},
-            onCondition:function() {return (currentInstrument === "piano")},
-            function:function() {
-                print("Switched to piano!");
-                currentInstrument = "piano";
-                instrument = pianoSampler;
-                instrumentType = "sampler";
-                vol.volume.value = -7;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "Rhodes"},
-            onCondition:function() {return (currentInstrument === "rhodes")},
-            function:function() {
-                print("Switched to Rhodes!");
-                currentInstrument = "rhodes";
-                instrument = rhodesSampler;
-                instrumentType = "sampler";
-                vol.volume.value = -10;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "Organ"},
-            onCondition:function() {return (currentInstrument === "organ")},
-            function:function() {
-                print("Switched to organ!");
-                currentInstrument = "organ";
-                instrument = organSampler;
-                instrumentType = "sampler";
-                vol.volume.value = -12;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "Harp"},
-            onCondition:function() {return (currentInstrument === "harp")},
-            function:function() {
-                print("Switched to harp!");
-                currentInstrument = "harp";
-                instrument = harpSampler;
-                instrumentType = "sampler";
-                vol.volume.value = -10;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "Sawtooth"},
-            onCondition:function() {return (currentInstrument === "sawtooth")},
-            function:function() {
-                print("Switched to saw wave!");
-                currentInstrument = "sawtooth";
-                menuSynth.set({"oscillator": {"type": "sawtooth"}});
-                for (let i = 0; i < 32; i++) {
-                    synthvoices[i].set({"oscillator": {"type": "sawtooth"}});
-                }
-                instrument = menuSynth;
-                instrumentType = "synth";
-                vol.volume.value = -28;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "Square"},
-            onCondition:function() {return (currentInstrument === "square")},
-            function:function() {
-                print("Switched to square wave!");
-                currentInstrument = "square";
-                menuSynth.set({"oscillator": {"type": "square"}});
-                for (let i = 0; i < 32; i++) {
-                    synthvoices[i].set({"oscillator": {"type": "square"}});
-                }
-                instrument = menuSynth;
-                instrumentType = "synth";
-                vol.volume.value = -31;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "Triangle"},
-            onCondition:function() {return (currentInstrument === "triangle")},
-            function:function() {
-                print("Switched to triangle wave!");
-                currentInstrument = "triangle";
-                menuSynth.set({"oscillator": {"type": "triangle"}});
-                for (let i = 0; i < 32; i++) {
-                    synthvoices[i].set({"oscillator": {"type": "triangle"}});
-                }
-                instrument = menuSynth;
-                instrumentType = "synth";
-                vol.volume.value = -20;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "Sine"},
-            onCondition:function() {return (currentInstrument === "sine")},
-            function:function() {
-                print("Switched to sine wave!");
-                currentInstrument = "sine";
-                menuSynth.set({"oscillator": {"type": "sine"}});
-                for (let i = 0; i < 32; i++) {
-                    synthvoices[i].set({"oscillator": {"type": "sine"}});
-                }
-                instrument = menuSynth;
-                instrumentType = "synth";
-                vol.volume.value = -30;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return ""},
-            onCondition:function() {return undefined},
-            function:undefined,
-        },
-    ],
-    [
-        //2nd column
-        {
-            type:"button",
-            label:function() {return "12 EDO"},
-            onCondition:function() {return (tuneMode === "12tet")},
-            function:function() {
-                print("Switched to 12 tone equal temperament");
-                tuneMode = "12tet";
-                currentTuning = tuning12tet;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "12JI Custom"},
-            onCondition:function() {return (tuneMode === "simple")},
-            function:function() {
-                print("Switched to simple 12 tone tuning");
-                tuneMode = "simple";
-                currentTuning = tuningSimple;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "Mode 12"},
-            onCondition:function() {return (tuneMode === "harmonic")},
-            function:function() {
-                print("Switched to 12 tone Harmonic series segment");
-                tuneMode = "harmonic";
-                currentTuning = tuningHarmonic;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "12JI Novem"},
-            onCondition:function() {return (tuneMode === "novemdecimal")},
-            function:function() {
-                print("Switched to 12 tone Novemdecimal");
-                tuneMode = "novemdecimal";
-                currentTuning = tuningNovemdecimal;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "12JI /16"},
-            onCondition:function() {return (tuneMode === "16neji")},
-            function:function() {
-                print("Switched to 12 tone 16-NEJI");
-                tuneMode = "16neji";
-                currentTuning = tuning16neji;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "12JI Undec"},
-            onCondition:function() {return (tuneMode === "undecimal")},
-            function:function() {
-                print("Switched to 12 tone Undecimal");
-                tuneMode = "undecimal";
-                currentTuning = tuningUndecimal;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "12JI Snow"},
-            onCondition:function() {return (tuneMode === "11neji")},
-            function:function() {
-                print("Switched to 12 tone 11-NEJI");
-                tuneMode = "11neji";
-                currentTuning = tuning11neji;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return ""},
-            onCondition:function() {return undefined},
-            function:undefined,
-        },
-        {
-            type:"button",
-            label:function() {return ""},
-            onCondition:function() {return undefined},
-            function:undefined,
-        },
-    ],
-    [
-        //3rd column
-        {
-            type:"button",
-            label:function() {return "14 EDO"},
-            onCondition:function() {return (tuneMode === "14tet")},
-            function:function() {
-                tuneMode = "14tet";
-                currentTuning = tuning14tet;
-                currentOctave = 0;
-                currentScale = scaleMajor14;
-                noteLayout = "harmonic"; makeKeys();
-                calculateNewMidiGrid(4, 5);
-                playTestChord([4, 8]);
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "19 EDO"},
-            onCondition:function() {return (tuneMode === "19tet")},
-            function:function() {
-                tuneMode = "19tet";
-                currentTuning = tuning19tet;
-                currentOctave = 0;
-                currentScale = scaleMajor19;
-                noteLayout = "concertina"; makeKeys();
-                calculateNewMidiGrid(6, 11);
-                playTestChord([6, 11]);
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "31JI"},
-            onCondition:function() {return (tuneMode === "31ji")},
-            function:function() {
-                tuneMode = "31ji";
-                currentTuning = tuning31ji;
-                currentOctave = 1;
-                currentScale = scaleMajor31;
-                noteLayout = "harmonic"; makeKeys();
-                calculateNewMidiGrid(5, 9);
-                playTestChord([10, 18]);
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "21JI Astral"},
-            onCondition:function() {return (tuneMode === "21astral")},
-            function:function() {
-                tuneMode = "21astral";
-                currentTuning = tuning21Astral;
-                currentOctave = 1;
-                currentScale = scalePrimal21;
-                noteLayout = "harmonic"; makeKeys();
-                calculateNewMidiGrid(5, 9);
-                playTestChord([6, 12, 18]);
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "24 EDO"},
-            onCondition:function() {return (tuneMode === "24tet")},
-            function:function() {
-                tuneMode = "24tet";
-                currentTuning = tuning24tet;
-                currentOctave = 1;
-                currentScale = scaleMajor24;
-                noteLayout = "harmonic"; makeKeys();
-                calculateNewMidiGrid(4, 7);
-                playTestChord([8, 14]);
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "24JI"},
-            onCondition:function() {return (tuneMode === "24ji")},
-            function:function() {
-                tuneMode = "24ji";
-                currentTuning = tuning24ji;
-                currentOctave = 1;
-                currentScale = scaleMajor24;
-                noteLayout = "harmonic"; makeKeys();
-                calculateNewMidiGrid(4, 7);
-                playTestChord([8, 14]);
-            },
-        },
-        {
-            type:"button",
-            label:function() {return ""},
-            onCondition:function() {return undefined},
-            function:undefined,
-        },
-        {
-            type:"button",
-            label:function() {return ""},
-            onCondition:function() {return undefined},
-            function:undefined,
-        },
-        {
-            type:"button",
-            label:function() {return ""},
-            onCondition:function() {return undefined},
-            function:undefined,
-        },
-    ],
-    [
-        //4th column
-        {
-            type:"stepper",
-            label:function() {return capitalize(labelStyle)},
-            onCondition:function() {return undefined},
-            function:function() {
-                print("Changed label style");
-                if (labelStyle === "notes") {labelStyle = "intervals";}
-                else if (labelStyle === "intervals") {labelStyle = "none";}
-                else {labelStyle = "notes";}
-            },
-        },
-        {
-            type:"stepper",
-            label:function() {return capitalize(noteLayout)},
-            onCondition:function() {return undefined},
-            function:function() {
-                print("Switched to different layout");
-                if (noteLayout === "concertina") noteLayout = "harmonic";
-                else if (noteLayout === "harmonic") noteLayout = "swapped";
-                else noteLayout = "concertina";
-                makeKeys(); calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
-            },
-        },
-        {
-            type:"stepper",
-            label:function() {return "Octave "+ currentOctave},
-            onCondition:function() {return undefined},
-            function:function() {
-                print("Changed octave");
-                currentOctave++;
-                if (currentOctave == 3) {currentOctave = 0;}
-            },
-        },
-        {
-            type:"button",
-            label:function() {return "Pitchbend"},
-            onCondition:function() {return undefined},
-            function:function() {
-                print("Toggled pitch bend");
-                pitchBend = !pitchBend;
-            },
-        },
-        {
-            type:"button",
-            label:function() {return ""},
-            onCondition:function() {return undefined},
-            function:undefined,
-        },
-        {
-            type:"button",
-            label:function() {return ""},
-            onCondition:function() {return undefined},
-            function:undefined,
-        },
-        {
-            type:"button",
-            label:function() {return ""},
-            onCondition:function() {return undefined},
-            function:undefined,
-        },
-        {
-            type:"button",
-            label:function() {return ""},
-            onCondition:function() {return undefined},
-            function:undefined,
-        },
-        {
-            type:"button",
-            label:function() {return ""},
-            onCondition:function() {return undefined},
-            function:undefined,
-        },
-    ],
-];
 
 function controlPressed (b) {
     instrument.releaseAll();
-
     const cFunction = controlFunctions[b.col][b.row].function;
     if (cFunction !== undefined) {
         cFunction();
@@ -1885,7 +1872,9 @@ function findNearestButton (touch, arr) {
     if (menuIsOpen) {
         arr.forEach((h) => {
             //if in certain X and Y distance of button center
-            if (Math.abs(touch.clientX - h.x) < 80 && Math.abs(touch.clientY - h.y) < 40) {
+            if (Math.abs(touch.clientX - h.x) < 80 && 
+                Math.abs(touch.clientY - h.y) < 40 &&
+                controlFunctions[h.col][h.row].type !== "label") {
                 {closestButton = h;}
             }
         });
@@ -2237,13 +2226,13 @@ function setDragValueToActiveVoice (h) {
 }
 
 class ControlClass extends ButtonClass {
-    constructor(x, y, column, row) {
+    constructor(x, y, column, row, id) {
         super();
         this.x = x;
         this.y = y;
         this.col = column;
         this.row = row;
-        this.name = row + controlRows*column;
+        this.name = id;
     }
 
     renderControlVariant () {
@@ -2251,7 +2240,9 @@ class ControlClass extends ButtonClass {
 
         const func = controlFunctions[this.col][this.row];
 
-        if (controlFunctions[this.col][this.row] !== undefined && func.label() === "") {
+        if (func !== undefined && func.type === "label") {
+            this.renderControlType("label");
+        } else if (func !== undefined && func.label() === "") {
             this.renderControlType("hidden");
         } else if (this.isControlOn && inPressedButtons !== undefined) {
             this.renderControlType("activepressed");
@@ -2274,6 +2265,8 @@ class ControlClass extends ButtonClass {
 
         // button states
         switch (state) {
+            case "label":
+                break;
             case "hidden":
                 fill(atAlpha(theme.bg, 30));
                 controlShape(this.x, this.y, baseSize);
@@ -2291,8 +2284,8 @@ class ControlClass extends ButtonClass {
                 fill(theme.bg);
                 controlShape(this.x, this.y, baseSize);
                 fill(onColor);
-                triangle(this.x + 60, this.y, this.x + 50, this.y + 10, this.x + 50, this.y - 10);
-                triangle(this.x - 60, this.y, this.x - 50, this.y + 10, this.x - 50, this.y - 10);
+                triangle(this.x + 70, this.y, this.x + 60, this.y + 10, this.x + 60, this.y - 10);
+                triangle(this.x - 70, this.y, this.x - 60, this.y + 10, this.x - 60, this.y - 10);
                 break;
             case "active":
                 fill(onColor);
@@ -2320,18 +2313,29 @@ class ControlClass extends ButtonClass {
 
     get isControlOn () {
         const func = controlFunctions[this.col][this.row];
-        return func.onCondition();
+        if (func.type !== "label") {
+            return func.onCondition();
+        } else {
+            return false;
+        }
     }
 
     renderControlText () {
         push();
         noStroke();
-        const stateColor = (this.isControlOn) ? theme.highlight : theme.text;
-        fill(stateColor);
 
-        textSize(18);
         const func = controlFunctions[this.col][this.row];
-        text(func.label(), this.x, this.y-1);
+        if (func.type === "label") {
+            fill(theme.textdark);
+            textSize(15);
+            textAlign(LEFT);
+            text(func.label(), this.x-72, this.y-10);
+        } else {
+            const stateColor = (this.isControlOn) ? theme.highlight : theme.text;
+            fill(stateColor);
+            textSize(18);
+            text(func.label(), this.x, this.y-1);
+        }
         pop();
     }
 }
@@ -2379,7 +2383,7 @@ function centerShape (x, y, r, color, variant) {
 }
 
 function controlShape (x, y, r) {
-    rect(x, y, r * 0.78, r * 0.32, r * 0.1);
+    rect(x, y, r * 0.9, r * 0.32, r * 0.1);
 }
 
 function hexagon (x, y, r, angle) {
