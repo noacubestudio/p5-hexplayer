@@ -385,9 +385,8 @@ let toolMode = "none";
 let heldToolID = undefined;
 let heldToolIdentifier = undefined;
 
-let penDragStartKey;
-let penDragEndKey;
-let bridgeKeyPairs = new Set();
+let bridgeKeyPairs = new Array;
+let dragKeyPairs = new Array;
 
 // tonejs
 let menuSynth;
@@ -715,30 +714,30 @@ const menuButtonFunctions = [
                 });
             }
         },
-        {
-            type:"label",
-            label:() => "(Osc. only)"
-        },
-        {
-            type:"button",
-            label:() => "Pitchbend",
-            onCondition:() => cfg.isPitchBend,
-            function:function() {
-                print("Toggled pitch bend");
-                cfg.isPitchBend = !cfg.isPitchBend;
-                if (instrumentType === "sampler") {
-                    print("Switched to saw wave!");
-                    currentInstrument = "sawtooth";
-                    menuSynth.set({"oscillator": {"type": "sawtooth"}});
-                    for (let i = 0; i < 32; i++) {
-                        synthvoices[i].set({"oscillator": {"type": "sawtooth"}});
-                    }
-                    instrument = menuSynth;
-                    instrumentType = "synth";
-                    vol.volume.value = -28;
-                }
-            },
-        },
+        //{
+        //    type:"label",
+        //    label:() => "(Osc. only)"
+        //},
+        //{
+        //    type:"button",
+        //    label:() => "Pitchbend",
+        //    onCondition:() => cfg.isPitchBend,
+        //    function:function() {
+        //        print("Toggled pitch bend");
+        //        cfg.isPitchBend = !cfg.isPitchBend;
+        //        if (instrumentType === "sampler") {
+        //            print("Switched to saw wave!");
+        //            currentInstrument = "sawtooth";
+        //            menuSynth.set({"oscillator": {"type": "sawtooth"}});
+        //            for (let i = 0; i < 32; i++) {
+        //                synthvoices[i].set({"oscillator": {"type": "sawtooth"}});
+        //            }
+        //            instrument = menuSynth;
+        //            instrumentType = "synth";
+        //            vol.volume.value = -28;
+        //        }
+        //    },
+        //},
     ],
 ];
 
@@ -751,8 +750,7 @@ const tools = [
         },
         onRelease:function() {
             toolMode = "none";
-            penDragStartKey = undefined;
-            penDragEndKey = undefined;
+            dragKeyPairs = [];
         },
     },
     {
@@ -1219,10 +1217,11 @@ function ongoingTouchIndexById (idToFind) {
     return -1; // not found
 }
 
+// keyboard shortcuts
 function keyPressed () {
     if (!isNaN(key)) {
         let visibleNumber = 0;
-        //is a number
+        // is a number
         for (let i = 0; i < tools.length; i++) {
             const t = tools[i]
             if (t.visible()) {
@@ -1241,10 +1240,11 @@ function keyPressed () {
     return false;
 }
 
+// keyboard shortcuts
 function keyReleased () {
     if (!isNaN(key)) {
         let visibleNumber = 0;
-        //is a number
+        // is a number
         for (let i = 0; i < tools.length; i++) {
             const t = tools[i]
             if (t.visible()) {
@@ -1280,10 +1280,11 @@ function runApp () {
     background(theme.bg);
     noStroke();
 
-    if (menuIsOpen) reactToPressedControls();
-    else {
-        reactToPressedKeys();
-        reactToPressedTools();
+    if (menuIsOpen) {
+        useMenu();
+    } else {
+        useKeys();
+        useToolbar();
     }
 
     //translate to center the hexagons and such on screen
@@ -1348,46 +1349,43 @@ function runApp () {
 function renderKeyBridges () {
     push();
     noStroke();
-    // lines between pressedButtons
-    if (penDragStartKey !== undefined && penDragEndKey !== undefined) {
-        renderBridge(
-            penDragStartKey.x, penDragStartKey.y,
-            penDragEndKey.x, penDragEndKey.y,
-            penDragStartKey.keyColorFromPalette(1),
-            penDragEndKey.keyColorFromPalette(2)
-        );
-    }
-    //lines between existing bridges
-    if (bridgeKeyPairs.size > 0) {
-        for (let b = bridgeKeyPairs.size - 1; b >= 0; b--) {
-            const namepair = bridgeKeyPairs[b];
-            let hexpair = [];
-            //print (nameArray);
 
-            // go through hexagons to find matching ones
+    bridgeType(dragKeyPairs);
+    bridgeType(bridgeKeyPairs);
+
+    //wip - draw in progress pairs differently. also show when both overlap - bridge is about to get deleted.
+
+    function bridgeType (pairArray) {
+        for (let b = pairArray.length - 1; b >= 0; b--) {
+
+            // find actual keys with same name as bridge keys
+            const bridgePair = pairArray[b];
+            let hexPair = [];
             keyArr.forEach((h) => {
-                if (namepair[0] == h.name) {
-                    hexpair[0] = h;
-                } else if (namepair[1] == h.name) {
-                    hexpair[1] = h;
+                if (bridgePair[0].name == h.name) {
+                    hexPair[0] = h;
+                } else if (bridgePair[1].name == h.name) {
+                    hexPair[1] = h;
                 }
             });
 
-            if (hexpair[0] !== undefined && hexpair[1] !== undefined) {
+            // drag the bridge
+            if (hexPair[0] !== undefined && hexPair[1] !== undefined) {
                 renderBridge(
-                    hexpair[0].x, hexpair[0].y,
-                    hexpair[1].x, hexpair[1].y,
-                    hexpair[0].keyColorFromPalette(1),
-                    hexpair[1].keyColorFromPalette(2)
+                    hexPair[0].x, hexPair[0].y,
+                    hexPair[1].x, hexPair[1].y,
+                    hexPair[0].keyColorFromPalette(1),
+                    hexPair[1].keyColorFromPalette(2)
                 );
             }
         }
     }
+
     pop();
 }
 
 
-function reactToPressedControls () {
+function useMenu () {
     // update which buttons are hovered over/ pressed
     lastPressedButtons = pressedButtons.slice();
     pressedButtons = [];
@@ -1419,12 +1417,18 @@ function reactToPressedControls () {
 }
 
 
-function reactToPressedKeys () {
+function useToolbar () {
+    // Currently not needed
+}
+
+
+function useKeys () {
     // update which buttons are hovered over/ pressed
     lastPressedButtons = pressedButtons.slice();
     pressedButtons = [];
     hoverButton = undefined;
 
+    // find what key each finger is on, add to pressedButtons list
     for (let i = 0; i < ongoingTouches.length; i++) {
         const touch = ongoingTouches[i];
         //if not on menu button, toolbar or same touch from toolbar
@@ -1433,103 +1437,96 @@ function reactToPressedKeys () {
             !(touch.identifier === heldToolIdentifier)) {
 
             const nearestHex = findNearestButton(ongoingTouches[i], keyArr);
-            if (nearestHex !== undefined) {
-                pressedButtons.push(nearestHex);
-            }
+            if (nearestHex !== undefined) {pressedButtons.push(nearestHex);}
         }
     }
+
+    // find where the mouse is hovering, except when on menu button
     if (mouseUsed && ongoingTouches.length === 0 && !overMenuButton(mouseX, mouseY)) {
         hoverButton = findNearestButton(ongoingHover, keyArr);
     }
-    //toolbar not interactive when mouse used
 
-
-    // clean up duplicates if needed
+    // clean up duplicates if the same key was pressed more than once
     pressedButtons = uniqByKeepFirst(pressedButtons, p => p.name);
 
-    // check if apple pencil or touch was used
-    if (!menuIsOpen) {
-        if (toolMode === "pen") {
-            pressedKeysPen();
-        } else {
-            pressedKeysPlay();
-        }
+    // do something with the pressed keys
+    if (toolMode === "pen") {
+        pressedKeysPen();
+        return;
     }
-
-    // when last finger or pen is lifted
-    if (ongoingTouches.length === 0) {
-
-        // add new line hexes to set, then remove the live line
-        if (penDragStartKey !== undefined && penDragEndKey !== undefined) {
-
-            const startName = penDragStartKey.name;
-            const endName = penDragEndKey.name;
-            penDragStartKey = undefined;
-            penDragEndKey = undefined;
-            const newNamePair = [startName, endName];
-            const reverseNamePair = [endName, startName];
-
-            if (bridgeKeyPairs.has(newNamePair)) {
-                // remove
-                bridgeKeyPairs.delete(newNamePair);
-                print("Removed " + newNamePair + ", total: " + bridgeKeyPairs.size);
-            } else if (bridgeKeyPairs.has(reverseNamePair)) {
-                // remove
-                bridgeKeyPairs.delete(reverseNamePair);
-                print("Removed " + reverseNamePair + ", total: " + bridgeKeyPairs.size);
-            } else if (startName !== endName) {
-                // add
-                bridgeKeyPairs.add(newNamePair);
-                print("Added " + newNamePair + ", total: " + bridgeKeyPairs.size);
-            }
-        }
-    }
-}
-
-function reactToPressedTools () {
-    
-}
-
-
-function detectMouse () {
-    // WIP, write new later
-}
-
-
-function uniqByKeepFirst (a, key) {
-    // from https:// stackoverflow.com/questions/9229645/remove-duplicate-values-from-js-array
-    let seen = new Set();
-    return a.filter(item => {
-        let k = key(item);
-        return seen.has(k) ? false : seen.add(k);
-    });
-}
-
-function uniqByKeepLast(a, key) {
-    // from https:// stackoverflow.com/questions/9229645/remove-duplicate-values-from-js-array
-    return [
-        ...new Map(
-            a.map(x => [key(x), x])
-        ).values()
-    ];
+    pressedKeysPlay();
 }
 
 
 function pressedKeysPen () {
-    // find unique items in each
-    const attackedKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) === undefined);
 
-    if (attackedKeys.length === 1) {
-        keyArr.forEach((h) => {
-            if (h.name === attackedKeys[0].name) {
-                if (penDragStartKey === undefined) {
-                    penDragStartKey = h;
-                } else {
-                    // update end, since start already exists
-                    penDragEndKey = h;
-                }
+    const attackedKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) === undefined);
+    for (let a = 0; a < attackedKeys.length; a++) {
+
+        // what's the identifier of the key?
+        // is there an existing dragkeypair that started with this identifier? if so, update that endkey.
+        // otherwise, start a new pair with both ends being this key.
+
+        const attackedKey = attackedKeys[a];
+        let foundFinger = false;
+        dragKeyPairs.forEach((dragPair) => {
+            if (dragPair[0].lastTouch.id === attackedKey.lastTouch.id) {
+                dragPair[1] = attackedKey;
+                foundFinger = true;
+            }
+        })
+        if (!foundFinger) {
+            dragKeyPairs.push([attackedKey, attackedKey]);
+        }
+    }
+
+
+    const releasedKeys = lastPressedButtons.filter(p => pressedButtons.find(l => {return l.name == p.name}) === undefined);
+    for (let r = 0; r < releasedKeys.length; r++) {
+
+        // see if finger still used (only dragged off the hexagon)
+        const releasedKey = releasedKeys[r];
+        let fingerStillDown = false;
+        ongoingTouches.forEach((o) => {
+            if (o.identifier === releasedKey.lastTouch.id) {
+                fingerStillDown = true;
             }
         });
+
+        if (!fingerStillDown) {
+
+            // find the dragkeypair with the same identifier, and move it to a final bridgekeypair instead
+            // only if both keys in it are different
+
+            dragKeyPairs.forEach((dragPair) => {
+                if (dragPair[1].lastTouch.id === releasedKey.lastTouch.id) {
+                    // update bridge pairs
+                    if (dragPair[0] !== dragPair[1]) {
+                        // push the dragpair, or remove if it already exists - either way around
+                        let foundPair = false;
+                        bridgeKeyPairs.forEach((bridgePair) => {
+                            if (dragPair[0] === bridgePair[0] && dragPair[1] === bridgePair[1] ||
+                                dragPair[0] === bridgePair[1] && dragPair[1] === bridgePair[0]) {
+                                // remove
+                                foundPair = true;
+                                print("Removed bridge", bridgePair);
+                                const index = bridgeKeyPairs.indexOf(bridgePair);
+                                if (index > -1) {bridgeKeyPairs.splice(index, 1);}
+                            }
+                        });
+                        if (!foundPair){
+                            // add
+                            print("Added bridge", dragPair);
+                            bridgeKeyPairs.push(dragPair);
+                        }
+                    }
+                    // remove from dragged pairs
+                    const index = dragKeyPairs.indexOf(dragPair);
+                    if (index > -1) {dragKeyPairs.splice(index, 1);}
+                }
+            });
+
+        }
     }
 }
 
@@ -1550,50 +1547,50 @@ function pressedKeysPlay () {
     if (attackedKeys.length > 0) {
         deactivatedSustainedKeys = [];
     }
-    for (let play = 0; play < attackedKeys.length; play++) {
-        const playHex = attackedKeys[play];
+    for (let a = 0; a < attackedKeys.length; a++) {
+        const attackedKey = attackedKeys[a];
         keyArr.forEach((h) => {
-            if (h.name === playHex.name) {
+            if (h.name === attackedKey.name) {
                 // could have other modes here
                 playKey(h);
             }
         });
         // add attacked keys in order to a list (after removing earlier keys with same name)
-        orderedKeys.push(playHex);
+        orderedKeys.push(attackedKey);
         orderedKeys = uniqByKeepLast(orderedKeys, p => p.name);
 
         // remove sustained keys one semitone higher or lower from the playHex
-        filterSustainedKeys("inSemiToneRange", playHex);
+        filterSustainedKeys("inSemiToneRange", attackedKey);
     }
 
     // release audio of key
     for (let r = 0; r < releasedKeys.length; r++) {
-        const removedHex = releasedKeys[r];
+        const releasedKey = releasedKeys[r];
 
         // see if finger still used (only dragged off the hexagon)
         let fingerStillDown = false;
         ongoingTouches.forEach((o) => {
-            if (o.identifier === removedHex.lastTouch.id) {
+            if (o.identifier === releasedKey.lastTouch.id) {
                 fingerStillDown = true;
             }
         });
 
         // push to list of sustained keys if...
-        const octaveHighEnough = (removedHex.octave + cfg.baseOctave > 1);
+        const octaveHighEnough = (releasedKey.octave + cfg.baseOctave > 1);
         const foundInSemitoneRange = attackedKeys.find(a =>
-            a.midiName < removedHex.midiName + 2 &&
-            a.midiName > removedHex.midiName - 2);
+            a.midiName < releasedKey.midiName + 2 &&
+            a.midiName > releasedKey.midiName - 2);
         if (fingerStillDown && octaveHighEnough && foundInSemitoneRange === undefined) {
-                sustainedKeys.push(removedHex);
+                sustainedKeys.push(releasedKey);
         } else {
             // actually release the note
             keyArr.forEach((h) => {
-                if (h.name === removedHex.name) {
+                if (h.name === releasedKey.name) {
                     playKey(h, "release");
                 }
             });
             // remove from list of all ordered keys
-            orderedKeys = orderedKeys.filter(o => o.name !== removedHex.name);
+            orderedKeys = orderedKeys.filter(o => o.name !== releasedKey.name);
         }
     }
     // find sustained keys with index that doesn't match any current index, remove them
@@ -2000,21 +1997,23 @@ function renderToolbar () {
     for (let t = 0; t < tools.length; t++) {
         const tool = tools[t];
         textSize(17);
+        stroke(theme.bgdark)
         if (tool.visible()) {
 
             if (t === heldToolID) {
                 fill(theme.textdark);
-                rect(buttonsX, edgeOffset, buttonSize -4, buttonSize -4, 12);
+                rect(buttonsX, edgeOffset, buttonSize -2, buttonSize -2, 12);
+                noStroke();
                 fill(theme.highlight);
-                text(tool.label, buttonsX, edgeOffset);
             } else {
-                fill(theme.bgdark);
+                fill(color(atAlpha(theme.bgdark,80)));
                 rect(buttonsX, edgeOffset, buttonSize -4, buttonSize -4, 12);
+                noStroke();
                 fill(theme.textdark);
-                text(tool.label, buttonsX, edgeOffset);
             }
+            text(tool.label, buttonsX, edgeOffset+6);
             textSize(13);
-            text(keyboardHelp, buttonsX-18, edgeOffset-18);
+            text(keyboardHelp, buttonsX-18, edgeOffset-16);
 
             keyboardHelp++;
             buttonsX += buttonSize*2;
@@ -2024,9 +2023,9 @@ function renderToolbar () {
     ongoingTouches.forEach((o) => {
         if (o.identifier === heldToolIdentifier) {
             noFill();
-            strokeWeight(8);
-            stroke("#FFFFFF30");
-            ellipse(o.clientX, o.clientY, 84)
+            strokeWeight(4);
+            stroke("#FFFFFF70");
+            ellipse(o.clientX, o.clientY, 80)
         }
     });
     pop();
@@ -2538,6 +2537,9 @@ class ControlClass extends ButtonClass {
     }
 }
 
+
+// HELPERS ===========================================================================================
+
 function keyShape (x, y, r, color) {
     push();
 
@@ -2645,4 +2647,22 @@ function overButtonID(x, y) {
             if (tools[t].visible()) checkAt++;
         }
     } 
+}
+
+function uniqByKeepFirst (a, key) {
+    // from https:// stackoverflow.com/questions/9229645/remove-duplicate-values-from-js-array
+    let seen = new Set();
+    return a.filter(item => {
+        let k = key(item);
+        return seen.has(k) ? false : seen.add(k);
+    });
+}
+
+function uniqByKeepLast(a, key) {
+    // from https:// stackoverflow.com/questions/9229645/remove-duplicate-values-from-js-array
+    return [
+        ...new Map(
+            a.map(x => [key(x), x])
+        ).values()
+    ];
 }
