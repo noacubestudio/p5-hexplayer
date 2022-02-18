@@ -2,287 +2,352 @@ let canvas;
 let readyForSound = false; // only play sound when ready
 let toneReady = false;
 let frameCountdown = 20; // minimum frames to render after anything happened
+Tone.context.lookAhead = 0;
 
 // labels
-const octaveSymbols = [
-    "⁰","¹","²","³","⁴","⁵","⁶","⁷","⁸","⁹",];
-const noteNames = [
-    "C","C#","D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-const intervalNames = [
-    "1", "m2", "2", "m3", "3", "4", "TT", "5", "m6", "6", "m7", "7",];
-const intervalNames19tet = [
-    "1", "1a", "m2", "2", "2a", "m3", "3", "3›‹4", "4", "4a", "m5", "5", "5a", "m6", "6", "6a", "m7", "7", "7›‹1",];
-const intervalNames14tet = [
-    "1", "1*", "2", "2*", "3", "3*", "4", "4*", "5", "5*", "6", "6*", "7", "7*",];
-const intervalNames24tet = [
-    "1", "-2", "m2", "~2", "2", "-3", "m3", "~3", "3", "+3", "4", "+4", "TT", "-5", "5", "-6", "m6", "~6", "6", "-7", "m7", "~7", "7", "-8",];
-const intervalNames31tet = [
-    "1", "+1", "-2", "m2", "~2", "2", "+2", "-3", "m3", "~3", "3", "+3", "-4", "4", "+4", "tt", "TT", "-5", "5", "+5", "-6", "m6", "~6", "6", "+6", "-7", "m7", "~7", "7", "+7", "-8",];
+const octaveSymbols = ["⁰","¹","²","³","⁴","⁵","⁶","⁷","⁸","⁹"];
+const noteNames = ["C","C#","D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-// scales - used for colors of keys and more
-const scaleMajor12 = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1];
-const scaleMajor19 = [1, 0, 0, 1, 0, 0, 1, -1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, -1];
-const scaleMajor14 = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0];
-const scaleMajor24 = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0];
-const scaleMajor31 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0];
-const scalePrimal21 = [1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0];
+//C1 to B1
+const baseFrequencies = [
+    32.70,
+    34.65,
+    36.71,
+    38.89,
+    41.20,
+    43.65,
+    46.25,
+    49.00,
+    51.91,
+    55.00,
+    58.27,
+    61.74,
+]
 
-const baseFrequency = 32.70 // C1
-const tuning12tet = [
-    1,
-    2 ** (1/12),
-    2 ** (2/12),
-    2 ** (3/12),
-    2 ** (4/12),
-    2 ** (5/12),
-    2 ** (6/12),
-    2 ** (7/12),
-    2 ** (8/12),
-    2 ** (9/12),
-    2 ** (10/12),
-    2 ** (11/12)];
-const tuningNovemdecimal = [
-    "1",
-    "20/19",
-    "43/38",
-    "23/19",
-    "24/19",
-    "51/38",
-    "27/19",
-    "3/2",
-    "61/38",
-    "32/19",
-    "34/19",
-    "36/19"];
-const tuningUndecimal = [
-    "1",
-    "23/22",
-    "25/22",
-    "13/11",
-    "14/11",
-    "15/11",
-    "31/22",
-    "3/2",
-    "35/22",
-    "37/22",
-    "39/22",
-    "21/11"];
-const tuning11neji = [ // snowfall
-    "1",
-    "12/11",
-    "25/22",
-    "13/11",
-    "14/11",
-    "15/11",
-    "16/11",
-    "17/11",
-    "18/11",
-    "19/11",
-    "20/11",
-    "21/11"];
-const tuning16neji = [ // 16:17:18:19:20:21:23:24:25:27:29:30:32
-    "1",
-    "17/16",
-    "9/8",
-    "19/16",
-    "5/4",
-    "21/16",
-    "11/8",
-    "3/2",
-    "25/16",
-    "27/16",
-    "29/16",
-    "15/8"];
-const tuningHarmonic = [
-    "1",
-    "13/12",
-    "7/6",
-    "5/4",
-    "4/3",
-    "17/12",
-    "3/2",
-    "19/12",
-    "5/3",
-    "7/4",
-    "11/6",
-    "23/12"];
-const tuningSimple = [
-    // https:// www.huygens-fokker.org/docs/intervals.html
-    "1",
-    "15/14", // semitone 16/15
-    "9/8", // whole tone 8/7
-    "6/5", // minor 3rd 7/6
-    "5/4", // major 3rd
-    "4/3", // p 4th
-    "7/5", // tritone
-    "3/2", // p 5th
-    "8/5", // minor 6th
-    "5/3", // major 6th
-    "7/4", // harmonic 7th, minor 7th
-    "15/8" // major 7th 17/9
-];
-const tuning19tet = [
-    1,
-    2 ** (1/19),
-    2 ** (2/19),
-    2 ** (3/19),
-    2 ** (4/19),
-    2 ** (5/19),
-    2 ** (6/19),
-    2 ** (7/19),
-    2 ** (8/19),
-    2 ** (9/19),
-    2 ** (10/19),
-    2 ** (11/19),
-    2 ** (12/19),
-    2 ** (13/19),
-    2 ** (14/19),
-    2 ** (15/19),
-    2 ** (16/19),
-    2 ** (17/19),
-    2 ** (18/19)];
-const tuning14tet = [
-    1,
-    2 ** (1/14),
-    2 ** (2/14),
-    2 ** (3/14),
-    2 ** (4/14),
-    2 ** (5/14),
-    2 ** (6/14),
-    2 ** (7/14),
-    2 ** (8/14),
-    2 ** (9/14),
-    2 ** (10/14),
-    2 ** (11/14),
-    2 ** (12/14),
-    2 ** (13/14),];
-const tuning31ji = [ // 7-limit by Adriaan Fokker
-    "1/1",
-    "64/63",
-    "135/128",
-    "15/14",
-    "35/32",
-    "9/8",
-    "8/7",
-    "7/6",
-    "135/112",
-    "315/256",
-    "5/4",
-    "9/7",
-    "21/16",
-    "4/3",
-    "175/128",
-    "45/32",
-    "10/7",
-    "35/24",
-    "3/2",
-    "32/21",
-    "14/9",
-    "45/28",
-    "105/64",
-    "5/3",
-    "12/7",
-    "7/4",
-    "16/9",
-    "945/512",
-    "15/8",
-    "40/21",
-    "63/32"];
-const tuning21Astral = [
-    "1/1",
-    "33/32",
-    "22/21",
-    "256/231",
-    "8/7",
-    "33/28",
-    "77/64",
-    "14/11",
-    "21/16",
-    "4/3",
-    "11/8",
-    "16/11",
-    "3/2",
-    "32/21",
-    "11/7",
-    "128/77",
-    "56/33",
-    "7/4",
-    "231/128",
-    "21/11",
-    "64/33",];
-const tuning24tet = [
-    1,
-    2 ** (1/24),
-    2 ** (2/24),
-    2 ** (3/24),
-    2 ** (4/24),
-    2 ** (5/24),
-    2 ** (6/24),
-    2 ** (7/24),
-    2 ** (8/24),
-    2 ** (9/24),
-    2 ** (10/24),
-    2 ** (11/24),
-    2 ** (12/24),
-    2 ** (13/24),
-    2 ** (14/24),
-    2 ** (15/24),
-    2 ** (16/24),
-    2 ** (17/24),
-    2 ** (18/24),
-    2 ** (19/24),
-    2 ** (20/24),
-    2 ** (21/24),
-    2 ** (22/24),
-    2 ** (23/24),];
-const tuning24ji = [
-    "1/1",
-    "33/32",
-    "16/15",
-    "12/11",
-    "9/8",
-    "7/6", // 6/5, 15/13
-    "6/5",
-    "11/9",
-    "5/4",
-    "9/7", // 13/10
-    "4/3",
-    "11/8",
-    "7/5",
-    "16/11",
-    "3/2",
-    "14/9",
-    "8/5",
-    "18/11",
-    "5/3",
-    "7/4",
-    "16/9", // 9/5
-    "11/6",
-    "15/8",
-    "35/18" // 27/14
-];
+const tuningPatterns = {
+    ne12: {
+        scale: [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1],
+        intervals: ["1", "m2", "2", "m3", "3", "4", "TT", "5", "m6", "6", "m7", "7"],
+        smallStep: 4,
+        bigStep: 7,
+        testChordSteps: [4, 7],
+        defaultLayout: "concertina",
+        midiOffset: 0,
+    },
+    harmonic12: {
+        // modify!
+        scale: [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1],
+        intervals: undefined,
+        smallStep: 4,
+        bigStep: 7,
+        testChordSteps: [4, 7],
+        defaultLayout: "concertina",
+        midiOffset: 0,
+    },
+    ne19: {
+        scale: [1, 0, 0, 1, 0, 0, 1, -1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, -1],
+        intervals: ["1", "1a", "m2", "2", "2a", "m3", "3", "3›‹4", "4", "4a", "m5", "5", "5a", "m6", "6", "6a", "m7", "7", "7›‹1"],
+        smallStep: 6,
+        bigStep: 11,
+        testChordSteps: [6, 11],
+        defaultLayout: "concertina",
+        midiOffset: 0,
+    },
+    ne14: {
+        scale: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+        intervals: ["1", "1*", "2", "2*", "3", "3*", "4", "4*", "5", "5*", "6", "6*", "7", "7*"],
+        smallStep: 4,
+        bigStep: 5,
+        testChordSteps: [4, 8],
+        defaultLayout: "harmonic",
+        midiOffset: 0,
+    },
+    ne24: {
+        scale: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+        intervals: ["1", "-2", "m2", "~2", "2", "-3", "m3", "~3", "3", "+3", "4", "+4", "TT", "-5", "5", "-6", "m6", "~6", "6", "-7", "m7", "~7", "7", "-8"],
+        smallStep: 4,
+        bigStep: 7,
+        testChordSteps: [8, 14],
+        defaultLayout: "harmonic",
+        midiOffset: 24,
+    },
+    ne31: {
+        scale: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
+        intervals: ["1", "+1", "-2", "m2", "~2", "2", "+2", "-3", "m3", "~3", "3", "+3", "-4", "4", "+4", "tt", "TT", "-5", "5", "+5", "-6", "m6", "~6", "6", "+6", "-7", "m7", "~7", "7", "+7", "-8"],
+        smallStep: 5,
+        bigStep: 9,
+        testChordSteps: [10, 18],
+        defaultLayout: "harmonic",
+        midiOffset: 31,
+    },
+    primal21: {
+        scale: [1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0],
+        intervals: undefined,
+        smallStep: 5,
+        bigStep: 9,
+        testChordSteps: [6, 12, 18],
+        defaultLayout: "harmonic",
+        midiOffset: 21,
+    },
+}
 
-// modes
-let pitchBend = false;
-let tuneMode = "12tet";
-let currentTuning = tuning12tet;
+const tunings = {
+    edo12: {
+        name:"12 EDO",
+        type:"equal",
+        steps:12,
+        pattern:tuningPatterns.ne12,
+    },
+    novemdecimal: {
+        name:"Novemdecimal",
+        type:"ratios",
+        ratios:[
+            "1",
+            "20/19",
+            "43/38",
+            "23/19",
+            "24/19",
+            "51/38",
+            "27/19",
+            "3/2",
+            "61/38",
+            "32/19",
+            "34/19",
+            "36/19"
+        ],
+        steps:12,
+        pattern:tuningPatterns.ne12,
+    },
+    undecimal: {
+        name:"Undecimal",
+        type:"ratios",
+        ratios:[
+            "1",
+            "23/22",
+            "25/22",
+            "13/11",
+            "14/11",
+            "15/11",
+            "31/22",
+            "3/2",
+            "35/22",
+            "37/22",
+            "39/22",
+            "21/11"
+        ],
+        steps:12,
+        pattern:tuningPatterns.ne12,
+    },
+    snowfall: {
+        name:"/11 \"Snowfall\"",
+        type:"ratios",
+        ratios:[
+            "1",
+            "12/11",
+            "25/22",
+            "13/11",
+            "14/11",
+            "15/11",
+            "16/11",
+            "17/11",
+            "18/11",
+            "19/11",
+            "20/11",
+            "21/11"
+        ],
+        steps:12,
+        pattern:tuningPatterns.ne12,
+    },
+    hexadecimal: {
+        name:"Hexadecimal",
+        type:"ratios", // 16:17:18:19:20:21:23:24:25:27:29:30:32
+        ratios:[
+            "1",
+            "17/16",
+            "9/8",
+            "19/16",
+            "5/4",
+            "21/16",
+            "11/8",
+            "3/2",
+            "25/16",
+            "27/16",
+            "29/16",
+            "15/8"
+        ],
+        steps:12,
+        pattern:tuningPatterns.ne12,
+    },
+    harmonic: {
+        name:"12 Harmonic",
+        type:"ratios",
+        ratios:[
+            "1",
+            "13/12",
+            "7/6",
+            "5/4",
+            "4/3",
+            "17/12",
+            "3/2",
+            "19/12",
+            "5/3",
+            "7/4",
+            "11/6",
+            "23/12"
+        ],
+        steps:12,
+        pattern:tuningPatterns.harmonic12,
+    },
+    simplefractions: {
+        name:"Simple Fractions",
+        type:"ratios", // https:// www.huygens-fokker.org/docs/intervals.html
+        ratios:[
+            "1",
+            "15/14", // semitone 16/15
+            "9/8", // whole tone 8/7
+            "6/5", // minor 3rd 7/6
+            "5/4", // major 3rd
+            "4/3", // p 4th
+            "7/5", // tritone
+            "3/2", // p 5th
+            "8/5", // minor 6th
+            "5/3", // major 6th
+            "7/4", // harmonic 7th, minor 7th
+            "15/8" // major 7th 17/9
+        ],
+        steps:12,
+        pattern:tuningPatterns.ne12,
+    },
+    edo19: {
+        name:"19 EDO",
+        type:"equal",
+        steps:19,
+        pattern:tuningPatterns.ne19,
+    },
+    edo14: {
+        name:"14 EDO",
+        type:"equal",
+        steps:14,
+        pattern:tuningPatterns.ne14,
+    },
+    neji31: {
+        name:"31 JI",
+        type:"ratios", // 7-limit by Adriaan Fokker
+        ratios:[
+            "1/1",
+            "64/63",
+            "135/128",
+            "15/14",
+            "35/32",
+            "9/8",
+            "8/7",
+            "7/6",
+            "135/112",
+            "315/256",
+            "5/4",
+            "9/7",
+            "21/16",
+            "4/3",
+            "175/128",
+            "45/32",
+            "10/7",
+            "35/24",
+            "3/2",
+            "32/21",
+            "14/9",
+            "45/28",
+            "105/64",
+            "5/3",
+            "12/7",
+            "7/4",
+            "16/9",
+            "945/512",
+            "15/8",
+            "40/21",
+            "63/32"
+        ],
+        steps:31,
+        pattern:tuningPatterns.ne31,
+    },
+    astral21: {
+        name:"21 JI Astral",
+        type:"ratios",
+        ratios:[
+            "1/1",
+            "33/32",
+            "22/21",
+            "256/231",
+            "8/7",
+            "33/28",
+            "77/64",
+            "14/11",
+            "21/16",
+            "4/3",
+            "11/8",
+            "16/11",
+            "3/2",
+            "32/21",
+            "11/7",
+            "128/77",
+            "56/33",
+            "7/4",
+            "231/128",
+            "21/11",
+            "64/33"
+        ],
+        steps:21,
+        pattern:tuningPatterns.primal21,
+    },
+    edo24: {
+        name:"24 EDO",
+        type:"equal",
+        steps:24,
+        pattern:tuningPatterns.ne24,
+    },
+    neji24: {
+        name:"24 JI",
+        type:"ratios",
+        ratios:[
+            "1/1",
+            "33/32",
+            "16/15",
+            "12/11",
+            "9/8",
+            "7/6", // 6/5, 15/13
+            "6/5",
+            "11/9",
+            "5/4",
+            "9/7", // 13/10
+            "4/3",
+            "11/8",
+            "7/5",
+            "16/11",
+            "3/2",
+            "14/9",
+            "8/5",
+            "18/11",
+            "5/3",
+            "7/4",
+            "16/9", // 9/5
+            "11/6",
+            "15/8",
+            "35/18" // 27/14
+        ],
+        steps:24,
+        pattern:tuningPatterns.ne24,
+    },
+}
 
-let currentScale = scaleMajor12.slice();
-let currentKey = "C"; // wip store as numerical offset instead
-let currentOctave = 0;
-let labelStyle = "none";
-
-// colors
-let theme = new Object; // Filled with p5 color()s
-
-
-// current keys
-let pressedButtons = new Array;
-let lastPressedButtons = new Array;
-let sustainedKeys = new Array;
-let orderedKeys = new Array; //sustained and pressed, in order
-let hoverButton; // for when mouse is used
-
+// settings that can be changed via the menu or tools
+let cfg = {
+    tuning: tunings.edo12,
+    baseOctave: 0,
+    baseNote: 0, //C1
+    labelStyle: "none",
+    isPitchBend: false,
+    layout: "concertina"
+}
+let lastCfg = cfg;
 
 //for constructing the hexagons
 let gridBaseMidi = 24;
@@ -290,27 +355,36 @@ let gridWidth;
 let gridIncrement_H = 1;
 let gridIncrement_D = 4;
 let gridIncrement_V = 7;
-let noteLayout = "concertina";
-let keyGridOffset = {}; // gets x and y
+let gridMidiOffset = 0; // different tunings may start at a higher midi note
+let keyGridOffset = new Object; // x/y
 
 // permanent key grid
 let gridSizeX, gridSizeY;
 let keyArr = new Array;
 let controlsArr = new Array;
-// buttons
 
+// colors
+let theme = new Object; // Filled with p5 color()s
+
+// current keys
+let pressedButtons = new Array;
+let lastPressedButtons = new Array;
+let sustainedKeys = new Array;
+let deactivatedSustainedKeys = new Array;
+let orderedKeys = new Array; //sustained and pressed, in order
+let hoverButton; // for when mouse is used
 
 // detect playing
-let interactionMode = "play";
 let menuIsOpen = false;
 let ongoingTouches = new Array;
-let ongoingHover = {};
-
-// mouse
+let ongoingHover = new Object;
 let mouseUsed;
 
-// bridges drawn with pencil
-let penPressure = 0;
+//tools
+let toolMode = "none";
+let heldToolID = undefined;
+let heldToolIdentifier = undefined;
+
 let penDragStartKey;
 let penDragEndKey;
 let bridgeKeyPairs = new Set();
@@ -322,18 +396,16 @@ let rhodesSampler;
 let organSampler;
 let harpSampler;
 let synthvoices = new Array;
-
 let instrument;
 let currentInstrument = "piano";
 let instrumentType = "sampler";
-Tone.context.lookAhead = 0;
 let vol;
 
 let activeKeys = {
-    // structure:    h.name = {"synth"..., "dragValues"...}
+    // structure: h.name = {"synth"..., "dragValues"...}
 };
 
-const controlFunctions = [
+const menuButtonFunctions = [
     [
         //1st column
         {
@@ -450,6 +522,7 @@ const controlFunctions = [
                 menuSynth.set({"oscillator": {"type": "sine"}});
                 for (let i = 0; i < 32; i++) {
                     synthvoices[i].set({"oscillator": {"type": "sine"}});
+                    //synthvoices[i] = pianoSampler;
                 }
                 instrument = menuSynth;
                 instrumentType = "synth";
@@ -461,76 +534,54 @@ const controlFunctions = [
         //2nd column
         {
             type:"label",
-            label:() => "12 Note Tunings"
+            label:() => "12 EDO and NEJIs"
         },
         {
             type:"button",
-            label:() => "12 EDO",
-            onCondition:() => (tuneMode === "12tet"),
+            label:() => tunings.edo12.name,
+            onCondition:() => (cfg.tuning === tunings.edo12),
             function:function() {
-                print("Switched to 12 tone equal temperament");
-                tuneMode = "12tet";
-                currentTuning = tuning12tet;
+                cfg.tuning = tunings.edo12;
             },
         },
         {
             type:"button",
-            label:() => "Simple Fractions",
-            onCondition:() => (tuneMode === "simple"),
+            label:() => tunings.simplefractions.name,
+            onCondition:() => (cfg.tuning === tunings.simplefractions),
             function:function() {
-                print("Switched to simple 12 tone tuning");
-                tuneMode = "simple";
-                currentTuning = tuningSimple;
+                cfg.tuning = tunings.simplefractions;
             },
         },
         {
             type:"button",
-            label:() => "Harmonic",
-            onCondition:() => (tuneMode === "harmonic"),
+            label:() => tunings.novemdecimal.name,
+            onCondition:() => (cfg.tuning === tunings.novemdecimal),
             function:function() {
-                print("Switched to 12 tone Harmonic series segment");
-                tuneMode = "harmonic";
-                currentTuning = tuningHarmonic;
+                cfg.tuning = tunings.novemdecimal;
             },
         },
         {
             type:"button",
-            label:() => "/19 Novemdec",
-            onCondition:() => (tuneMode === "novemdecimal"),
+            label:() => tunings.hexadecimal.name,
+            onCondition:() => (cfg.tuning === tunings.hexadecimal),
             function:function() {
-                print("Switched to 12 tone Novemdecimal");
-                tuneMode = "novemdecimal";
-                currentTuning = tuningNovemdecimal;
+                cfg.tuning = tunings.hexadecimal;
             },
         },
         {
             type:"button",
-            label:() => "/16",
-            onCondition:() => (tuneMode === "16neji"),
+            label:() => tunings.undecimal.name,
+            onCondition:() => (cfg.tuning === tunings.undecimal),
             function:function() {
-                print("Switched to 12 tone 16-NEJI");
-                tuneMode = "16neji";
-                currentTuning = tuning16neji;
+                cfg.tuning = tunings.undecimal;
             },
         },
         {
             type:"button",
-            label:() => "/11 Undecimal",
-            onCondition:() => (tuneMode === "undecimal"),
+            label:() => tunings.snowfall.name,
+            onCondition:() => (cfg.tuning === tunings.snowfall),
             function:function() {
-                print("Switched to 12 tone Undecimal");
-                tuneMode = "undecimal";
-                currentTuning = tuningUndecimal;
-            },
-        },
-        {
-            type:"button",
-            label:() => "/11 Snow",
-            onCondition:() => (tuneMode === "11neji"),
-            function:function() {
-                print("Switched to 12 tone 11-NEJI");
-                tuneMode = "11neji";
-                currentTuning = tuning11neji;
+                cfg.tuning = tunings.snowfall;
             },
         },
     ],
@@ -538,90 +589,62 @@ const controlFunctions = [
         //3rd column
         {
             type:"label",
-            label:() => "Bigger Octaves",
+            label:() => "Other Tunings",
         },
         {
             type:"button",
-            label:() => "14 EDO",
-            onCondition:() => (tuneMode === "14tet"),
+            label:() => tunings.harmonic.name,
+            onCondition:() => (cfg.tuning === tunings.harmonic),
             function:function() {
-                tuneMode = "14tet";
-                currentTuning = tuning14tet;
-                currentOctave = 0;
-                currentScale = scaleMajor14;
-                noteLayout = "harmonic"; makeKeys();
-                calculateNewMidiGrid(4, 5);
-                playTestChord([4, 8]);
+                cfg.tuning = tunings.harmonic;
             },
         },
         {
             type:"button",
-            label:() => "19 EDO",
-            onCondition:() => (tuneMode === "19tet"),
+            label:() => tunings.edo14.name,
+            onCondition:() => (cfg.tuning === tunings.edo14),
             function:function() {
-                tuneMode = "19tet";
-                currentTuning = tuning19tet;
-                currentOctave = 0;
-                currentScale = scaleMajor19;
-                noteLayout = "concertina"; makeKeys();
-                calculateNewMidiGrid(6, 11);
-                playTestChord([6, 11]);
+                cfg.tuning = tunings.edo14;
             },
         },
         {
             type:"button",
-            label:() => "31 JI",
-            onCondition:() => (tuneMode === "31ji"),
+            label:() => tunings.edo19.name,
+            onCondition:() => (cfg.tuning === tunings.edo19),
             function:function() {
-                tuneMode = "31ji";
-                currentTuning = tuning31ji;
-                currentOctave = 1;
-                currentScale = scaleMajor31;
-                noteLayout = "harmonic"; makeKeys();
-                calculateNewMidiGrid(5, 9);
-                playTestChord([10, 18]);
+                cfg.tuning = tunings.edo19;
             },
         },
         {
             type:"button",
-            label:() => "21 JI Astral",
-            onCondition:() => (tuneMode === "21astral"),
+            label:() => tunings.neji31.name,
+            onCondition:() => (cfg.tuning === tunings.neji31),
             function:function() {
-                tuneMode = "21astral";
-                currentTuning = tuning21Astral;
-                currentOctave = 1;
-                currentScale = scalePrimal21;
-                noteLayout = "harmonic"; makeKeys();
-                calculateNewMidiGrid(5, 9);
-                playTestChord([6, 12, 18]);
+                cfg.tuning = tunings.neji31;
             },
         },
         {
             type:"button",
-            label:() => "24 EDO",
-            onCondition:() => (tuneMode === "24tet"),
+            label:() => tunings.astral21.name,
+            onCondition:() => (cfg.tuning === tunings.astral21),
             function:function() {
-                tuneMode = "24tet";
-                currentTuning = tuning24tet;
-                currentOctave = 1;
-                currentScale = scaleMajor24;
-                noteLayout = "harmonic"; makeKeys();
-                calculateNewMidiGrid(4, 7);
-                playTestChord([8, 14]);
+                cfg.tuning = tunings.astral21;
             },
         },
         {
             type:"button",
-            label:() => "24 JI",
-            onCondition:() => (tuneMode === "24ji"),
+            label:() => tunings.edo24.name,
+            onCondition:() => (cfg.tuning === tunings.edo24),
             function:function() {
-                tuneMode = "24ji";
-                currentTuning = tuning24ji;
-                currentOctave = 1;
-                currentScale = scaleMajor24;
-                noteLayout = "harmonic"; makeKeys();
-                calculateNewMidiGrid(4, 7);
-                playTestChord([8, 14]);
+                cfg.tuning = tunings.edo24;
+            },
+        },
+        {
+            type:"button",
+            label:() => tunings.neji24.name,
+            onCondition:() => (cfg.tuning === tunings.neji24),
+            function:function() {
+                cfg.tuning = tunings.neji24;
             },
         },
     ],
@@ -633,13 +656,13 @@ const controlFunctions = [
         },
         {
             type:"stepper",
-            label:() => capitalize(labelStyle),
+            label:() => capitalize(cfg.labelStyle),
             onCondition:() => undefined,
             function:function() {
                 print("Changed label style");
-                if (labelStyle === "notes") {labelStyle = "intervals";}
-                else if (labelStyle === "intervals") {labelStyle = "none";}
-                else {labelStyle = "notes";}
+                if (cfg.labelStyle === "notes") {cfg.labelStyle = "intervals";}
+                else if (cfg.labelStyle === "intervals") {cfg.labelStyle = "none";}
+                else {cfg.labelStyle = "notes";}
             },
         },
         {
@@ -648,14 +671,15 @@ const controlFunctions = [
         },
         {
             type:"stepper",
-            label:() => capitalize(noteLayout),
+            label:() => capitalize(cfg.layout),
             onCondition:() => undefined,
             function:function() {
                 print("Switched to different layout");
-                if (noteLayout === "concertina") noteLayout = "harmonic";
-                else if (noteLayout === "harmonic") noteLayout = "swapped";
-                else noteLayout = "concertina";
-                makeKeys(); calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
+                if (cfg.layout === "concertina") cfg.layout = "harmonic";
+                else if (cfg.layout === "harmonic") cfg.layout = "swapped";
+                else cfg.layout = "concertina";
+                makeKeys(); 
+                calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
             },
         },
         {
@@ -664,13 +688,32 @@ const controlFunctions = [
         },
         {
             type:"stepper",
-            label:() => currentOctave,
+            label:() => cfg.baseOctave,
             onCondition:() => undefined,
             function:function() {
                 print("Changed octave");
-                currentOctave++;
-                if (currentOctave == 3) {currentOctave = 0;}
+                cfg.baseOctave++;
+                if (cfg.baseOctave == 3) {cfg.baseOctave = 0;}
             },
+        },
+        {
+            type:"label",
+            label:() => "Base Frequency"
+        },
+        {
+            type:"stepper",
+            label:() => noteNames[cfg.baseNote] + " (" + baseFrequencies[cfg.baseNote]+")",
+            onCondition:() => undefined,
+            function:function() {
+                print("Changed to root " + noteNames[cfg.baseNote]);
+                cfg.baseNote++;
+                if (cfg.baseNote === 12) cfg.baseNote = 0;
+
+                //update midiname of notes
+                keyArr.forEach((h) => {
+                    h.setMidiFromGrid(gridBaseMidi, gridWidth, newIncrement_H, newIncrement_D, newIncrement_V);
+                });
+            }
         },
         {
             type:"label",
@@ -679,14 +722,50 @@ const controlFunctions = [
         {
             type:"button",
             label:() => "Pitchbend",
-            onCondition:() => pitchBend,
+            onCondition:() => cfg.isPitchBend,
             function:function() {
                 print("Toggled pitch bend");
-                pitchBend = !pitchBend;
+                cfg.isPitchBend = !cfg.isPitchBend;
+                if (instrumentType === "sampler") {
+                    print("Switched to saw wave!");
+                    currentInstrument = "sawtooth";
+                    menuSynth.set({"oscillator": {"type": "sawtooth"}});
+                    for (let i = 0; i < 32; i++) {
+                        synthvoices[i].set({"oscillator": {"type": "sawtooth"}});
+                    }
+                    instrument = menuSynth;
+                    instrumentType = "synth";
+                    vol.volume.value = -28;
+                }
             },
         },
     ],
 ];
+
+const tools = [
+    {
+        label:"Pen",
+        visible:() => true,
+        onTap:function() {
+            toolMode = "pen";
+        },
+        onRelease:function() {
+            toolMode = "none";
+            penDragStartKey = undefined;
+            penDragEndKey = undefined;
+        },
+    },
+    {
+        label:"Bend",
+        visible:() => (instrumentType === "synth"),
+        onTap:function() {
+            cfg.isPitchBend = true;
+        },
+        onRelease:function() {
+            cfg.isPitchBend = false;
+        },
+    },
+]
 
 
 function preload() {
@@ -879,7 +958,7 @@ function makeKeys () {
     let id = 0;
 
     // hexagons are less wide so they can interlock
-    if (noteLayout !== "concertina") {
+    if (cfg.layout !== "concertina") {
         gridSizeY = sqrt((3 * pow(gridSizeY, 2)) / 4);
         gridWidth = 19; // how many in a row + odd row
 
@@ -928,13 +1007,13 @@ function makeControls () {
     const bHeight = 59;
     let columnHeight = 0;
 
-    for (let x = 0; x < controlFunctions.length; x++) {
+    for (let x = 0; x < menuButtonFunctions.length; x++) {
         columnHeight = 0;
-        for (let y = 0; y < controlFunctions[x].length; y++) {
+        for (let y = 0; y < menuButtonFunctions[x].length; y++) {
             const xPos = xOffset + bWidth*x;
 
             const yPos = yOffset + columnHeight;
-            const elementHeight = (controlFunctions[x][y].type === "label") ? 32 : bHeight;
+            const elementHeight = (menuButtonFunctions[x][y].type === "label") ? 32 : bHeight;
             columnHeight += elementHeight;
 
             controlsArr.push(new ControlClass(xPos, yPos, x, y, id++));
@@ -956,7 +1035,6 @@ function handleStart (evt) {
             return;
         }
     }
-    
 
     const newTouches = evt.changedTouches;
 
@@ -966,8 +1044,15 @@ function handleStart (evt) {
         ongoingTouches.push(copyTouch(newTouches[i]));
 
         // Render menu when corner button pressed
-        if (newTouches[i].clientX > width-72 && newTouches[i].clientY < 72) {
+        if (overMenuButton(newTouches[i].clientX, newTouches[i].clientY)) {
             menuIsOpen = !menuIsOpen;
+        } else {
+            const toolID = overButtonID(newTouches[i].clientX, newTouches[i].clientY);
+            if (toolID !== undefined) {
+                tools[toolID].onTap();
+                heldToolID = toolID;
+                heldToolIdentifier = newTouches[i].identifier;
+            }
         }
     }
 
@@ -1003,12 +1088,13 @@ function mousePressed () {
             interactionType:"start"
         };
         ongoingTouches = [copyTouch(newPress)];
-    
+
         // Render menu when corner button pressed
-        if (newPress.clientX > width-72 && newPress.clientY < 72) {
+        if (overMenuButton(newPress.clientX, newPress.clientY)) {
             menuIsOpen = !menuIsOpen;
         }
-    
+        // Toolbar not interactive when mouse used
+
         frameCountdown = 20;
         loop();
     }
@@ -1077,12 +1163,15 @@ function handleEnd (evt) {
         }
 
         // Hide open menu when last finger is lifted & NOT on the button
-        if (newTouches[i].clientX < width-72 || newTouches[i].clientY > 72) {
-            if (ongoingTouches.length === 0) {
-                menuIsOpen = false;
-            }
+        if (!overMenuButton(newTouches[i].clientX, newTouches[i].clientY && ongoingTouches.length === 0)){
+            menuIsOpen = false;
         };
 
+        if (idx === heldToolID) {
+            tools[heldToolID].onRelease();
+            heldToolID = undefined;
+            heldToolIdentifier = undefined;
+        }
     }
     frameCountdown = 20;
     loop();
@@ -1098,10 +1187,11 @@ function mouseReleased () {
     if (mouseUsed) {
         ongoingTouches = [];
 
-        // Hide open menu when last finger is lifted & NOT on the button
-        if (mouseX < width-72 || mouseY > 72) {
+        // Hide open menu when mouse released & NOT on the button
+        if (!overMenuButton(mouseX, mouseY)) {
             menuIsOpen = false;
         };
+        // toolbar not interactive
 
         frameCountdown = 20;
         loop();
@@ -1129,9 +1219,53 @@ function ongoingTouchIndexById (idToFind) {
     return -1; // not found
 }
 
+function keyPressed () {
+    if (!isNaN(key)) {
+        let visibleNumber = 0;
+        //is a number
+        for (let i = 0; i < tools.length; i++) {
+            const t = tools[i]
+            if (t.visible()) {
+                visibleNumber++;
+            }
+            if (visibleNumber == key) {
+                print("Pressed key for tool " + t.label);
+                t.onTap();
+                heldToolID = i;
+                break;
+            }
+        }
+    }
+    frameCountdown = 20;
+    loop();
+    return false;
+}
+
+function keyReleased () {
+    if (!isNaN(key)) {
+        let visibleNumber = 0;
+        //is a number
+        for (let i = 0; i < tools.length; i++) {
+            const t = tools[i]
+            if (t.visible()) {
+                visibleNumber++;
+            }
+            if (visibleNumber == key) {
+                print("Released key for tool " + t.label);
+                t.onRelease();
+                heldToolID = undefined;
+                break;
+            }
+        }
+    }
+    frameCountdown = 20;
+    loop();
+    return false;
+}
+
 
 function draw () {
-    runKeys();
+    runApp();
 
     if (frameCountdown > 0) {
         frameCountdown--;
@@ -1141,13 +1275,16 @@ function draw () {
     }
 }
 
-function runKeys () {
+function runApp () {
     //between keys
     background(theme.bg);
     noStroke();
 
     if (menuIsOpen) reactToPressedControls();
-    else reactToPressedKeys();
+    else {
+        reactToPressedKeys();
+        reactToPressedTools();
+    }
 
     //translate to center the hexagons and such on screen
     push();
@@ -1171,14 +1308,14 @@ function runKeys () {
         h.renderText(h.findKeyVariant);
     });
 
-    if (pitchBend && !menuIsOpen) {
-        dragToPitchBend();
+    if (cfg.isPitchBend && !menuIsOpen) {
+        pitchBendVoices();
     }
-
 
     // MENU
 
     pop(); //translate for hexagons ended
+    renderToolbar();
 
     if (menuIsOpen) {
         background(atAlpha(theme.bgdark, 60));
@@ -1200,6 +1337,11 @@ function runKeys () {
     // HUD
     renderTuningReference();
     renderCornerText();
+
+    // Display on top until sound has loaded
+    if (!toneReady) {
+        background(atAlpha(theme.bgdark, 20));
+    }
 }
 
 
@@ -1215,29 +1357,28 @@ function renderKeyBridges () {
             penDragEndKey.keyColorFromPalette(2)
         );
     }
+    //lines between existing bridges
     if (bridgeKeyPairs.size > 0) {
         for (let b = bridgeKeyPairs.size - 1; b >= 0; b--) {
-            const nameArray = Array.from(bridgeKeyPairs)[b].split(" ");
-            let hexArray = [];
-            print (nameArray);
+            const namepair = bridgeKeyPairs[b];
+            let hexpair = [];
+            //print (nameArray);
 
             // go through hexagons to find matching ones
             keyArr.forEach((h) => {
-                if (nameArray[0] == h.name) {
-                    hexArray[0] = h;
-                } else if (nameArray[1] == h.name) {
-                    hexArray[1] = h;
+                if (namepair[0] == h.name) {
+                    hexpair[0] = h;
+                } else if (namepair[1] == h.name) {
+                    hexpair[1] = h;
                 }
             });
 
-            if (hexArray[0] !== undefined && hexArray[1] !== undefined) {
-                print(hexArray);
-
+            if (hexpair[0] !== undefined && hexpair[1] !== undefined) {
                 renderBridge(
-                    hexArray[0].x, hexArray[0].y,
-                    hexArray[1].x, hexArray[1].y,
-                    hexArray[0].keyColorFromPalette(1),
-                    hexArray[1].keyColorFromPalette(2)
+                    hexpair[0].x, hexpair[0].y,
+                    hexpair[1].x, hexpair[1].y,
+                    hexpair[0].keyColorFromPalette(1),
+                    hexpair[1].keyColorFromPalette(2)
                 );
             }
         }
@@ -1266,10 +1407,12 @@ function reactToPressedControls () {
     const attackedKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) === undefined);
 
     if (attackedKeys.length > 0) {
-        // see if a button is hovered closest
+
+        instrument.releaseAll();
+
         controlsArr.forEach((b) => {
             if (b.name === pressedButtons[0].name) {
-                controlPressed(b);
+                menuButtonPressed(b);
             }
         });
     }
@@ -1283,8 +1426,11 @@ function reactToPressedKeys () {
     hoverButton = undefined;
 
     for (let i = 0; i < ongoingTouches.length; i++) {
-        //if not on menu button
-        if (ongoingTouches[i].clientX < width-72 || ongoingTouches[i].clientY > 72) {
+        const touch = ongoingTouches[i];
+        //if not on menu button, toolbar or same touch from toolbar
+        if (!overMenuButton(touch.clientX, touch.clientY) &&
+            !overToolbar(touch.clientX, touch.clientY) &&
+            !(touch.identifier === heldToolIdentifier)) {
 
             const nearestHex = findNearestButton(ongoingTouches[i], keyArr);
             if (nearestHex !== undefined) {
@@ -1292,15 +1438,22 @@ function reactToPressedKeys () {
             }
         }
     }
-    if (mouseUsed && ongoingTouches.length === 0) {
+    if (mouseUsed && ongoingTouches.length === 0 && !overMenuButton(mouseX, mouseY)) {
         hoverButton = findNearestButton(ongoingHover, keyArr);
     }
+    //toolbar not interactive when mouse used
+
+
+    // clean up duplicates if needed
+    pressedButtons = uniqByKeepFirst(pressedButtons, p => p.name);
 
     // check if apple pencil or touch was used
-    if (penPressure > 0.0 && menuIsOpen == false) {
-        reactToPen();
-    } else {
-        keysReactToTouch();
+    if (!menuIsOpen) {
+        if (toolMode === "pen") {
+            pressedKeysPen();
+        } else {
+            pressedKeysPlay();
+        }
     }
 
     // when last finger or pen is lifted
@@ -1311,31 +1464,30 @@ function reactToPressedKeys () {
 
             const startName = penDragStartKey.name;
             const endName = penDragEndKey.name;
-            const newNamePair = startName + " " + endName;
-            const reverseNamePair = endName + " " + startName;
+            penDragStartKey = undefined;
+            penDragEndKey = undefined;
+            const newNamePair = [startName, endName];
+            const reverseNamePair = [endName, startName];
+
             if (bridgeKeyPairs.has(newNamePair)) {
                 // remove
                 bridgeKeyPairs.delete(newNamePair);
-                print(bridgeKeyPairs.size);
-                print("Removed " + newNamePair);
-            }
-            else if (bridgeKeyPairs.has(reverseNamePair)) {
+                print("Removed " + newNamePair + ", total: " + bridgeKeyPairs.size);
+            } else if (bridgeKeyPairs.has(reverseNamePair)) {
                 // remove
                 bridgeKeyPairs.delete(reverseNamePair);
-                print(bridgeKeyPairs.size);
-                print("Removed " + reverseNamePair);
-            }
-            else {
+                print("Removed " + reverseNamePair + ", total: " + bridgeKeyPairs.size);
+            } else if (startName !== endName) {
                 // add
                 bridgeKeyPairs.add(newNamePair);
-                print(bridgeKeyPairs.size);
-                print("Added " + newNamePair);
+                print("Added " + newNamePair + ", total: " + bridgeKeyPairs.size);
             }
         }
-
-        penDragStartKey = undefined;
-        penDragEndKey = undefined;
     }
+}
+
+function reactToPressedTools () {
+    
 }
 
 
@@ -1363,24 +1515,17 @@ function uniqByKeepLast(a, key) {
 }
 
 
-function reactToPen () {
-    // clean up duplicates
-    pressedButtons = uniqByKeepFirst(pressedButtons, p => p.name);
-
+function pressedKeysPen () {
     // find unique items in each
-    let attackedKeys = pressedButtons.filter((o) => lastPressedButtons.indexOf(o) === -1);
-    let releasedKeys = lastPressedButtons.filter((o) => pressedButtons.indexOf(o) === -1);
-    const unique = attackedKeys.concat(releasedKeys);
+    const attackedKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) === undefined);
 
-    if (unique.length > 0 && attackedKeys.length == 1) {
-
+    if (attackedKeys.length === 1) {
         keyArr.forEach((h) => {
             if (h.name === attackedKeys[0].name) {
-                if (penDragStartKey == undefined) {
+                if (penDragStartKey === undefined) {
                     penDragStartKey = h;
-                }
-                else {
-                    // there is a start hex already, update the end one instead
+                } else {
+                    // update end, since start already exists
                     penDragEndKey = h;
                 }
             }
@@ -1389,12 +1534,9 @@ function reactToPen () {
 }
 
 
-function keysReactToTouch () {
+function pressedKeysPlay () {
     // every key stores:
     // .lastTouch.id and .lastTouch.type
-
-    // clean up duplicates if needed
-    pressedButtons = uniqByKeepFirst(pressedButtons, p => p.name);
 
     // find unique items in each
     const attackedKeys = pressedButtons.filter(p => lastPressedButtons.find(l => {return l.name == p.name}) === undefined);
@@ -1405,11 +1547,13 @@ function keysReactToTouch () {
     attackedKeys.sort((a, b) => a.name - b.name);
 
     // find key and press
+    if (attackedKeys.length > 0) {
+        deactivatedSustainedKeys = [];
+    }
     for (let play = 0; play < attackedKeys.length; play++) {
         const playHex = attackedKeys[play];
         keyArr.forEach((h) => {
             if (h.name === playHex.name) {
-                
                 // could have other modes here
                 playKey(h);
             }
@@ -1423,48 +1567,45 @@ function keysReactToTouch () {
     }
 
     // release audio of key
-    if (interactionMode === "play") {
+    for (let r = 0; r < releasedKeys.length; r++) {
+        const removedHex = releasedKeys[r];
 
-        for (let r = 0; r < releasedKeys.length; r++) {
-            const removedHex = releasedKeys[r];
+        // see if finger still used (only dragged off the hexagon)
+        let fingerStillDown = false;
+        ongoingTouches.forEach((o) => {
+            if (o.identifier === removedHex.lastTouch.id) {
+                fingerStillDown = true;
+            }
+        });
 
-            // see if finger still used (only dragged off the hexagon)
-            let fingerStillDown = false;
-            ongoingTouches.forEach((o) => {
-                if (o.identifier === removedHex.lastTouch.id) {
-                    fingerStillDown = true;
+        // push to list of sustained keys if...
+        const octaveHighEnough = (removedHex.octave + cfg.baseOctave > 1);
+        const foundInSemitoneRange = attackedKeys.find(a =>
+            a.midiName < removedHex.midiName + 2 &&
+            a.midiName > removedHex.midiName - 2);
+        if (fingerStillDown && octaveHighEnough && foundInSemitoneRange === undefined) {
+                sustainedKeys.push(removedHex);
+        } else {
+            // actually release the note
+            keyArr.forEach((h) => {
+                if (h.name === removedHex.name) {
+                    playKey(h, "release");
                 }
             });
-
-            // push to list of sustained keys if...
-            const octaveHighEnough = (removedHex.octave + currentOctave > 1);
-            const foundInSemitoneRange = attackedKeys.find(a =>
-                a.midiName < removedHex.midiName + 2 &&
-                a.midiName > removedHex.midiName - 2);
-            if (fingerStillDown && octaveHighEnough && foundInSemitoneRange === undefined) {
-                    sustainedKeys.push(removedHex);
-            } else {
-                // actually release the note
-                keyArr.forEach((h) => {
-                    if (h.name === removedHex.name) {
-                        playKey(h, "release");
-                    }
-                });
-                // remove from list of all ordered keys
-                orderedKeys = orderedKeys.filter(o => o.name !== removedHex.name);
-            }
+            // remove from list of all ordered keys
+            orderedKeys = orderedKeys.filter(o => o.name !== removedHex.name);
         }
-        // find sustained keys with index that doesn't match any current index, remove them
-        filterSustainedKeys("touchIdGone");
     }
+    // find sustained keys with index that doesn't match any current index, remove them
+    filterSustainedKeys("touchIdGone");
 
-    if (interactionMode === "play" && instrumentType === "synth") {
+    if (cfg.isPitchBend) {
         // detect movement on same keys
         for (let s = 0; s < sameKeys.length; s++) {
             const sameHex = sameKeys[s];
             keyArr.forEach((h) => {
                 if (h.name === sameHex.name) {
-                    setDragValueToActiveVoice(h);
+                    keyDragToVoices(h);
                 }
             });
         }
@@ -1485,6 +1626,7 @@ function filterSustainedKeys (mode, compareHex) {
                     s.midiName !== compareHex.midiName) {
                     // print("Was in range: " + s.midiName, compareHex.midiName)
                     stopSustained.push(s);
+                    deactivatedSustainedKeys.push(s);
                 } else {
                     stillSustained.push(s);
                 }
@@ -1506,6 +1648,17 @@ function filterSustainedKeys (mode, compareHex) {
                     stillSustained.push(s);
                 }
             });
+            deactivatedSustainedKeys.forEach((d) => {
+                let sustainFingerStillPresent = false
+                ongoingTouches.forEach((o) => {
+                    if (d.lastTouch.id === o.identifier) {
+                        sustainFingerStillPresent = true;
+                    }
+                });
+                if (!sustainFingerStillPresent) {
+                    deactivatedSustainedKeys = [];
+                }
+            });
         }
 
         sustainedKeys = stillSustained.slice();
@@ -1525,11 +1678,21 @@ function filterSustainedKeys (mode, compareHex) {
     }
 }
 
+function intervalFromTuning(midiNumber) {
+    const i = midiNumber % cfg.tuning.steps;
+
+    if (cfg.tuning.type === "equal") {
+        return 2 ** (i / cfg.tuning.steps);
+    }
+    if (cfg.tuning.type === "ratios") {
+        return eval(cfg.tuning.ratios[i]);
+    }
+}
 
 function playKey (h, mode) {
-    const pOctave = h.octave + currentOctave;
-    const freq = eval(currentTuning[h.midiName % currentTuning.length]);
-    const pPitch = baseFrequency * freq * 2 ** (pOctave -1);
+    const octave = h.octave + cfg.baseOctave;
+    const freq = intervalFromTuning(h.midiName);
+    const pPitch = baseFrequencies[cfg.baseNote] * freq * 2 ** (octave -1);
 
     if (instrumentType !== "synth") {
         if (mode === "release") {
@@ -1540,13 +1703,12 @@ function playKey (h, mode) {
     } else {
         // in synth mode, using activekeys to store all the voices
 
-        // release if there is something to release
+        // always release if there is something to release
         if (activeKeys[h.name] !== undefined) {
             activeKeys[h.name].voice.triggerRelease();
             delete activeKeys[h.name].dragValues;
         }
-
-        // attack again if mode is not 'release'
+        // now do attack
         if (mode !== "release") {
             // play note
             for (let i = 0; i < 32; i++) {
@@ -1561,6 +1723,7 @@ function playKey (h, mode) {
                     }
 
                     activeKeys[h.name] = {"key": h, "voice": synthvoices[i]};
+                    activeKeys[h.name].voice.set({ "detune": 0 });
 
                     print("Playing " + i + "-voice")
                     activeKeys[h.name].voice.triggerAttack(pPitch);
@@ -1580,12 +1743,12 @@ function playKey (h, mode) {
 
 
 
-function dragToPitchBend () {
+function pitchBendVoices () {
     //go through voices that are still playing
     Object.values(activeKeys).forEach(a => {
         const keyHasBeenDragged = (a.dragValues !== undefined && a.dragValues.dragX !== undefined);
         if (keyHasBeenDragged) {
-            const maxDetuneCents = 1200 / currentTuning.length;
+            const maxDetuneCents = 1200 / cfg.tuning.steps;
             const detuneCents = dragDistanceMap(a.key.x, a.dragValues.startX, a.dragValues.dragX, 5, 40) * maxDetuneCents;
             print("detuning by: " + detuneCents)
             a.voice.set({ "detune": detuneCents });
@@ -1616,44 +1779,52 @@ function dragDistanceMap (center, start, drag, min, max) {
 }
 
 
-function controlPressed (b) {
-    instrument.releaseAll();
-    const cFunction = controlFunctions[b.col][b.row].function;
-    if (cFunction !== undefined) {
-        cFunction();
+function menuButtonPressed (b) {
+    const bFunction = menuButtonFunctions[b.col][b.row].function;
+    if (bFunction !== undefined) {
+        bFunction();
 
         if (b.col === 0) {
             //for all instruments
             instrument.triggerAttackRelease("C3", "16n");
             instrument.triggerAttackRelease("C4", "16n");
-        } else if (b.col === 1) {
-            //for all 12 tone tunings
-            currentOctave = 0;
-            currentScale = scaleMajor12;
-            noteLayout = "concertina"; makeKeys();
-            calculateNewMidiGrid(4, 7);
-            playTestChord([4,7]);
+        } else if (b.col === 1 || b.col === 2) {
+            print("Switched tuning to", cfg.tuning);
+            const pat = cfg.tuning.pattern;
+            const lastpat = lastCfg.tuning.pattern;
+
+
+            cfg.layout = pat.defaultLayout; //wip, should keep the previous type if the pattern didn't change
+            //if (lastpat !== pat) {
+            //    
+            //}
+
+            gridMidiOffset = pat.midiOffset;
+            makeKeys();
+            calculateNewMidiGrid(pat.smallStep, pat.bigStep);
+            playTestChord(pat.testChordSteps);
         }
     }
+    lastCfg = cfg;
 }
 
 function playTestChord (intervals) {
     // play root
-    const root = baseFrequency * eval(currentTuning[0]) * 2 ** 2;
+    const root = baseFrequencies[cfg.baseNote] * 2 ** 2;
     instrument.triggerAttackRelease(root, "16n");
 
     intervals.forEach(i => {
-        const freq = baseFrequency * eval(currentTuning[i]) * 2 ** 3;
+        const interval = intervalFromTuning(i);
+        const freq = baseFrequencies[cfg.baseNote] * interval * 2 ** 3;
         instrument.triggerAttackRelease(freq, "16n");
     });
 }
 
 function calculateNewMidiGrid (small, big) {
-
-    if (noteLayout === "concertina") {
-        gridBaseMidi = Math.floor(currentTuning.length * 1.5);
+    if (cfg.layout === "concertina") {
+        gridBaseMidi = Math.floor(cfg.tuning.steps * 1.5);
     } else {
-        gridBaseMidi = currentTuning.length * 2;
+        gridBaseMidi = cfg.tuning.steps * 2;
     }
 
     // save for checking elsewhere
@@ -1662,14 +1833,14 @@ function calculateNewMidiGrid (small, big) {
     gridIncrement_V = big;
 
     // actual values take into account extra grid modes
-    if (noteLayout === "swapped") {
+    if (cfg.layout === "swapped") {
         newIncrement_H = big;
         newIncrement_D = small;
         newIncrement_V = 2 * small - big;
-    } else if (noteLayout === "concertina") {
-        newIncrement_H = currentTuning.length; // octave
+    } else if (cfg.layout === "concertina") {
+        newIncrement_H = cfg.tuning.steps; // octave
         newIncrement_D = big;
-        newIncrement_V = (2 * big) % currentTuning.length;
+        newIncrement_V = (2 * big) % cfg.tuning.steps;
     } else {
         newIncrement_H = 2 * small - big;
         newIncrement_D = small;
@@ -1701,15 +1872,15 @@ function renderBridge (x1, y1, x2, y2, c1, c2) {
 
 function renderTuningReference () {
     push();
-    const cornerOffset = map(width, 1200, 2200, 40, 60, true);
+    const cornerOffset = map(width, 1200, 2200, 44, 54, true);
     translate(width-cornerOffset, cornerOffset);
     scale(1.2)
 
     // round base
     strokeWeight(16);
     const baseSize = 26;
-    for (let t = 0; t < currentTuning.length; t++) {
-        const angle = map(t, 0, currentTuning.length, 0, TWO_PI) - HALF_PI;
+    for (let t = 0; t < cfg.tuning.steps; t++) {
+        const angle = map(t, 0, cfg.tuning.steps, 0, TWO_PI) - HALF_PI;
         const start = {x: cos(angle) * 0, y: sin(angle) * 0};
         const end = {x: cos(angle) * baseSize, y: sin(angle) * baseSize};
         stroke(lerpColor(theme.bg, color("black"), 0.5));
@@ -1722,7 +1893,7 @@ function renderTuningReference () {
 
     for (let t = 0; t < 12; t++) {
         const angle = map(t, 0, 12, 0, TWO_PI) - HALF_PI;
-        const innerD = (scaleMajor12[t] == 1) ? 0 : 10;
+        const innerD = (tuningPatterns.ne12.scale[t] == 1) ? 0 : 10;
         const start = {x: cos(angle) * innerD, y: sin(angle) * innerD};
         const end = {x: cos(angle) * 19, y: sin(angle) * 19};
 
@@ -1732,22 +1903,21 @@ function renderTuningReference () {
     }
 
     // outer lines
-    const octaveLength = currentTuning.length;
-    const offset = noteNames.indexOf(currentKey);
-    strokeWeight(map(currentTuning.length, 12, 24, 3, 2, true)); //2 or more
-    const endScale = map(currentTuning.length, 12, 24, 26, 28, true);
+    const octaveLength = cfg.tuning.steps;
+    strokeWeight(map(octaveLength, 12, 24, 3, 2, true)); //2 or more
+    const endScale = map(octaveLength, 12, 24, 26, 28, true);
 
     for (let i = 0; i < octaveLength; i++) {
-        const freq = eval(currentTuning[i]);
+        const freq = intervalFromTuning(i);
         const cents = scaleFreqToCents(freq);
         const angle = map(cents, 0, 1200, 0, TWO_PI) - HALF_PI;
         const start = {x: cos(angle) * 19, y: sin(angle) * 19};
         const end = {x: cos(angle) * endScale, y: sin(angle) * endScale};
 
         let col = theme.textdark;
-        if (currentScale[i] === 1) {
+        if (cfg.tuning.pattern.scale[i] === 1) {
             col = theme.text;
-        } else if (currentScale[i] === -1) {
+        } else if (cfg.tuning.pattern.scale[i] === -1) {
             col = theme.textdarker;
         }
         const lineColor = color(atAlpha(col, lineAlpha));
@@ -1760,13 +1930,13 @@ function renderTuningReference () {
     let lastKeyColor;
     let lastKeyOctave;
     strokeWeight(0.9);
-    const orderedPercent = Math.min(orderedKeys.length / currentTuning.length, 1);
+    const orderedPercent = Math.min(orderedKeys.length / cfg.tuning.steps, 1);
     const dotScale = -sqrt(1 - pow(orderedPercent - 1, 2)) + 2;
 
     orderedKeys.forEach((o) => {
 
-        const index = ((o.midiName-offset) % octaveLength);
-        const freq = eval(currentTuning[index]);
+        const index = (o.midiName % octaveLength);
+        const freq = intervalFromTuning(index);
         let cents = scaleFreqToCents(freq);
 
         const matchingVoice = activeKeys[o.name];
@@ -1819,13 +1989,56 @@ function renderTuningReference () {
     pop();
 }
 
+function renderToolbar () {
+    push();
+
+    const edgeOffset = 38;
+    const buttonSize = 36;
+    let buttonsX = edgeOffset;
+    let keyboardHelp = 1;
+
+    for (let t = 0; t < tools.length; t++) {
+        const tool = tools[t];
+        textSize(17);
+        if (tool.visible()) {
+
+            if (t === heldToolID) {
+                fill(theme.textdark);
+                rect(buttonsX, edgeOffset, buttonSize -4, buttonSize -4, 12);
+                fill(theme.highlight);
+                text(tool.label, buttonsX, edgeOffset);
+            } else {
+                fill(theme.bgdark);
+                rect(buttonsX, edgeOffset, buttonSize -4, buttonSize -4, 12);
+                fill(theme.textdark);
+                text(tool.label, buttonsX, edgeOffset);
+            }
+            textSize(13);
+            text(keyboardHelp, buttonsX-18, edgeOffset-18);
+
+            keyboardHelp++;
+            buttonsX += buttonSize*2;
+        }
+    }
+    
+    ongoingTouches.forEach((o) => {
+        if (o.identifier === heldToolIdentifier) {
+            noFill();
+            strokeWeight(8);
+            stroke("#FFFFFF30");
+            ellipse(o.clientX, o.clientY, 84)
+        }
+    });
+    pop();
+}
+
 function renderCornerText () {
     push();
     textFont("Satoshi");
     textSize(16);
     textStyle(BOLD);
 
-    let playText = currentKey + octaveSymbols[currentOctave] + " " + capitalize(tuneMode);
+    let playText = noteNames[cfg.baseNote] + octaveSymbols[cfg.baseOctave] + " " + capitalize(cfg.tuning.name);
 
     if (instrumentType === "synth") {
         playText += " " + Object.values(activeKeys).length + "/32";
@@ -1835,16 +2048,19 @@ function renderCornerText () {
 
     for (let o = 0; o < orderedKeys.length; o++) {
         let keyName;
-        const octave = orderedKeys[o].octave + currentOctave;
+        const octave = orderedKeys[o].octave + cfg.baseOctave;
         const octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
 
-        if (currentTuning.length === 12) {
-            keyName = orderedKeys[o].pitchName + octaveSymbol;
+        if (cfg.tuning.pattern === tuningPatterns.ne12) {
+            keyName = orderedKeys[o].noteSymbol + octaveSymbol;
         } else {
-            keyName = (orderedKeys[o].pitchName-1) + octaveSymbol;
+            keyName = (orderedKeys[o].midiName % octaveSymbols.length) + octaveSymbol;
         }
         playText += " " + keyName;
     }
+
+    //testing
+    //playText += ;
 
     const xOffset = 15;
     const yOffset = height - 20;
@@ -1874,7 +2090,7 @@ function findNearestButton (touch, arr) {
             //if in certain X and Y distance of button center
             if (Math.abs(touch.clientX - h.x) < 80 && 
                 Math.abs(touch.clientY - h.y) < 40 &&
-                controlFunctions[h.col][h.row].type !== "label") {
+                menuButtonFunctions[h.col][h.row].type !== "label") {
                 {closestButton = h;}
             }
         });
@@ -1910,16 +2126,14 @@ class KeyClass extends ButtonClass {
 
     setMidiFromGrid (base, width, h, d, v) {
         this.midiName =
-            base +
+            base + gridMidiOffset +
             floor((this.name % width) / 2) * h +
             ((this.name % width) % 2) * d +
             floor(this.name / width) * v;
-        if (currentTuning.length !== 12) {
-            this.pitchName = this.midiName % currentTuning.length + 1;
-        } else {
-            this.pitchName = noteNames[this.midiName % 12];
-        }
-        this.octave = floor(this.midiName / currentTuning.length) - 2;
+
+        // note symbols are only used in 12nejis.
+        this.noteSymbol = noteNames[(this.midiName + cfg.baseNote) % 12];
+        this.octave = floor(this.midiName / cfg.tuning.steps) - 2;
     }
 
     renderKeyType (state, strength) {
@@ -1933,8 +2147,8 @@ class KeyClass extends ButtonClass {
         const hexSize = 34;
         const hexInner = 30;
         const circleSize = 36;
-        // const circleInner = ((this.midiName) % currentTuning.length == 0) ? 0 : 18;
-        const nearOctave = ((this.midiName) % currentTuning.length) / currentTuning.length;
+        // const circleInner = ((this.midiName) % currentTuning.len == 0) ? 0 : 18;
+        const nearOctave = ((this.midiName) % cfg.tuning.steps) / cfg.tuning.steps;
         const circleInner = sqrt(1 - pow(nearOctave - 1, 2)) * 24;
 
         // if keys are being pressed, dim the other keys
@@ -1990,6 +2204,14 @@ class KeyClass extends ButtonClass {
                 centerShape(this.x, this.y+0.5, circleInner* 1.2, baseColor);
                 centerShape(this.x, this.y+0.5, circleInner* 1.2, lightColor50);
                 break;
+            case "deactivatedSustained":
+                keyShape(this.x+1, this.y+3, hexSize+1, color("#00000030"));
+                keyShape(this.x, this.y, hexSize, theme.highlight);
+                keyShape(this.x, this.y, hexSize, lightColor50);
+                keyShape(this.x, this.y, hexInner, lightColor);
+                centerShape(this.x, this.y, circleInner, baseColor);
+                centerShape(this.x, this.y, circleInner, lightColor50);
+                break;
             case "glow":
                 const rgb = glowColor;
                 const glowColorStrength = color(atAlpha(rgb, strength));
@@ -2022,8 +2244,8 @@ class KeyClass extends ButtonClass {
 
     keyColorFromPalette (v) {
         const octaveColors = [theme.red, theme.green, theme.blue];
-        const hue = octaveColors[(this.octave + 3 + currentOctave) % 3];
-        const value = valueFromScale(this.midiName % currentTuning.length)[v]
+        const hue = octaveColors[(this.octave + 3 + cfg.baseOctave) % 3];
+        const value = valueFromScale(this.midiName % cfg.tuning.steps)[v]
         return hue[value];
     }
 
@@ -2045,9 +2267,9 @@ class KeyClass extends ButtonClass {
         noStroke();
         if (state === "hover" || state === "klicked" || state === "sustained") {
             fill(lightTextColor);
-        } else if (this.pitchName === currentKey || this.pitchName === 1) { 
+        } else if (this.noteSymbol === noteNames[cfg.baseNote] || this.midiName % cfg.tuning.steps === 0) { 
             fill(lightTextColor); 
-        } else if (currentScale[this.midiName % currentTuning.length] !== 1) {
+        } else if (cfg.tuning.pattern.scale[this.midiName % cfg.tuning.steps] !== 1) {
             fill(darkTextColor);
         } else {
             fill(lightTextColor);
@@ -2065,12 +2287,8 @@ class KeyClass extends ButtonClass {
 
         // extra text above
         push();
-        if (currentTuning != tuning12tet &&
-                currentTuning != tuning19tet &&
-                currentTuning != tuning24tet &&
-                currentTuning != tuning14tet) {
-            const offset = noteNames.indexOf(currentKey);
-            const intervalName = currentTuning[(this.midiName - offset) % currentTuning.length];
+        if (cfg.tuning.type === "ratios") {
+            const intervalName = cfg.tuning.ratios[this.midiName % cfg.tuning.steps]; //intervalFromTuning
 
             let topText = intervalName;
             if (topText == 1) {topText = "";}
@@ -2093,43 +2311,22 @@ class KeyClass extends ButtonClass {
     }
 
     renderKeyText () {
-        const octaveLength = currentTuning.length;
+        const octaveLength = cfg.tuning.steps;
         let keyText = "";
 
-        if (labelStyle !== "none") {
+        if (cfg.labelStyle !== "none") {
 
-            if (octaveLength == 12) {
-                if (labelStyle === "notes") {
-    
-                    keyText = this.pitchName;
-    
-                } else if (labelStyle === "intervals") {
-    
-                    const offset = noteNames.indexOf(currentKey);
-                    const intervalName = intervalNames[(this.midiName - offset) % 12];
-                    keyText = intervalName;
-                }
+            if (cfg.labelStyle === "intervals" && cfg.tuning.pattern.intervals !== undefined) {
+                keyText = cfg.tuning.pattern.intervals[this.midiName % octaveLength];
+            } else if (cfg.labelStyle === "notes" && cfg.tuning.pattern === tuningPatterns.ne12) {
+                keyText = this.noteSymbol;
             } else {
-                // other octave lengths
-                if (labelStyle === "intervals") {
-                    const offset = noteNames.indexOf(currentKey);
-                    let intervalNamesTable;
-                    if (octaveLength == 19) {intervalNamesTable = intervalNames19tet.slice();}
-                    else if (octaveLength == 14) {intervalNamesTable = intervalNames14tet.slice();}
-                    else if (octaveLength == 24) {intervalNamesTable = intervalNames24tet.slice();}
-                    else if (octaveLength == 31) {intervalNamesTable = intervalNames31tet.slice();}
-                    else {intervalNamesTable = new Array(octaveLength).fill((this.midiName - offset) % octaveLength + 1);}
-                    
-                    const intervalName = intervalNamesTable[(this.midiName - offset) % octaveLength];
-                    keyText = intervalName;
-                } else {
-                    keyText = this.pitchName - 1;
-                }
+                keyText = this.midiName % octaveLength;
             }
 
             // Add symbol for octave only on first note of each
-            if (this.pitchName == currentKey || this.pitchName == 1) {
-                const octave = this.octave + currentOctave;
+            if (this.noteSymbol === noteNames[cfg.baseNote] || this.midiName % cfg.tuning.steps === 0) {
+                const octave = this.octave + cfg.baseOctave;
                 const octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
                 keyText = " " + keyText + octaveSymbol;
             }
@@ -2143,23 +2340,24 @@ class KeyClass extends ButtonClass {
         //const inKlickedHexes = pressedButtons.find(t => t.midiName === this.midiName && t.countdown > 0);
         const inPressedKeys = pressedButtons.find(t => t.midiName === this.midiName);
         const inSustainedKeys = sustainedKeys.find(t => t.midiName === this.midiName);
+        const inDeactivatedSustainedKeys = deactivatedSustainedKeys.find(t => t.midiName === this.midiName);
 
         // also highlight same note in different octave.
         // in concertina layout, highlight the semitone instead.
         let higherHexes; let lowerHexes; let differentOctaveHexes;
-        if (noteLayout === "concertina") {
+        if (cfg.layout === "concertina") {
             higherHexes = pressedButtons.find(t => t.midiName - this.midiName === 1);
             lowerHexes = pressedButtons.find(t => t.midiName - this.midiName === -1);
         } else {
-            differentOctaveHexes = pressedButtons.find(t => t.midiName % currentTuning.length === this.midiName % currentTuning.length);
+            differentOctaveHexes = pressedButtons.find(t => t.midiName % cfg.tuning.steps === this.midiName % cfg.tuning.steps);
         }
 
         if (inPressedKeys !== undefined) {
             return "pressed";
-        } else if (this.pitchName === currentKey && interactionMode === "key") {
-            return "selected";
         } else if (inSustainedKeys !== undefined) {
             return "sustained";
+        } else if (inDeactivatedSustainedKeys !== undefined) {
+            return "deactivatedSustained";
         } else if (differentOctaveHexes !== undefined) {
             return "differentOctave";
         } else if (higherHexes !== undefined && lowerHexes !== undefined) {
@@ -2181,14 +2379,14 @@ class KeyClass extends ButtonClass {
 }
 function valueFromScale (scaleIndex) {
     //minor note
-    if (currentScale[scaleIndex] === 0) return [1,2,3];
+    if (cfg.tuning.pattern.scale[scaleIndex] === 0) return [1,2,3];
     //major note
-    if (currentScale[scaleIndex] === 1) return [2,3,4];
+    if (cfg.tuning.pattern.scale[scaleIndex] === 1) return [2,3,4];
     //ambiguous
-    if (currentScale[scaleIndex] === -1) return [0,1,2];
+    if (cfg.tuning.pattern.scale[scaleIndex] === -1) return [0,1,2];
 }
 
-function setDragValueToActiveVoice (h) {
+function keyDragToVoices (h) {
     if (activeKeys[h.name] === undefined) {
         print("No active note to apply key drag on!");
         return;
@@ -2238,7 +2436,7 @@ class ControlClass extends ButtonClass {
     renderControlVariant () {
         const inPressedButtons = pressedButtons.find(t => t.name === this.name);
 
-        const func = controlFunctions[this.col][this.row];
+        const func = menuButtonFunctions[this.col][this.row];
 
         if (func !== undefined && func.type === "label") {
             this.renderControlType("label");
@@ -2312,7 +2510,7 @@ class ControlClass extends ButtonClass {
     }
 
     get isControlOn () {
-        const func = controlFunctions[this.col][this.row];
+        const func = menuButtonFunctions[this.col][this.row];
         if (func.type !== "label") {
             return func.onCondition();
         } else {
@@ -2324,7 +2522,7 @@ class ControlClass extends ButtonClass {
         push();
         noStroke();
 
-        const func = controlFunctions[this.col][this.row];
+        const func = menuButtonFunctions[this.col][this.row];
         if (func.type === "label") {
             fill(theme.textdark);
             textSize(15);
@@ -2348,7 +2546,7 @@ function keyShape (x, y, r, color) {
     stroke(color);
     strokeJoin(ROUND);
 
-    if (noteLayout === "concertina") {
+    if (cfg.layout === "concertina") {
         hexagon(x, y, r, 1/2 * PI);
     } else {
         hexagon(x, y, r, 0);
@@ -2362,7 +2560,7 @@ function keyShapeOverlay (x, y, r, color) {
     fill(color);
     noStroke();
 
-    if (noteLayout === "concertina") {
+    if (cfg.layout === "concertina") {
         hexagon(x, y, r*1.5, 1/2 * PI);
     } else {
         hexagon(x, y, r*1.5, 0);
@@ -2422,4 +2620,29 @@ function atAlpha (color, percent) {
     const b = blue(color);
     const a = percent / 100;
     return 'rgba('+r+','+g+','+b+','+a+')';
+}
+
+function overMenuButton(x, y) {
+    return (x > width-72 && y < 72);
+}
+function overToolbar(x, y) {
+    let visibleNumber = 0;
+    tools.forEach((t) => {
+        if (t.visible()) visibleNumber++;
+    });
+    return (x < (72 * visibleNumber + 2) && y < 72);
+}
+
+function overButtonID(x, y) {
+    if (overToolbar(x, y)) {
+        let checkAt = 1;
+        let offset = 38;
+        for (let t = 0; t < tools.length; t++) {
+            if (x > offset-36*checkAt && x < offset+36*checkAt) {
+                print("On button: " + t)
+                return t;
+            }
+            if (tools[t].visible()) checkAt++;
+        }
+    } 
 }
