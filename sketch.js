@@ -1326,9 +1326,23 @@ function runApp () {
     renderToolbar();
 
     if (menuIsOpen) {
-        background(atAlpha(theme.bgdark, 60));
+
+        //bg
+        push();
+        rectMode(CORNER);
+        const gradientSteps = width;
+        for (let i = 0; i < gradientSteps; i++) {
+            const alpha = map(i, 0, gradientSteps-1, 10, 60);
+            fill(atAlpha(theme.bgdark,alpha));
+            rect(i * (width / gradientSteps), 0, width /gradientSteps, height);
+        }
+        pop();
+        //background(atAlpha(theme.bgdark, 60));
+
+        //menu
         fill(theme.bgdark);
         rect(width - 366, 374, 350, 282, 20);
+        
 
         controlsArr.forEach((b) => {
             b.renderControlVariant();
@@ -2324,7 +2338,7 @@ class KeyClass extends ButtonClass {
             let whitekeytext = whiteKeyModes[index];
             if (whitekeytext === undefined) {whitekeytext = ""}
             if (whitekeytext !== "") {
-                this.renderExtraKeyText(this.noteSymbol + " " + whitekeytext, 0, 18, state);
+                this.renderExtraKeyText(whitekeytext, 0, 18, state);
             }
             
         }
@@ -2368,6 +2382,14 @@ class KeyClass extends ButtonClass {
                 const octave = this.octave + cfg.baseOctave;
                 const octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
                 keyText = " " + keyText + octaveSymbol;
+            }
+            text(keyText, this.x, this.y);
+        } else if (menuIsOpen && this.midiName >= octaveLength*5 && this.midiName < octaveLength*6 && 
+            cfg.tuning.pattern.scale[this.midiName % octaveLength] === 1) {
+            if (cfg.tuning.pattern === tuningPatterns.ne12) {
+                keyText = this.noteSymbol;
+            } else {
+                keyText = this.midiName % octaveLength;
             }
             text(keyText, this.x, this.y);
         }
