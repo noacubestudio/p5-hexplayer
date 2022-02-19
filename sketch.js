@@ -390,8 +390,8 @@ let mouseUsed;
 
 //tools
 let toolMode = "none";
-let heldToolID = undefined;
-let heldToolIdentifier = undefined;
+let currentToolIndex = undefined;
+let currentToolTouch = undefined;
 let dragKeyPairs = new Array;
 
 // tonejs
@@ -657,7 +657,7 @@ const menuButtonFunctions = [
         //4th column
         {
             type:"label",
-            label:() => "Note Labels"
+            label:() => "Note Labels",
         },
         {
             type:"stepper",
@@ -672,7 +672,7 @@ const menuButtonFunctions = [
         },
         {
             type:"label",
-            label:() => "Note Layout"
+            label:() => "Note Layout",
         },
         {
             type:"stepper",
@@ -689,7 +689,7 @@ const menuButtonFunctions = [
         },
         {
             type:"label",
-            label:() => "Lowest Octave"
+            label:() => "Lowest Octave",
         },
         {
             type:"stepper",
@@ -703,7 +703,7 @@ const menuButtonFunctions = [
         },
         {
             type:"label",
-            label:() => "Base Frequency"
+            label:() => "Base Frequency",
         },
         {
             type:"stepper",
@@ -720,36 +720,25 @@ const menuButtonFunctions = [
                 });
             }
         },
-        //{
-        //    type:"label",
-        //    label:() => "(Osc. only)"
-        //},
-        //{
-        //    type:"button",
-        //    label:() => "Pitchbend",
-        //    onCondition:() => cfg.isPitchBend,
-        //    function:function() {
-        //        print("Toggled pitch bend");
-        //        cfg.isPitchBend = !cfg.isPitchBend;
-        //        if (instrumentType === "sampler") {
-        //            print("Switched to saw wave!");
-        //            currentInstrument = "sawtooth";
-        //            menuSynth.set({"oscillator": {"type": "sawtooth"}});
-        //            for (let i = 0; i < 32; i++) {
-        //                synthvoices[i].set({"oscillator": {"type": "sawtooth"}});
-        //            }
-        //            instrument = menuSynth;
-        //            instrumentType = "synth";
-        //            vol.volume.value = -28;
-        //        }
-        //    },
-        //},
+        {
+            type:"label",
+            label:() => "Tools",
+        },
+        {
+            type:"button",
+            label:() => "Clear "+cfg.tuning.pattern.bridgeKeyPairs.length+" Lines",
+            onCondition:() => undefined,
+            function:function() {
+                cfg.tuning.pattern.bridgeKeyPairs = [];
+            },
+        },
     ],
 ];
 
 const tools = [
     {
         label:"Pen",
+        image: undefined,
         visible:() => true,
         onTap:function() {
             toolMode = "pen";
@@ -761,6 +750,7 @@ const tools = [
     },
     {
         label:"Bend",
+        image: undefined,
         visible:() => (instrumentType === "synth"),
         onTap:function() {
             cfg.isPitchBend = true;
@@ -852,6 +842,9 @@ function preload() {
     }).connect(vol);
 
     instrument = pianoSampler;
+
+    tools[0].image = loadImage("assets/pentool.svg");
+    tools[1].image = loadImage("assets/bendtool.svg");
 }
 
 function windowResized () {
@@ -872,6 +865,7 @@ function setup () {
     canvas = createCanvas(windowWidth, windowHeight); //1366, 1000 on my iPad
     canvas.parent("canvasContainer");
     strokeWeight(2);
+    strokeJoin(ROUND);
 
     theme = {
         highlight:color("#FFEECD"),
@@ -1020,7 +1014,7 @@ function makeControls () {
             const elementHeight = (menuButtonFunctions[x][y].type === "label") ? 32 : bHeight;
             columnHeight += elementHeight;
 
-            controlsArr.push(new ControlClass(xPos, yPos, x, y, id++));
+            controlsArr.push(new MenuButtonClass(xPos, yPos, x, y, id++));
         }
     }
 }
@@ -1044,28 +1038,27 @@ function handleStart (evt) {
 
     for (let i = 0; i < newTouches.length; i++) {
         evt.preventDefault();
-        newTouches[i].interactionType = "start";
-        ongoingTouches.push(copyTouch(newTouches[i]));
 
         // Render menu when corner button pressed
         if (overMenuButton(newTouches[i].clientX, newTouches[i].clientY)) {
             menuIsOpen = !menuIsOpen;
         } else {
-            const toolID = overButtonID(newTouches[i].clientX, newTouches[i].clientY);
-            if (toolID !== undefined) {
-                tools[toolID].onTap();
-                heldToolID = toolID;
-                heldToolIdentifier = newTouches[i].identifier;
+            newTouches[i].interactionType = "start";
+            ongoingTouches.push(copyTouch(newTouches[i]));
+
+            const toolIndex = overToolIndex(newTouches[i].clientX, newTouches[i].clientY);
+            if (toolIndex !== undefined) {
+                tools[toolIndex].onTap();
+                currentToolIndex = toolIndex;
+                currentToolTouch = newTouches[i].identifier;
             }
         }
     }
-
     // get combined pen pressure from new touches
-    let force = 0;
-    for (let t = 0; t < newTouches.length; t++) {
-        force += newTouches[t].force;
-    }
-    penPressure = force;
+    //let force = 0;
+    //for (let t = 0; t < newTouches.length; t++) {
+    //    force += newTouches[t].force;
+    //}
 
     frameCountdown = 20;
     loop();
@@ -1091,14 +1084,13 @@ function mousePressed () {
             force:0,
             interactionType:"start"
         };
-        ongoingTouches = [copyTouch(newPress)];
 
         // Render menu when corner button pressed
         if (overMenuButton(newPress.clientX, newPress.clientY)) {
             menuIsOpen = !menuIsOpen;
+        } else {
+            ongoingTouches = [copyTouch(newPress)];
         }
-        // Toolbar not interactive when mouse used
-
         frameCountdown = 20;
         loop();
     }
@@ -1110,11 +1102,11 @@ function handleMove (evt) {
 
     for (let i = 0; i < newTouches.length; i++) {
         evt.preventDefault();
-        const idx = ongoingTouchIndexById(newTouches[i].identifier);
+        const ongoingIndex = ongoingTouchIndexById(newTouches[i].identifier);
         newTouches[i].interactionType = "move";
 
-        if (idx >= 0) {
-            ongoingTouches.splice(idx, 1, copyTouch(newTouches[i])); // swap in the new touch record
+        if (ongoingIndex >= 0) {
+            ongoingTouches.splice(ongoingIndex, 1, copyTouch(newTouches[i])); // swap in the new touch record
         }
     }
     frameCountdown = 20;
@@ -1160,10 +1152,10 @@ function handleEnd (evt) {
 
     for (let i = 0; i < newTouches.length; i++) {
         evt.preventDefault();
-        const idx = ongoingTouchIndexById(newTouches[i].identifier);
+        const ongoingIndex = ongoingTouchIndexById(newTouches[i].identifier);
 
-        if (idx >= 0) {
-            ongoingTouches.splice(idx, 1);
+        if (ongoingIndex >= 0) {
+            ongoingTouches.splice(ongoingIndex, 1);
         }
 
         // Hide open menu when last finger is lifted & NOT on the button
@@ -1171,10 +1163,11 @@ function handleEnd (evt) {
             menuIsOpen = false;
         };
 
-        if (idx === heldToolID) {
-            tools[heldToolID].onRelease();
-            heldToolID = undefined;
-            heldToolIdentifier = undefined;
+        // release tool and remove current tool
+        if (newTouches[i].identifier === currentToolTouch) {
+            tools[currentToolIndex].onRelease();
+            currentToolIndex = undefined;
+            currentToolTouch = undefined;
         }
     }
     frameCountdown = 20;
@@ -1236,7 +1229,7 @@ function keyPressed () {
             if (visibleNumber == key) {
                 print("Pressed key for tool " + t.label);
                 t.onTap();
-                heldToolID = i;
+                currentToolIndex = i;
                 break;
             }
         }
@@ -1259,7 +1252,7 @@ function keyReleased () {
             if (visibleNumber == key) {
                 print("Released key for tool " + t.label);
                 t.onRelease();
-                heldToolID = undefined;
+                currentToolIndex = undefined;
                 break;
             }
         }
@@ -1345,13 +1338,13 @@ function runApp () {
         
 
         controlsArr.forEach((b) => {
-            b.renderControlVariant();
+            b.renderButtonVariant();
         });
 
         // Render extra glow
         if (hoverButton !== undefined) {
             controlsArr.forEach((b) => {
-                b.drawControlGlow();
+                b.renderButtonHover();
             });
         }
     }
@@ -1454,10 +1447,7 @@ function useKeys () {
     for (let i = 0; i < ongoingTouches.length; i++) {
         const touch = ongoingTouches[i];
         //if not on menu button, toolbar or same touch from toolbar
-        if (!overMenuButton(touch.clientX, touch.clientY) &&
-            !overToolbar(touch.clientX, touch.clientY) &&
-            !(touch.identifier === heldToolIdentifier)) {
-
+        if (touch.identifier !== currentToolTouch) {
             const nearestKey = findNearestButton(ongoingTouches[i], keyArr);
             if (nearestKey !== undefined) {pressedButtons.push(nearestKey);}
         }
@@ -1748,6 +1738,7 @@ function playKey (h, mode) {
                     activeKeys[h.name].voice.triggerAttack(pPitch);
                     activeKeys[h.name].voice.onsilence = () => {
                         delete activeKeys[h.name];
+                        synthvoices[i].set({ "detune": 0 });
                         print(i + "-voice is silent, remaining active key objects: " + Object.values(activeKeys));
                         frameCountdown = 20;
                         loop();
@@ -2012,7 +2003,7 @@ function renderToolbar () {
     push();
     translate(38, 38);
 
-    const buttonSize = 36;
+    const buttonSize = 38;
     let buttonsX = 0;
     let keyboardHelp = 1;
 
@@ -2021,24 +2012,31 @@ function renderToolbar () {
         textSize(17);
     
         if (tool.visible()) {
-            if (t === heldToolID) {
-                stroke(theme.highlight)
-                fill(theme.textdark);
+            if (t === currentToolIndex) {
+                stroke(theme.text)
+                fill(theme.bg);
                 rect(buttonsX, 0, buttonSize -4, buttonSize -4, 12);
                 noStroke();
                 fill(theme.highlight);
             } else {
                 stroke(theme.bgdark)
-                fill(color(atAlpha(theme.bgdark,80)));
+                fill(color(atAlpha(theme.bgdark,90)));
                 rect(buttonsX, 0, buttonSize -4, buttonSize -4, 12);
                 noStroke();
                 fill(theme.textdark);
             }
-            text(tool.label, buttonsX-2, -8);
+
+            if (tool.image !== undefined) {
+                image(tool.image, buttonsX-18, -20, 32, 32);
+            } else {
+                text(tool.label, buttonsX-2, -8);
+            }
+
+            fill(theme.textdark);
             textSize(13);
             text(keyboardHelp, buttonsX+18, 14);
-
             keyboardHelp++;
+
             buttonsX += buttonSize*2;
         }
     }
@@ -2046,18 +2044,21 @@ function renderToolbar () {
 
     push();
     ongoingTouches.forEach((o) => {
-        if (o.identifier === heldToolIdentifier) {
+        if (o.identifier === currentToolTouch) {
             noFill();
             strokeWeight(4);
             stroke("#FFFFFF70");
-            ellipse(o.clientX, o.clientY, 80)
+            ellipse(o.clientX, o.clientY, 80);
 
             noStroke();
-            fill("#FFFFFF70");
-            rect(o.clientX + 80, o.clientY, 34, 14, 20)
-            fill(theme.bg);
+            //fill("#FFFFFF70");
+            //rect(o.clientX + 80, o.clientY, 34, 14, 20);
+            fill(theme.highlight)
+            strokeWeight(5);
+            stroke("#00000040");
             textSize(16);
-            text("Pen", o.clientX + 80, o.clientY);
+            textAlign(LEFT);
+            text(tools[currentToolIndex].label, o.clientX + 55, o.clientY - 18);
         }
     });
     pop();
@@ -2070,11 +2071,6 @@ function renderCornerText () {
     textStyle(BOLD);
 
     let playText = noteNames[cfg.baseNote] + octaveSymbols[cfg.baseOctave] + " " + capitalize(cfg.tuning.name);
-
-    if (instrumentType === "synth") {
-        playText += " " + Object.values(activeKeys).length + "/32";
-    }
-
     playText += "  ";
 
     for (let o = 0; o < orderedKeys.length; o++) {
@@ -2094,20 +2090,38 @@ function renderCornerText () {
     if (toolMode === "pen") playText += " PEN ";
     if (cfg.isPitchBend) playText += " BEND ";
 
-    const xOffset = 15;
-    const yOffset = height - 20;
+    textWithShadow(playText, LEFT, 15, height - 20);
 
-    textAlign(LEFT, CENTER);
-    strokeJoin(ROUND);
 
-    strokeWeight(5);
-    stroke(color(atAlpha(theme.bgdark,90)));
-    text(playText, xOffset, yOffset);
+    let voicesText = "";
+    if (instrumentType === "synth") {
 
-    noStroke();
-    const textColor = lerpColor(theme.textdark, theme.text, frameCountdown/20);
-    fill(textColor);
-    text(playText, xOffset, yOffset);
+        let sumDetune = 0;
+        synthvoices.forEach((s) => {
+            sumDetune += s.get().detune;
+        });
+        if (sumDetune !== 0) {
+            voicesText += " " + sumDetune.toFixed(1);
+        }
+
+        voicesText += "  " + Object.values(activeKeys).length + "/32 Voices";
+    }
+
+    textWithShadow(voicesText, RIGHT, width-15, height - 20);
+
+
+    function textWithShadow(txt, align, x, y) {
+        textAlign(align, CENTER);
+
+        strokeWeight(5);
+        stroke(color(atAlpha(theme.bgdark,90)));
+        text(txt, x, y);
+
+        noStroke();
+        const textColor = lerpColor(theme.textdark, theme.text, frameCountdown/20);
+        fill(textColor);
+        text(txt, x, y);
+    }
 
     pop();
 }
@@ -2143,11 +2157,11 @@ function findNearestButton (touch, arr) {
 }
 
 
-class ButtonClass {
+class GenericButtonClass {
     // anything shared by keys and menu buttons can go here
 }
 
-class KeyClass extends ButtonClass {
+class KeyClass extends GenericButtonClass {
     constructor (x, y, name) {
         super();
         this.x = x;
@@ -2290,7 +2304,6 @@ class KeyClass extends ButtonClass {
         // shadow
         strokeWeight(4);
         stroke("#00000050");
-        strokeJoin(ROUND);
         fill("#00000050");
         this.renderKeyText();
 
@@ -2326,7 +2339,7 @@ class KeyClass extends ButtonClass {
             let topText = intervalName;
             if (topText == 1) {topText = "";}
 
-            this.renderExtraKeyText(topText, 0, -25, state);
+            this.renderExtraKeyText(topText, 0, -25, state, this.keyColorFromPalette(2), this.keyColorFromPalette(0));
         }
 
         //if (this.heat > 0) {
@@ -2338,19 +2351,18 @@ class KeyClass extends ButtonClass {
             let whitekeytext = whiteKeyModes[index];
             if (whitekeytext === undefined) {whitekeytext = ""}
             if (whitekeytext !== "") {
-                this.renderExtraKeyText(whitekeytext, 0, 18, state);
+                this.renderExtraKeyText(whitekeytext, 0, 18, state, lightTextColor, "#00000050");
             }
             
         }
     }
 
-    renderExtraKeyText (txt, x, y, state) {
+    renderExtraKeyText (txt, x, y, state, fc, sc) {
         push();
         textSize(11);
         strokeWeight(3);
-        strokeJoin(ROUND);
-        stroke(this.keyColorFromPalette(0));
-        fill(this.keyColorFromPalette(2));
+        stroke(sc);
+        fill(fc);
 
         text(txt, this.x + x, this.y + y);
 
@@ -2484,7 +2496,7 @@ function keyDragToVoices (h) {
     return ("No touch found in range!");
 }
 
-class ControlClass extends ButtonClass {
+class MenuButtonClass extends GenericButtonClass {
     constructor(x, y, column, row, id) {
         super();
         this.x = x;
@@ -2494,29 +2506,29 @@ class ControlClass extends ButtonClass {
         this.name = id;
     }
 
-    renderControlVariant () {
+    renderButtonVariant () {
         const inPressedButtons = pressedButtons.find(t => t.name === this.name);
 
         const func = menuButtonFunctions[this.col][this.row];
 
         if (func !== undefined && func.type === "label") {
-            this.renderControlType("label");
+            this.renderButtonType("label");
         } else if (func !== undefined && func.label() === "") {
-            this.renderControlType("hidden");
-        } else if (this.isControlOn && inPressedButtons !== undefined) {
-            this.renderControlType("activepressed");
-        } else if (this.isControlOn) {
-            this.renderControlType("active");
-        } else if (this.isControlOn === false) {
-            this.renderControlType("inactive");
+            this.renderButtonType("hidden");
+        } else if (this.isButtonOn && inPressedButtons !== undefined) {
+            this.renderButtonType("activepressed");
         } else if (inPressedButtons !== undefined) {
-            this.renderControlType("pressed");
+            this.renderButtonType("pressed");
+        } else if (this.isButtonOn) {
+            this.renderButtonType("active");
+        } else if (this.isButtonOn === false || (func.type === "button" && this.isButtonOn === undefined)) {
+            this.renderButtonType("inactive");
         } else {
-            this.renderControlType("idle");
+            this.renderButtonType("idle");
         }
     }
 
-    renderControlType (state) {
+    renderButtonType (state) {
         push();
         noStroke();
         const baseSize = 86;
@@ -2560,17 +2572,17 @@ class ControlClass extends ButtonClass {
                 controlShape(this.x, this.y, baseSize);
                 break;
         }
-        this.renderControlText();
+        this.renderButtonText();
         pop();
     }
 
-    drawControlGlow () {
+    renderButtonHover () {
         if (hoverButton !== undefined && hoverButton.name === this.name) {
-            this.renderControlType("hover"); return;
+            this.renderButtonType("hover"); return;
         }
     }
 
-    get isControlOn () {
+    get isButtonOn () {
         const func = menuButtonFunctions[this.col][this.row];
         if (func.type !== "label") {
             return func.onCondition();
@@ -2579,7 +2591,7 @@ class ControlClass extends ButtonClass {
         }
     }
 
-    renderControlText () {
+    renderButtonText () {
         push();
         noStroke();
 
@@ -2590,7 +2602,7 @@ class ControlClass extends ButtonClass {
             textAlign(LEFT);
             text(func.label(), this.x-72, this.y-10);
         } else {
-            const stateColor = (this.isControlOn) ? theme.highlight : theme.text;
+            const stateColor = (this.isButtonOn) ? theme.highlight : theme.text;
             fill(stateColor);
             textSize(18);
             text(func.label(), this.x, this.y-1);
@@ -2608,7 +2620,6 @@ function keyShape (x, y, r, color) {
     fill(color);
     strokeWeight(r * 0.8);
     stroke(color);
-    strokeJoin(ROUND);
 
     if (cfg.layout === "concertina") {
         hexagon(x, y, r, 1/2 * PI);
@@ -2694,15 +2705,14 @@ function overToolbar(x, y) {
     tools.forEach((t) => {
         if (t.visible()) visibleNumber++;
     });
-    return (x < (72 * visibleNumber + 2) && y < 72);
+    return (x < (76 * visibleNumber) && y < 76);
 }
 
-function overButtonID(x, y) {
+function overToolIndex(x, y) {
     if (overToolbar(x, y)) {
-        let checkAt = 1;
-        let offset = 38;
+        let checkAt = 0;
         for (let t = 0; t < tools.length; t++) {
-            if (x > offset-36*checkAt && x < offset+36*checkAt) {
+            if (x > checkAt*76 && x < (checkAt + 1)*76) {
                 print("On button: " + t)
                 return t;
             }
