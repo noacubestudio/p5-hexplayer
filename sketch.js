@@ -7,6 +7,7 @@ Tone.context.lookAhead = 0;
 // labels
 const octaveSymbols = ["⁰","¹","²","³","⁴","⁵","⁶","⁷","⁸","⁹"];
 const noteNames = ["C","C#","D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const whiteKeyModes = ["Ionian", "", "Dorian", "", "Phrygian", "Lydian", "", "Mixolydian", "", "Aeolian", "", "Locrian"];
 
 //C1 to B1
 const baseFrequencies = [
@@ -33,6 +34,7 @@ const tuningPatterns = {
         testChordSteps: [4, 7],
         defaultLayout: "concertina",
         midiOffset: 0,
+        bridgeKeyPairs: new Array,
     },
     harmonic12: {
         // modify!
@@ -43,6 +45,7 @@ const tuningPatterns = {
         testChordSteps: [4, 7],
         defaultLayout: "concertina",
         midiOffset: 0,
+        bridgeKeyPairs: new Array,
     },
     ne19: {
         scale: [1, 0, 0, 1, 0, 0, 1, -1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, -1],
@@ -52,6 +55,7 @@ const tuningPatterns = {
         testChordSteps: [6, 11],
         defaultLayout: "concertina",
         midiOffset: 0,
+        bridgeKeyPairs: new Array,
     },
     ne14: {
         scale: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
@@ -61,6 +65,7 @@ const tuningPatterns = {
         testChordSteps: [4, 8],
         defaultLayout: "harmonic",
         midiOffset: 0,
+        bridgeKeyPairs: new Array,
     },
     ne24: {
         scale: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
@@ -70,6 +75,7 @@ const tuningPatterns = {
         testChordSteps: [8, 14],
         defaultLayout: "harmonic",
         midiOffset: 24,
+        bridgeKeyPairs: new Array,
     },
     ne31: {
         scale: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
@@ -79,6 +85,7 @@ const tuningPatterns = {
         testChordSteps: [10, 18],
         defaultLayout: "harmonic",
         midiOffset: 31,
+        bridgeKeyPairs: new Array,
     },
     primal21: {
         scale: [1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0],
@@ -87,7 +94,8 @@ const tuningPatterns = {
         bigStep: 9,
         testChordSteps: [6, 12, 18],
         defaultLayout: "harmonic",
-        midiOffset: 21,
+        midiOffset: 26,
+        bridgeKeyPairs: new Array,
     },
 }
 
@@ -384,8 +392,6 @@ let mouseUsed;
 let toolMode = "none";
 let heldToolID = undefined;
 let heldToolIdentifier = undefined;
-
-let bridgeKeyPairs = new Array;
 let dragKeyPairs = new Array;
 
 // tonejs
@@ -1294,6 +1300,7 @@ function runApp () {
     // Render all hexagons + variants
     keyArr.forEach((h) => {
         h.renderKeyType(h.findKeyVariant);
+        h.heat = (h.heat * 0.95).toFixed(7);
     });
 
     // Render extra glow
@@ -1351,7 +1358,7 @@ function renderKeyBridges () {
     noStroke();
 
     bridgeType(dragKeyPairs);
-    bridgeType(bridgeKeyPairs);
+    bridgeType(cfg.tuning.pattern.bridgeKeyPairs);
 
     //wip - draw in progress pairs differently. also show when both overlap - bridge is about to get deleted.
 
@@ -1362,9 +1369,10 @@ function renderKeyBridges () {
             const bridgePair = pairArray[b];
             let hexPair = [];
             keyArr.forEach((h) => {
-                if (bridgePair[0].name == h.name) {
+                if (h.name === bridgePair[0].name) {
                     hexPair[0] = h;
-                } else if (bridgePair[1].name == h.name) {
+                }
+                if (h.name === bridgePair[1].name) {
                     hexPair[1] = h;
                 }
             });
@@ -1436,8 +1444,8 @@ function useKeys () {
             !overToolbar(touch.clientX, touch.clientY) &&
             !(touch.identifier === heldToolIdentifier)) {
 
-            const nearestHex = findNearestButton(ongoingTouches[i], keyArr);
-            if (nearestHex !== undefined) {pressedButtons.push(nearestHex);}
+            const nearestKey = findNearestButton(ongoingTouches[i], keyArr);
+            if (nearestKey !== undefined) {pressedButtons.push(nearestKey);}
         }
     }
 
@@ -1480,7 +1488,7 @@ function pressedKeysPen () {
         }
     }
 
-
+    const pt = cfg.tuning.pattern;
     const releasedKeys = lastPressedButtons.filter(p => pressedButtons.find(l => {return l.name == p.name}) === undefined);
     for (let r = 0; r < releasedKeys.length; r++) {
 
@@ -1504,20 +1512,20 @@ function pressedKeysPen () {
                     if (dragPair[0] !== dragPair[1]) {
                         // push the dragpair, or remove if it already exists - either way around
                         let foundPair = false;
-                        bridgeKeyPairs.forEach((bridgePair) => {
-                            if (dragPair[0] === bridgePair[0] && dragPair[1] === bridgePair[1] ||
-                                dragPair[0] === bridgePair[1] && dragPair[1] === bridgePair[0]) {
+                        pt.bridgeKeyPairs.forEach((bridgePair) => {
+                            if (dragPair[0].name === bridgePair[0].name && dragPair[1].name === bridgePair[1].name ||
+                                dragPair[0].name === bridgePair[1].name && dragPair[1].name === bridgePair[0].name) {
                                 // remove
                                 foundPair = true;
                                 print("Removed bridge", bridgePair);
-                                const index = bridgeKeyPairs.indexOf(bridgePair);
-                                if (index > -1) {bridgeKeyPairs.splice(index, 1);}
+                                const index = pt.bridgeKeyPairs.indexOf(bridgePair);
+                                if (index > -1) {pt.bridgeKeyPairs.splice(index, 1);}
                             }
                         });
                         if (!foundPair){
                             // add
                             print("Added bridge", dragPair);
-                            bridgeKeyPairs.push(dragPair);
+                            pt.bridgeKeyPairs.push(dragPair);
                         }
                     }
                     // remove from dragged pairs
@@ -1551,7 +1559,7 @@ function pressedKeysPlay () {
         const attackedKey = attackedKeys[a];
         keyArr.forEach((h) => {
             if (h.name === attackedKey.name) {
-                // could have other modes here
+                h.heat++;
                 playKey(h);
             }
         });
@@ -1871,7 +1879,7 @@ function renderTuningReference () {
     push();
     const cornerOffset = map(width, 1200, 2200, 44, 54, true);
     translate(width-cornerOffset, cornerOffset);
-    scale(1.2)
+    scale((menuIsOpen) ? 1.3 : 1.2);
 
     // round base
     strokeWeight(16);
@@ -1988,44 +1996,54 @@ function renderTuningReference () {
 
 function renderToolbar () {
     push();
+    translate(38, 38);
 
-    const edgeOffset = 38;
     const buttonSize = 36;
-    let buttonsX = edgeOffset;
+    let buttonsX = 0;
     let keyboardHelp = 1;
 
     for (let t = 0; t < tools.length; t++) {
         const tool = tools[t];
         textSize(17);
-        stroke(theme.bgdark)
+    
         if (tool.visible()) {
-
             if (t === heldToolID) {
+                stroke(theme.highlight)
                 fill(theme.textdark);
-                rect(buttonsX, edgeOffset, buttonSize -2, buttonSize -2, 12);
+                rect(buttonsX, 0, buttonSize -4, buttonSize -4, 12);
                 noStroke();
                 fill(theme.highlight);
             } else {
+                stroke(theme.bgdark)
                 fill(color(atAlpha(theme.bgdark,80)));
-                rect(buttonsX, edgeOffset, buttonSize -4, buttonSize -4, 12);
+                rect(buttonsX, 0, buttonSize -4, buttonSize -4, 12);
                 noStroke();
                 fill(theme.textdark);
             }
-            text(tool.label, buttonsX, edgeOffset+6);
+            text(tool.label, buttonsX-2, -8);
             textSize(13);
-            text(keyboardHelp, buttonsX-18, edgeOffset-16);
+            text(keyboardHelp, buttonsX+18, 14);
 
             keyboardHelp++;
             buttonsX += buttonSize*2;
         }
     }
-    
+    pop();
+
+    push();
     ongoingTouches.forEach((o) => {
         if (o.identifier === heldToolIdentifier) {
             noFill();
             strokeWeight(4);
             stroke("#FFFFFF70");
             ellipse(o.clientX, o.clientY, 80)
+
+            noStroke();
+            fill("#FFFFFF70");
+            rect(o.clientX + 80, o.clientY, 34, 14, 20)
+            fill(theme.bg);
+            textSize(16);
+            text("Pen", o.clientX + 80, o.clientY);
         }
     });
     pop();
@@ -2059,7 +2077,8 @@ function renderCornerText () {
     }
 
     //testing
-    //playText += ;
+    if (toolMode === "pen") playText += " PEN ";
+    if (cfg.isPitchBend) playText += " BEND ";
 
     const xOffset = 15;
     const yOffset = height - 20;
@@ -2121,6 +2140,7 @@ class KeyClass extends ButtonClass {
         this.y = y;
         this.name = name;
         this.setMidiFromGrid(gridBaseMidi, gridWidth, gridIncrement_H, gridIncrement_D, gridIncrement_V);
+        this.heat = 0;
     }
 
     setMidiFromGrid (base, width, h, d, v) {
@@ -2285,26 +2305,45 @@ class KeyClass extends ButtonClass {
 
 
         // extra text above
-        push();
+        
         if (cfg.tuning.type === "ratios") {
             const intervalName = cfg.tuning.ratios[this.midiName % cfg.tuning.steps]; //intervalFromTuning
 
             let topText = intervalName;
             if (topText == 1) {topText = "";}
 
-            textSize(11);
-            strokeWeight(3);
-            stroke(this.keyColorFromPalette(0));
-            fill(this.keyColorFromPalette(2));
+            this.renderExtraKeyText(topText, 0, -25, state);
+        }
 
-            text(topText, this.x, this.y - 25);
+        //if (this.heat > 0) {
+        //    this.renderExtraKeyText(this.heat, 0, 25, state);
+        //}
 
-            if (orderedKeys.length > 0 && state === "idle") {
-                noStroke();
-                const idleOverlay = color(atAlpha(theme.bgdark, 10));
-                fill(idleOverlay);
-                text(topText, this.x, this.y - 25);
+        if (cfg.tuning.pattern === tuningPatterns.ne12) {
+            const index = this.midiName % cfg.tuning.steps;
+            let whitekeytext = whiteKeyModes[index];
+            if (whitekeytext !== "") {
+                this.renderExtraKeyText(this.noteSymbol + " " + whitekeytext, 0, 22, state);
             }
+            
+        }
+    }
+
+    renderExtraKeyText (txt, x, y, state) {
+        push();
+        textSize(11);
+        strokeWeight(3);
+        strokeJoin(ROUND);
+        stroke(this.keyColorFromPalette(0));
+        fill(this.keyColorFromPalette(2));
+
+        text(txt, this.x + x, this.y + y);
+
+        if (orderedKeys.length > 0 && state === "idle") {
+            noStroke();
+            const idleOverlay = color(atAlpha(theme.bgdark, 10));
+            fill(idleOverlay);
+            text(txt, this.x + x, this.y + y);
         }
         pop();
     }
