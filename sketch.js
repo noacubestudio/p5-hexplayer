@@ -2319,11 +2319,12 @@ class KeyClass extends ButtonClass {
         //    this.renderExtraKeyText(this.heat, 0, 25, state);
         //}
 
-        if (cfg.tuning.pattern === tuningPatterns.ne12) {
-            const index = this.midiName % cfg.tuning.steps;
+        if (cfg.tuning.pattern === tuningPatterns.ne12 && menuIsOpen) {
+            const index = (this.midiName - cfg.tuning.steps * 5);
             let whitekeytext = whiteKeyModes[index];
+            if (whitekeytext === undefined) {whitekeytext = ""}
             if (whitekeytext !== "") {
-                this.renderExtraKeyText(this.noteSymbol + " " + whitekeytext, 0, 22, state);
+                this.renderExtraKeyText(this.noteSymbol + " " + whitekeytext, 0, 18, state);
             }
             
         }
