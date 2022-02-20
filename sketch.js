@@ -27,6 +27,7 @@ const baseFrequencies = [
 
 const tuningPatterns = {
     ne12: {
+        steps: 12,
         scale: [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1],
         intervals: ["1", "m2", "2", "m3", "3", "4", "TT", "5", "m6", "6", "m7", "7"],
         smallStep: 4,
@@ -38,6 +39,7 @@ const tuningPatterns = {
     },
     harmonic12: {
         // modify!
+        steps: 12,
         scale: [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1],
         intervals: undefined,
         smallStep: 4,
@@ -48,6 +50,7 @@ const tuningPatterns = {
         bridgeKeyPairs: new Array,
     },
     ne19: {
+        steps: 19,
         scale: [1, 0, 0, 1, 0, 0, 1, -1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, -1],
         intervals: ["1", "1a", "m2", "2", "2a", "m3", "3", "3›‹4", "4", "4a", "m5", "5", "5a", "m6", "6", "6a", "m7", "7", "7›‹1"],
         smallStep: 6,
@@ -58,6 +61,7 @@ const tuningPatterns = {
         bridgeKeyPairs: new Array,
     },
     ne14: {
+        steps: 14,
         scale: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
         intervals: ["1", "1*", "2", "2*", "3", "3*", "4", "4*", "5", "5*", "6", "6*", "7", "7*"],
         smallStep: 4,
@@ -68,6 +72,7 @@ const tuningPatterns = {
         bridgeKeyPairs: new Array,
     },
     ne24: {
+        steps: 24,
         scale: [1, 0, -1, 0, 1, 0, -1, 0, 1, 0, 1, 0, -1, 0, 1, 0, -1, 0, 1, 0, -1, 0, 1, 0],
         intervals: ["1", "-2", "m2", "~2", "2", "-3", "m3", "~3", "3", "+3", "4", "+4", "TT", "-5", "5", "-6", "m6", "~6", "6", "-7", "m7", "~7", "7", "-8"],
         smallStep: 4,
@@ -78,6 +83,7 @@ const tuningPatterns = {
         bridgeKeyPairs: new Array,
     },
     ne31: {
+        steps: 31,
         scale: [1, -1, 0, 0, -1, 1, -1, 0, 0, -1, 1, 0, 0, 1, -1, 0, 0, -1, 1, -1, 0, 0, -1, 1, -1, 0, 0, -1, 1, 0, 0],
         intervals: ["1", "+1", "-2", "m2", "~2", "2", "+2", "-3", "m3", "~3", "3", "+3", "-4", "4", "+4", "tt", "TT", "-5", "5", "+5", "-6", "m6", "~6", "6", "+6", "-7", "m7", "~7", "7", "+7", "-8"],
         smallStep: 10,
@@ -88,6 +94,7 @@ const tuningPatterns = {
         bridgeKeyPairs: new Array,
     },
     primal21: {
+        steps: 21,
         scale: [1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0],
         intervals: undefined,
         smallStep: 5,
@@ -103,7 +110,6 @@ const tunings = {
     edo12: {
         name:"12 EDO",
         type:"equal",
-        steps:12,
         pattern:tuningPatterns.ne12,
     },
     novemdecimal: {
@@ -123,7 +129,6 @@ const tunings = {
             "34/19",
             "36/19"
         ],
-        steps:12,
         pattern:tuningPatterns.ne12,
     },
     undecimal: {
@@ -143,7 +148,6 @@ const tunings = {
             "39/22",
             "21/11"
         ],
-        steps:12,
         pattern:tuningPatterns.ne12,
     },
     snowfall: {
@@ -163,7 +167,6 @@ const tunings = {
             "20/11",
             "21/11"
         ],
-        steps:12,
         pattern:tuningPatterns.ne12,
     },
     hexadecimal: {
@@ -183,7 +186,6 @@ const tunings = {
             "29/16",
             "15/8"
         ],
-        steps:12,
         pattern:tuningPatterns.ne12,
     },
     harmonic: {
@@ -203,7 +205,6 @@ const tunings = {
             "11/6",
             "23/12"
         ],
-        steps:12,
         pattern:tuningPatterns.harmonic12,
     },
     simplefractions: {
@@ -223,19 +224,16 @@ const tunings = {
             "7/4", // harmonic 7th, minor 7th
             "15/8" // major 7th 17/9
         ],
-        steps:12,
         pattern:tuningPatterns.ne12,
     },
     edo19: {
         name:"19 EDO",
         type:"equal",
-        steps:19,
         pattern:tuningPatterns.ne19,
     },
     edo14: {
         name:"14 EDO",
         type:"equal",
-        steps:14,
         pattern:tuningPatterns.ne14,
     },
     neji31: {
@@ -274,7 +272,6 @@ const tunings = {
             "40/21",
             "63/32"
         ],
-        steps:31,
         pattern:tuningPatterns.ne31,
     },
     astral21: {
@@ -303,13 +300,11 @@ const tunings = {
             "21/11",
             "64/33"
         ],
-        steps:21,
         pattern:tuningPatterns.primal21,
     },
     edo24: {
         name:"24 EDO",
         type:"equal",
-        steps:24,
         pattern:tuningPatterns.ne24,
     },
     neji24: {
@@ -341,7 +336,6 @@ const tunings = {
             "15/8",
             "35/18" // 27/14
         ],
-        steps:24,
         pattern:tuningPatterns.ne24,
     },
 }
@@ -367,6 +361,7 @@ grid = {
     hexSize: 34, // 34 seems good
     tuningMidiOffset: 0, // different tunings may start at a higher midi note
     translateOffset: new Object, // x/y
+    angle: 0,
 }
 
 // permanent key grid
@@ -691,8 +686,36 @@ const menuButtonFunctions = [
             },
         },
         {
+            type:"button",
+            label:() => "Smaller Keys",
+            onCondition:() => (grid.hexSize === 28),
+            function:function() {
+                if (grid.hexSize === 34) {
+                    grid.hexSize = 28;
+                } else {
+                    grid.hexSize = 34;
+                }
+                makeKeys();
+                calculateNewMidiGrid(grid.axisD, grid.axisV);
+            },
+        },
+        {
+            type:"button",
+            label:() => "Angle (WIP)",
+            onCondition:() => (grid.angle !== 0),
+            function:function() {
+                if (grid.angle === 0) {
+                    grid.angle = -35;
+                } else {
+                    grid.angle = 0;
+                }
+                makeKeys();
+                calculateNewMidiGrid(grid.axisD, grid.axisV);
+            },
+        },
+        {
             type:"label",
-            label:() => "Lowest Octave",
+            label:() => "Base Octave/Key",
         },
         {
             type:"stepper",
@@ -703,10 +726,6 @@ const menuButtonFunctions = [
                 cfg.baseOctave++;
                 if (cfg.baseOctave == 3) {cfg.baseOctave = 0;}
             },
-        },
-        {
-            type:"label",
-            label:() => "Base Frequency",
         },
         {
             type:"stepper",
@@ -722,24 +741,6 @@ const menuButtonFunctions = [
                     h.setMidiFromGrid(grid.baseMidi, grid.width, newIncrement_H, newIncrement_D, newIncrement_V);
                 });
             }
-        },
-        {
-            type:"label",
-            label:() => "Layout Size",
-        },
-        {
-            type:"button",
-            label:() => "Smaller Keys",
-            onCondition:() => (grid.hexSize === 28),
-            function:function() {
-                if (grid.hexSize === 34) {
-                    grid.hexSize = 28;
-                } else {
-                    grid.hexSize = 34;
-                }
-                makeKeys();
-                calculateNewMidiGrid(grid.axisD, grid.axisV);
-            },
         },
         {
             type:"label",
@@ -870,6 +871,8 @@ function preload() {
 
 function windowResized () {
     resizeCanvas(windowWidth, windowHeight);
+    makeKeys();
+    calculateNewMidiGrid(grid.axisD, grid.axisV);
     makeControls();
 
     frameCountdown = 20;
@@ -1709,10 +1712,10 @@ function filterSustainedKeys (mode, compareHex) {
 }
 
 function intervalFromTuning(midiNumber) {
-    const i = midiNumber % cfg.tuning.steps;
+    const i = midiNumber % cfg.tuning.pattern.steps;
 
     if (cfg.tuning.type === "equal") {
-        return 2 ** (i / cfg.tuning.steps);
+        return 2 ** (i / cfg.tuning.pattern.steps);
     }
     if (cfg.tuning.type === "ratios") {
         return eval(cfg.tuning.ratios[i]);
@@ -1779,7 +1782,7 @@ function pitchBendVoices () {
     Object.values(activeKeys).forEach(a => {
         const keyHasBeenDragged = (a.dragValues !== undefined && a.dragValues.dragX !== undefined);
         if (keyHasBeenDragged) {
-            const maxDetuneCents = 1200 / cfg.tuning.steps;
+            const maxDetuneCents = 1200 / cfg.tuning.pattern.steps;
             const detuneCents = dragDistanceMap(a.key.x, a.dragValues.startX, a.dragValues.dragX, 5, 40) * maxDetuneCents;
             print("detuning by: " + detuneCents)
             a.voice.set({ "detune": detuneCents });
@@ -1853,9 +1856,9 @@ function playTestChord (intervals) {
 
 function calculateNewMidiGrid (small, big) {
     if (cfg.layout === "concertina") {
-        grid.baseMidi = Math.floor(cfg.tuning.steps * 1.5);
+        grid.baseMidi = Math.floor(cfg.tuning.pattern.steps * 1.5);
     } else {
-        grid.baseMidi = cfg.tuning.steps * 2;
+        grid.baseMidi = cfg.tuning.pattern.steps * 2;
     }
 
     // save for checking elsewhere
@@ -1869,9 +1872,9 @@ function calculateNewMidiGrid (small, big) {
         newIncrement_D = small;
         newIncrement_V = 2 * small - big;
     } else if (cfg.layout === "concertina") {
-        newIncrement_H = cfg.tuning.steps; // octave
+        newIncrement_H = cfg.tuning.pattern.steps; // octave
         newIncrement_D = big;
-        newIncrement_V = (2 * big) % cfg.tuning.steps;
+        newIncrement_V = (2 * big) % cfg.tuning.pattern.steps;
     } else {
         newIncrement_H = 2 * small - big;
         newIncrement_D = small;
@@ -1910,8 +1913,8 @@ function renderTuningReference () {
     // round base
     strokeWeight(16);
     const baseSize = 26;
-    for (let t = 0; t < cfg.tuning.steps; t++) {
-        const angle = map(t, 0, cfg.tuning.steps, 0, TWO_PI) - HALF_PI;
+    for (let t = 0; t < cfg.tuning.pattern.steps; t++) {
+        const angle = map(t, 0, cfg.tuning.pattern.steps, 0, TWO_PI) - HALF_PI;
         const start = {x: cos(angle) * 0, y: sin(angle) * 0};
         const end = {x: cos(angle) * baseSize, y: sin(angle) * baseSize};
         stroke(lerpColor(theme.bg, color("black"), 0.5));
@@ -1934,7 +1937,7 @@ function renderTuningReference () {
     }
 
     // outer lines
-    const octaveLength = cfg.tuning.steps;
+    const octaveLength = cfg.tuning.pattern.steps;
     strokeWeight(map(octaveLength, 12, 24, 3, 2, true)); //2 or more
     const endScale = map(octaveLength, 12, 24, 26, 28, true);
 
@@ -1961,7 +1964,7 @@ function renderTuningReference () {
     let lastKeyColor;
     let lastKeyOctave;
     strokeWeight(0.9);
-    const orderedPercent = Math.min(orderedKeys.length / cfg.tuning.steps, 1);
+    const orderedPercent = Math.min(orderedKeys.length / cfg.tuning.pattern.steps, 1);
     const dotScale = -sqrt(1 - pow(orderedPercent - 1, 2)) + 2;
 
     orderedKeys.forEach((o) => {
@@ -2185,8 +2188,7 @@ class GenericButtonClass {
 class KeyClass extends GenericButtonClass {
     constructor (x, y, name) {
         super();
-        this.x = x;
-        this.y = y;
+        this.setRotatedCoordinates(x, y)
         this.name = name;
         this.setMidiFromGrid(grid.baseMidi, grid.width, grid.axisH, grid.axisD, grid.axisV);
         this.heat = 0;
@@ -2200,13 +2202,45 @@ class KeyClass extends GenericButtonClass {
             floor(this.name / width) * v;
 
         // note symbols are only used in 12nejis.
-        this.noteSymbol = noteNames[(this.midiName + cfg.baseNote) % 12];
-        this.octave = floor(this.midiName / cfg.tuning.steps) - 2;
+        this.noteSymbol = (cfg.tuning.pattern === tuningPatterns.ne12) ? noteNames[(this.midiName + cfg.baseNote) % 12] :"";
+        this.octave = floor(this.midiName / cfg.tuning.pattern.steps) - 2;
+    }
+
+    setRotatedCoordinates(startX, startY) {
+
+        function calculateRotationMatrix(rotation, center) {
+            var m = [];
+
+            m[0] = Math.cos(PI*(rotation/360));
+            m[1] = Math.sin(PI*(rotation/360));
+            m[2] = -m[1];
+            m[3] = m[0];
+            m[4] = center.x - m[0] * center.x - m[2] * center.y;
+            m[5] = center.y - m[1] * center.x - m[3] * center.y;
+
+            return m;
+        }
+
+        const m = calculateRotationMatrix(grid.angle, {x:width/2, y:height/2});
+
+        function applyMatrixToPoint(m, p) { /*Array, Point*/
+            return {
+                x:m[0] * p.x + m[2] * p.y + m[4],
+                y:m[1] * p.x + m[3] * p.y + m[5],
+            };
+        }
+
+        const point = applyMatrixToPoint(m, {x:startX, y:startY})
+
+        this.x = point.x;
+        this.y = point.y;
     }
 
     renderKeyType (state, strength) {
         push();
         noStroke();
+        translate(this.x, this.y);
+        rotate(PI*(grid.angle/360));
 
         const baseColor = this.keyColorFromPalette(0);
         const lightColor = this.keyColorFromPalette(1);
@@ -2214,71 +2248,71 @@ class KeyClass extends GenericButtonClass {
         const lightColor50 = color(atAlpha(lightColor, 50));
         const hexInner = 0.9 * grid.hexSize;
         const circleSize = 0.53 * grid.hexSize * 2;
-        const nearOctave = ((this.midiName) % cfg.tuning.steps) / cfg.tuning.steps;
+        const nearOctave = ((this.midiName) % cfg.tuning.pattern.steps) / cfg.tuning.pattern.steps;
         const circleInner = (nearOctave === 0)? 0 : map(nearOctave, 0, 1, 0.24, 1) * 0.38 * grid.hexSize * 2;
 
         // if keys are being pressed, dim the other keys
         const idleOverlay = (orderedKeys.length > 0) ? color(atAlpha(theme.bgdark, 8)) : color(atAlpha(theme.bgdark, 4));
 
-        const ds = grid.hexSize / 34;
+        const scale = grid.hexSize / 34;
 
         // note states
         switch (state) {
             case "idle":
-                keyShape(this.x+1*ds, this.y+3*ds, grid.hexSize+1*ds, color("#00000040"));
-                keyShape(this.x, this.y, grid.hexSize, baseColor);
-                centerShape(this.x, this.y, circleSize, lightColor50);
-                centerShape(this.x, this.y, circleInner, baseColor);
-                keyShapeOverlay(this.x, this.y, grid.hexSize, idleOverlay);
+                keyShape(1*scale, 3*scale, grid.hexSize+1*scale, color("#00000040"));
+                keyShape(0, 0, grid.hexSize, baseColor);
+                centerShape(0, 0, circleSize, lightColor50);
+                centerShape(0, 0, circleInner, baseColor);
+                keyShapeOverlay(0, 0, grid.hexSize, idleOverlay);
                 break;
             case "differentOctave":
-                keyShape(this.x+1*ds, this.y+3*ds, grid.hexSize+1*ds, color("#00000030"));
-                keyShape(this.x, this.y, grid.hexSize, baseColor);
-                centerShape(this.x, this.y, circleSize* 1.05, lightColor50);
-                centerShape(this.x, this.y, circleInner* 1.2, baseColor);
-                keyShapeOverlay(this.x, this.y, grid.hexSize, idleOverlay);
+                keyShape(1*scale, 3*scale, grid.hexSize+1*scale, color("#00000030"));
+                keyShape(0, 0, grid.hexSize, baseColor);
+                centerShape(0, 0, circleSize* 1.05, lightColor50);
+                centerShape(0, 0, circleInner* 1.2, baseColor);
+                keyShapeOverlay(0, 0, grid.hexSize, idleOverlay);
                 break;
             case "stepHigher":
-                keyShape(this.x+1*ds, this.y+3*ds, grid.hexSize+1*ds, color("#00000030"));
-                keyShape(this.x, this.y, grid.hexSize, baseColor);
-                centerShape(this.x-2*ds, this.y, circleSize, lightColor50);
-                centerShape(this.x-2*ds, this.y, circleInner, baseColor);
-                keyShapeOverlay(this.x, this.y, grid.hexSize, idleOverlay);
+                keyShape(1*scale, 3*scale, grid.hexSize+1*scale, color("#00000030"));
+                keyShape(0, 0, grid.hexSize, baseColor);
+                centerShape(0-2*scale, 0, circleSize, lightColor50);
+                centerShape(0-2*scale, 0, circleInner, baseColor);
+                keyShapeOverlay(0, 0, grid.hexSize, idleOverlay);
                 break;
             case "stepLower":
-                keyShape(this.x+1*ds, this.y+3*ds, grid.hexSize+1*ds, color("#00000030"));
-                keyShape(this.x, this.y, grid.hexSize, baseColor);
-                centerShape(this.x+2*ds, this.y, circleSize, lightColor50);
-                centerShape(this.x+2*ds, this.y, circleInner, baseColor);
-                keyShapeOverlay(this.x, this.y, grid.hexSize, idleOverlay);
+                keyShape(1*scale, 3*scale, grid.hexSize+1*scale, color("#00000030"));
+                keyShape(0, 0, grid.hexSize, baseColor);
+                centerShape(2*scale, 0, circleSize, lightColor50);
+                centerShape(2*scale, 0, circleInner, baseColor);
+                keyShapeOverlay(0, 0, grid.hexSize, idleOverlay);
                 break;
             case "stepHigherAndLower":
-                keyShape(this.x+1*ds, this.y+3*ds, grid.hexSize+1*ds, color("#00000030"));
-                keyShape(this.x, this.y, grid.hexSize, baseColor);
-                centerShape(this.x, this.y, circleSize, lightColor50, "wide");
-                centerShape(this.x, this.y, circleInner, baseColor, "wide");
-                keyShapeOverlay(this.x, this.y, grid.hexSize, idleOverlay);
+                keyShape(1*scale, 3*scale, grid.hexSize+1*scale, color("#00000030"));
+                keyShape(0, 0, grid.hexSize, baseColor);
+                centerShape(0, 0, circleSize, lightColor50, "wide");
+                centerShape(0, 0, circleInner, baseColor, "wide");
+                keyShapeOverlay(0, 0, grid.hexSize, idleOverlay);
                 break;
             case "pressed":
-                keyShape(this.x, this.y+1*ds, grid.hexSize, theme.highlight);
-                keyShape(this.x, this.y+1*ds, hexInner, lightColor);
-                centerShape(this.x, this.y+1*ds, circleInner * 1.3, baseColor);
-                centerShape(this.x, this.y+1*ds, circleInner * 1.3, lightColor50);
+                keyShape(0, 1*scale, grid.hexSize, theme.highlight);
+                keyShape(0, 1*scale, hexInner, lightColor);
+                centerShape(0, 1*scale, circleInner * 1.3, baseColor);
+                centerShape(0, 1*scale, circleInner * 1.3, lightColor50);
                 break;
             case "sustained":
-                keyShape(this.x, this.y+0.5*ds, grid.hexSize, theme.highlight);
-                keyShape(this.x, this.y+0.5*ds, grid.hexSize, color(atAlpha(lightColor, 30)));
-                keyShape(this.x, this.y+0.5*ds, hexInner, lightColor);
-                centerShape(this.x, this.y+0.5*ds, circleInner* 1.2, baseColor);
-                centerShape(this.x, this.y+0.5*ds, circleInner* 1.2, lightColor50);
+                keyShape(0, 0.5*scale, grid.hexSize, theme.highlight);
+                keyShape(0, 0.5*scale, grid.hexSize, color(atAlpha(lightColor, 30)));
+                keyShape(0, 0.5*scale, hexInner, lightColor);
+                centerShape(0, 0.5*scale, circleInner* 1.2, baseColor);
+                centerShape(0, 0.5*scale, circleInner* 1.2, lightColor50);
                 break;
             case "deactivatedSustained":
-                keyShape(this.x+1*ds, this.y+3*ds, grid.hexSize+1*ds, color("#00000030"));
-                keyShape(this.x, this.y, grid.hexSize, theme.highlight);
-                keyShape(this.x, this.y, grid.hexSize, lightColor50);
-                keyShape(this.x, this.y, hexInner, lightColor);
-                centerShape(this.x, this.y, circleInner, baseColor);
-                centerShape(this.x, this.y, circleInner, lightColor50);
+                keyShape(1*scale, 3*scale, grid.hexSize+1*scale, color("#00000030"));
+                keyShape(0, 0, grid.hexSize, theme.highlight);
+                keyShape(0, 0, grid.hexSize, lightColor50);
+                keyShape(0, 0, hexInner, lightColor);
+                centerShape(0, 0, circleInner, baseColor);
+                centerShape(0, 0, circleInner, lightColor50);
                 break;
             case "glow":
                 const rgb = glowColor;
@@ -2286,11 +2320,11 @@ class KeyClass extends GenericButtonClass {
                 gradientCircle(
                     glowColorStrength, grid.hexSize * 0.5,
                     glowColorStrength, grid.hexSize * 4,
-                    this.x, this.y, 14);
+                    0, 0, 14);
                 break;
             case "hover":
                 const hoverColor = color(atAlpha(glowColor, 30));
-                centerShape(this.x, this.y, 42, hoverColor);
+                centerShape(0, 0, 42, hoverColor);
                 break;
         }
         pop();
@@ -2313,13 +2347,15 @@ class KeyClass extends GenericButtonClass {
     keyColorFromPalette (v) {
         const octaveColors = [theme.red, theme.green, theme.blue];
         const hue = octaveColors[(this.octave + 3 + cfg.baseOctave) % 3];
-        const value = valueFromScale(this.midiName % cfg.tuning.steps)[v]
+        const value = valueFromScale(this.midiName % cfg.tuning.pattern.steps)[v]
         return hue[value];
     }
 
     renderText (state) {
         // text on note
         push();
+        translate(this.x, this.y);
+        //rotate(PI*0.1);
         const scaler = grid.hexSize / 34;
         textSize(22 * scaler);
 
@@ -2327,7 +2363,7 @@ class KeyClass extends GenericButtonClass {
         strokeWeight(4 * scaler);
         stroke("#00000050");
         fill("#00000050");
-        this.renderKeyText();
+        this.renderKeyText(0, 0);
 
         const darkTextColor = lerpColor(this.keyColorFromPalette(2), theme.highlight, 0.5);
         const lightTextColor = lerpColor(this.keyColorFromPalette(2), color("white"), 0.8);
@@ -2335,29 +2371,26 @@ class KeyClass extends GenericButtonClass {
         noStroke();
         if (state === "hover" || state === "klicked" || state === "sustained") {
             fill(lightTextColor);
-        } else if (this.noteSymbol === noteNames[cfg.baseNote] || this.midiName % cfg.tuning.steps === 0) { 
+        } else if (this.noteSymbol === noteNames[cfg.baseNote] || this.midiName % cfg.tuning.pattern.steps === 0) { 
             fill(lightTextColor); 
-        } else if (cfg.tuning.pattern.scale[this.midiName % cfg.tuning.steps] !== 1) {
+        } else if (cfg.tuning.pattern.scale[this.midiName % cfg.tuning.pattern.steps] !== 1) {
             fill(darkTextColor);
         } else {
             fill(lightTextColor);
         }
 
-        this.renderKeyText();
+        this.renderKeyText(0, 0);
 
         if (state === "idle") {
             const idleOverlay = (orderedKeys.length > 0) ? color(atAlpha(theme.bgdark, 4)) : color("#00000000");
             fill(idleOverlay);
-            this.renderKeyText();
+            this.renderKeyText(0, 0);
         }
-        pop();
-
 
         // extra text above
-        push();
-        
+
         if (cfg.tuning.type === "ratios") {
-            const intervalName = cfg.tuning.ratios[this.midiName % cfg.tuning.steps]; //intervalFromTuning
+            const intervalName = cfg.tuning.ratios[this.midiName % cfg.tuning.pattern.steps]; //intervalFromTuning
 
             let topText = intervalName;
             if (topText == 1) {topText = "";}
@@ -2370,7 +2403,7 @@ class KeyClass extends GenericButtonClass {
         //}
 
         if (cfg.tuning.pattern === tuningPatterns.ne12 && menuIsOpen) {
-            const index = (this.midiName - cfg.tuning.steps * 5);
+            const index = (this.midiName - cfg.tuning.pattern.steps * 5);
             let whitekeytext = whiteKeyModes[index];
             if (whitekeytext === undefined) {whitekeytext = ""}
             if (whitekeytext !== "") {
@@ -2389,19 +2422,19 @@ class KeyClass extends GenericButtonClass {
         stroke(sc);
         fill(fc);
 
-        text(txt, this.x + x, this.y + y);
+        text(txt, x, y);
 
         if (orderedKeys.length > 0 && state === "idle") {
             noStroke();
             const idleOverlay = color(atAlpha(theme.bgdark, 10));
             fill(idleOverlay);
-            text(txt, this.x + x, this.y + y);
+            text(txt, x, y);
         }
         pop();
     }
 
-    renderKeyText () {
-        const octaveLength = cfg.tuning.steps;
+    renderKeyText (x, y) {
+        const octaveLength = cfg.tuning.pattern.steps;
         let keyText = "";
 
         if (cfg.labelStyle !== "none") {
@@ -2415,12 +2448,12 @@ class KeyClass extends GenericButtonClass {
             }
 
             // Add symbol for octave only on first note of each
-            if (this.noteSymbol === noteNames[cfg.baseNote] || this.midiName % cfg.tuning.steps === 0) {
+            if (this.noteSymbol === noteNames[cfg.baseNote] || this.midiName % cfg.tuning.pattern.steps === 0) {
                 const octave = this.octave + cfg.baseOctave;
                 const octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
                 keyText = " " + keyText + octaveSymbol;
             }
-            text(keyText, this.x, this.y);
+            text(keyText, x, y);
         } else if (menuIsOpen && this.midiName >= octaveLength*5 && this.midiName < octaveLength*6 && 
             cfg.tuning.pattern.scale[this.midiName % octaveLength] === 1) {
             if (cfg.tuning.pattern === tuningPatterns.ne12) {
@@ -2428,7 +2461,7 @@ class KeyClass extends GenericButtonClass {
             } else {
                 keyText = this.midiName % octaveLength;
             }
-            text(keyText, this.x, this.y);
+            text(keyText, x, y);
         }
     }
 
@@ -2447,7 +2480,8 @@ class KeyClass extends GenericButtonClass {
             higherHexes = pressedButtons.find(t => t.midiName - this.midiName === 1);
             lowerHexes = pressedButtons.find(t => t.midiName - this.midiName === -1);
         } else {
-            differentOctaveHexes = pressedButtons.find(t => t.midiName % cfg.tuning.steps === this.midiName % cfg.tuning.steps);
+            const octaveLength = cfg.tuning.pattern.steps;
+            differentOctaveHexes = pressedButtons.find(t => t.midiName % octaveLength === this.midiName % octaveLength);
         }
 
         if (inPressedKeys !== undefined) {
