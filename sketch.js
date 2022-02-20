@@ -5,7 +5,7 @@ let frameCountdown = 20; // minimum frames to render after anything happened
 Tone.context.lookAhead = 0;
 
 // labels
-const octaveSymbols = ["⁰","¹","²","³","⁴","⁵","⁶","⁷","⁸","⁹"];
+const octaveSymbols = ["⁰","¹","²","³","⁴","⁵","⁶","⁷","⁸","⁹","¹⁰"];
 const noteNames = ["C","C#","D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const whiteKeyModes = ["Ionian", "", "Dorian", "", "Phrygian", "Lydian", "", "Mixolydian", "", "Aeolian", "", "Locrian"];
 
@@ -68,7 +68,7 @@ const tuningPatterns = {
         bridgeKeyPairs: new Array,
     },
     ne24: {
-        scale: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+        scale: [1, 0, -1, 0, 1, 0, -1, 0, 1, 0, 1, 0, -1, 0, 1, 0, -1, 0, 1, 0, -1, 0, 1, 0],
         intervals: ["1", "-2", "m2", "~2", "2", "-3", "m3", "~3", "3", "+3", "4", "+4", "TT", "-5", "5", "-6", "m6", "~6", "6", "-7", "m7", "~7", "7", "-8"],
         smallStep: 4,
         bigStep: 7,
@@ -78,13 +78,13 @@ const tuningPatterns = {
         bridgeKeyPairs: new Array,
     },
     ne31: {
-        scale: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
+        scale: [1, -1, 0, 0, -1, 1, -1, 0, 0, -1, 1, 0, 0, 1, -1, 0, 0, -1, 1, -1, 0, 0, -1, 1, -1, 0, 0, -1, 1, 0, 0],
         intervals: ["1", "+1", "-2", "m2", "~2", "2", "+2", "-3", "m3", "~3", "3", "+3", "-4", "4", "+4", "tt", "TT", "-5", "5", "+5", "-6", "m6", "~6", "6", "+6", "-7", "m7", "~7", "7", "+7", "-8"],
-        smallStep: 5,
-        bigStep: 9,
+        smallStep: 10,
+        bigStep: 18,
         testChordSteps: [10, 18],
-        defaultLayout: "harmonic",
-        midiOffset: 31,
+        defaultLayout: "concertina",
+        midiOffset: 12,
         bridgeKeyPairs: new Array,
     },
     primal21: {
@@ -358,13 +358,16 @@ let cfg = {
 let lastCfg = cfg;
 
 //for constructing the hexagons
-let gridBaseMidi = 24;
-let gridWidth;
-let gridIncrement_H = 1;
-let gridIncrement_D = 4;
-let gridIncrement_V = 7;
-let gridMidiOffset = 0; // different tunings may start at a higher midi note
-let keyGridOffset = new Object; // x/y
+grid = {
+    baseMidi: 24,
+    width: undefined,
+    axisH: 1,
+    axisD: 4,
+    axisV: 7,
+    hexSize: 34, // 34 seems good
+    tuningMidiOffset: 0, // different tunings may start at a higher midi note
+    translateOffset: new Object, // x/y
+}
 
 // permanent key grid
 let gridSizeX, gridSizeY;
@@ -684,7 +687,7 @@ const menuButtonFunctions = [
                 else if (cfg.layout === "harmonic") cfg.layout = "swapped";
                 else cfg.layout = "concertina";
                 makeKeys(); 
-                calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
+                calculateNewMidiGrid(grid.axisD, grid.axisV);
             },
         },
         {
@@ -716,9 +719,27 @@ const menuButtonFunctions = [
 
                 //update midiname of notes
                 keyArr.forEach((h) => {
-                    h.setMidiFromGrid(gridBaseMidi, gridWidth, newIncrement_H, newIncrement_D, newIncrement_V);
+                    h.setMidiFromGrid(grid.baseMidi, grid.width, newIncrement_H, newIncrement_D, newIncrement_V);
                 });
             }
+        },
+        {
+            type:"label",
+            label:() => "Layout Size",
+        },
+        {
+            type:"button",
+            label:() => "Smaller Keys",
+            onCondition:() => (grid.hexSize === 28),
+            function:function() {
+                if (grid.hexSize === 34) {
+                    grid.hexSize = 28;
+                } else {
+                    grid.hexSize = 34;
+                }
+                makeKeys();
+                calculateNewMidiGrid(grid.axisD, grid.axisV);
+            },
         },
         {
             type:"label",
@@ -904,7 +925,7 @@ function setup () {
     rectMode(RADIUS);
 
     makeKeys();
-    calculateNewMidiGrid(gridIncrement_D, gridIncrement_V);
+    calculateNewMidiGrid(grid.axisD, grid.axisV);
     makeControls();
 
     let style = document.createElement("style");
@@ -951,17 +972,17 @@ function makeKeys () {
     keyArr = [];
 
     // store the hexagon keys with the correct coordinates and ID
-    gridSizeX = 52; 
-    gridSizeY = 52;
+    gridSizeX = 1.53*grid.hexSize; //52
+    gridSizeY = 1.53*grid.hexSize;
     let id = 0;
 
     // hexagons are less wide so they can interlock
     if (cfg.layout !== "concertina") {
         gridSizeY = sqrt((3 * pow(gridSizeY, 2)) / 4);
-        gridWidth = 19; // how many in a row + odd row
+        grid.width = 19; // how many in a row + odd row
 
-        keyGridOffset.x = (width - 31*gridSizeY) / 2 //-26;
-        keyGridOffset.y = (height - 20.5*gridSizeY) / 2 //42;
+        grid.translateOffset.x = (width - 31*gridSizeY) / 2 //-26;
+        grid.translateOffset.y = (height - 20.5*gridSizeY) / 2 //42;
 
         // create hexagons interlocking horizontally
         for (let y = 21 * gridSizeY; y > -50; y -= 2 * gridSizeY) {
@@ -976,10 +997,10 @@ function makeKeys () {
     } else {
         // concertina layout
         gridSizeX = sqrt((3 * pow(gridSizeX, 2)) / 4);
-        gridWidth = 13; // how many in a column + odd column
+        grid.width = 13; // how many in a column + odd column
 
-        keyGridOffset.x = (width - 26.5*gridSizeY) / 2;
-        keyGridOffset.y = (height - 18*gridSizeY) / 2;
+        grid.translateOffset.x = (width - 26.5*gridSizeY) / 2;
+        grid.translateOffset.y = (height - 18*gridSizeY) / 2;
         
         // create hexagons interlocking vertically
         for (let x = 0; x < 32 * gridSizeX; x += 2 * gridSizeX) {
@@ -1288,7 +1309,7 @@ function runApp () {
 
     //translate to center the hexagons and such on screen
     push();
-    translate(keyGridOffset.x, keyGridOffset.y);
+    translate(grid.translateOffset.x, grid.translateOffset.y);
 
     // Render all hexagons + variants
     keyArr.forEach((h) => {
@@ -1809,7 +1830,7 @@ function menuButtonPressed (b) {
             //    
             //}
 
-            gridMidiOffset = pat.midiOffset;
+            grid.tuningMidiOffset = pat.midiOffset;
             makeKeys();
             calculateNewMidiGrid(pat.smallStep, pat.bigStep);
             playTestChord(pat.testChordSteps);
@@ -1832,15 +1853,15 @@ function playTestChord (intervals) {
 
 function calculateNewMidiGrid (small, big) {
     if (cfg.layout === "concertina") {
-        gridBaseMidi = Math.floor(cfg.tuning.steps * 1.5);
+        grid.baseMidi = Math.floor(cfg.tuning.steps * 1.5);
     } else {
-        gridBaseMidi = cfg.tuning.steps * 2;
+        grid.baseMidi = cfg.tuning.steps * 2;
     }
 
     // save for checking elsewhere
-    gridIncrement_H = 2 * small - big; // should be semitone
-    gridIncrement_D = small;
-    gridIncrement_V = big;
+    grid.axisH = 2 * small - big; // should be semitone
+    grid.axisD = small;
+    grid.axisV = big;
 
     // actual values take into account extra grid modes
     if (cfg.layout === "swapped") {
@@ -1857,7 +1878,7 @@ function calculateNewMidiGrid (small, big) {
         newIncrement_V = big;
     }
     keyArr.forEach((h) => {
-        h.setMidiFromGrid(gridBaseMidi, gridWidth, newIncrement_H, newIncrement_D, newIncrement_V);
+        h.setMidiFromGrid(grid.baseMidi, grid.width, newIncrement_H, newIncrement_D, newIncrement_V);
     });
 }
 
@@ -2019,7 +2040,6 @@ function renderToolbar () {
                 noStroke();
                 fill(theme.highlight);
             } else {
-                stroke(theme.bgdark)
                 fill(color(atAlpha(theme.bgdark,90)));
                 rect(buttonsX, 0, buttonSize -4, buttonSize -4, 12);
                 noStroke();
@@ -2076,7 +2096,8 @@ function renderCornerText () {
     for (let o = 0; o < orderedKeys.length; o++) {
         let keyName;
         const octave = orderedKeys[o].octave + cfg.baseOctave;
-        const octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
+        let octaveSymbol = octaveSymbols[octave % octaveSymbols.length];
+        if (octaveSymbol === undefined) octaveSymbol = "-";
 
         if (cfg.tuning.pattern === tuningPatterns.ne12) {
             keyName = orderedKeys[o].noteSymbol + octaveSymbol;
@@ -2167,13 +2188,13 @@ class KeyClass extends GenericButtonClass {
         this.x = x;
         this.y = y;
         this.name = name;
-        this.setMidiFromGrid(gridBaseMidi, gridWidth, gridIncrement_H, gridIncrement_D, gridIncrement_V);
+        this.setMidiFromGrid(grid.baseMidi, grid.width, grid.axisH, grid.axisD, grid.axisV);
         this.heat = 0;
     }
 
     setMidiFromGrid (base, width, h, d, v) {
         this.midiName =
-            base + gridMidiOffset +
+            base + grid.tuningMidiOffset +
             floor((this.name % width) / 2) * h +
             ((this.name % width) % 2) * d +
             floor(this.name / width) * v;
@@ -2191,70 +2212,70 @@ class KeyClass extends GenericButtonClass {
         const lightColor = this.keyColorFromPalette(1);
         const glowColor = this.keyColorFromPalette(2);
         const lightColor50 = color(atAlpha(lightColor, 50));
-        const hexSize = 34;
-        const hexInner = 30;
-        const circleSize = 36;
-        // const circleInner = ((this.midiName) % currentTuning.len == 0) ? 0 : 18;
+        const hexInner = 0.9 * grid.hexSize;
+        const circleSize = 0.53 * grid.hexSize * 2;
         const nearOctave = ((this.midiName) % cfg.tuning.steps) / cfg.tuning.steps;
-        const circleInner = sqrt(1 - pow(nearOctave - 1, 2)) * 24;
+        const circleInner = (nearOctave === 0)? 0 : map(nearOctave, 0, 1, 0.24, 1) * 0.38 * grid.hexSize * 2;
 
         // if keys are being pressed, dim the other keys
         const idleOverlay = (orderedKeys.length > 0) ? color(atAlpha(theme.bgdark, 8)) : color(atAlpha(theme.bgdark, 4));
 
+        const ds = grid.hexSize / 34;
+
         // note states
         switch (state) {
             case "idle":
-                keyShape(this.x+1, this.y+3, hexSize+1, color("#00000040"));
-                keyShape(this.x, this.y, hexSize, baseColor);
+                keyShape(this.x+1*ds, this.y+3*ds, grid.hexSize+1*ds, color("#00000040"));
+                keyShape(this.x, this.y, grid.hexSize, baseColor);
                 centerShape(this.x, this.y, circleSize, lightColor50);
                 centerShape(this.x, this.y, circleInner, baseColor);
-                keyShapeOverlay(this.x, this.y, hexSize, idleOverlay);
+                keyShapeOverlay(this.x, this.y, grid.hexSize, idleOverlay);
                 break;
             case "differentOctave":
-                keyShape(this.x+1, this.y+3, hexSize+1, color("#00000030"));
-                keyShape(this.x, this.y, hexSize, baseColor);
+                keyShape(this.x+1*ds, this.y+3*ds, grid.hexSize+1*ds, color("#00000030"));
+                keyShape(this.x, this.y, grid.hexSize, baseColor);
                 centerShape(this.x, this.y, circleSize* 1.05, lightColor50);
                 centerShape(this.x, this.y, circleInner* 1.2, baseColor);
-                keyShapeOverlay(this.x, this.y, hexSize, idleOverlay);
+                keyShapeOverlay(this.x, this.y, grid.hexSize, idleOverlay);
                 break;
             case "stepHigher":
-                keyShape(this.x+1, this.y+3, hexSize+1, color("#00000030"));
-                keyShape(this.x, this.y, hexSize, baseColor);
-                centerShape(this.x-3, this.y, circleSize, lightColor50);
-                centerShape(this.x-4, this.y, circleInner, baseColor);
-                keyShapeOverlay(this.x, this.y, hexSize, idleOverlay);
+                keyShape(this.x+1*ds, this.y+3*ds, grid.hexSize+1*ds, color("#00000030"));
+                keyShape(this.x, this.y, grid.hexSize, baseColor);
+                centerShape(this.x-2*ds, this.y, circleSize, lightColor50);
+                centerShape(this.x-2*ds, this.y, circleInner, baseColor);
+                keyShapeOverlay(this.x, this.y, grid.hexSize, idleOverlay);
                 break;
             case "stepLower":
-                keyShape(this.x+1, this.y+3, hexSize+1, color("#00000030"));
-                keyShape(this.x, this.y, hexSize, baseColor);
-                centerShape(this.x+3, this.y, circleSize, lightColor50);
-                centerShape(this.x+4, this.y, circleInner, baseColor);
-                keyShapeOverlay(this.x, this.y, hexSize, idleOverlay);
+                keyShape(this.x+1*ds, this.y+3*ds, grid.hexSize+1*ds, color("#00000030"));
+                keyShape(this.x, this.y, grid.hexSize, baseColor);
+                centerShape(this.x+2*ds, this.y, circleSize, lightColor50);
+                centerShape(this.x+2*ds, this.y, circleInner, baseColor);
+                keyShapeOverlay(this.x, this.y, grid.hexSize, idleOverlay);
                 break;
             case "stepHigherAndLower":
-                keyShape(this.x+1, this.y+3, hexSize+1, color("#00000030"));
-                keyShape(this.x, this.y, hexSize, baseColor);
+                keyShape(this.x+1*ds, this.y+3*ds, grid.hexSize+1*ds, color("#00000030"));
+                keyShape(this.x, this.y, grid.hexSize, baseColor);
                 centerShape(this.x, this.y, circleSize, lightColor50, "wide");
                 centerShape(this.x, this.y, circleInner, baseColor, "wide");
-                keyShapeOverlay(this.x, this.y, hexSize, idleOverlay);
+                keyShapeOverlay(this.x, this.y, grid.hexSize, idleOverlay);
                 break;
             case "pressed":
-                keyShape(this.x, this.y+1, hexSize, theme.highlight);
-                keyShape(this.x, this.y+1, hexInner, lightColor);
-                centerShape(this.x, this.y+1, circleInner * 1.3, baseColor);
-                centerShape(this.x, this.y+1, circleInner * 1.3, lightColor50);
+                keyShape(this.x, this.y+1*ds, grid.hexSize, theme.highlight);
+                keyShape(this.x, this.y+1*ds, hexInner, lightColor);
+                centerShape(this.x, this.y+1*ds, circleInner * 1.3, baseColor);
+                centerShape(this.x, this.y+1*ds, circleInner * 1.3, lightColor50);
                 break;
             case "sustained":
-                keyShape(this.x, this.y+0.5, hexSize, theme.highlight);
-                keyShape(this.x, this.y+0.5, hexSize, color(atAlpha(lightColor, 30)));
-                keyShape(this.x, this.y+0.5, hexInner, lightColor);
-                centerShape(this.x, this.y+0.5, circleInner* 1.2, baseColor);
-                centerShape(this.x, this.y+0.5, circleInner* 1.2, lightColor50);
+                keyShape(this.x, this.y+0.5*ds, grid.hexSize, theme.highlight);
+                keyShape(this.x, this.y+0.5*ds, grid.hexSize, color(atAlpha(lightColor, 30)));
+                keyShape(this.x, this.y+0.5*ds, hexInner, lightColor);
+                centerShape(this.x, this.y+0.5*ds, circleInner* 1.2, baseColor);
+                centerShape(this.x, this.y+0.5*ds, circleInner* 1.2, lightColor50);
                 break;
             case "deactivatedSustained":
-                keyShape(this.x+1, this.y+3, hexSize+1, color("#00000030"));
-                keyShape(this.x, this.y, hexSize, theme.highlight);
-                keyShape(this.x, this.y, hexSize, lightColor50);
+                keyShape(this.x+1*ds, this.y+3*ds, grid.hexSize+1*ds, color("#00000030"));
+                keyShape(this.x, this.y, grid.hexSize, theme.highlight);
+                keyShape(this.x, this.y, grid.hexSize, lightColor50);
                 keyShape(this.x, this.y, hexInner, lightColor);
                 centerShape(this.x, this.y, circleInner, baseColor);
                 centerShape(this.x, this.y, circleInner, lightColor50);
@@ -2263,8 +2284,8 @@ class KeyClass extends GenericButtonClass {
                 const rgb = glowColor;
                 const glowColorStrength = color(atAlpha(rgb, strength));
                 gradientCircle(
-                    glowColorStrength, hexSize * 0.5,
-                    glowColorStrength, hexSize * 4,
+                    glowColorStrength, grid.hexSize * 0.5,
+                    glowColorStrength, grid.hexSize * 4,
                     this.x, this.y, 14);
                 break;
             case "hover":
@@ -2299,10 +2320,11 @@ class KeyClass extends GenericButtonClass {
     renderText (state) {
         // text on note
         push();
-        textSize(22);
+        const scaler = grid.hexSize / 34;
+        textSize(22 * scaler);
 
         // shadow
-        strokeWeight(4);
+        strokeWeight(4 * scaler);
         stroke("#00000050");
         fill("#00000050");
         this.renderKeyText();
@@ -2332,6 +2354,7 @@ class KeyClass extends GenericButtonClass {
 
 
         // extra text above
+        push();
         
         if (cfg.tuning.type === "ratios") {
             const intervalName = cfg.tuning.ratios[this.midiName % cfg.tuning.steps]; //intervalFromTuning
@@ -2339,7 +2362,7 @@ class KeyClass extends GenericButtonClass {
             let topText = intervalName;
             if (topText == 1) {topText = "";}
 
-            this.renderExtraKeyText(topText, 0, -25, state, this.keyColorFromPalette(2), this.keyColorFromPalette(0));
+            this.renderExtraKeyText(topText, 0, -25*scaler, state, this.keyColorFromPalette(2), this.keyColorFromPalette(0));
         }
 
         //if (this.heat > 0) {
@@ -2351,16 +2374,18 @@ class KeyClass extends GenericButtonClass {
             let whitekeytext = whiteKeyModes[index];
             if (whitekeytext === undefined) {whitekeytext = ""}
             if (whitekeytext !== "") {
-                this.renderExtraKeyText(whitekeytext, 0, 18, state, lightTextColor, "#00000050");
+                this.renderExtraKeyText(whitekeytext, 0, 18*scaler, state, lightTextColor, "#00000050");
             }
             
         }
+        pop();
     }
 
     renderExtraKeyText (txt, x, y, state, fc, sc) {
         push();
-        textSize(11);
-        strokeWeight(3);
+        const scaler = grid.hexSize / 34;
+        textSize(11 * scaler);
+        strokeWeight(3 * scaler);
         stroke(sc);
         fill(fc);
 
@@ -2446,7 +2471,7 @@ class KeyClass extends GenericButtonClass {
 
     keyDistanceToTouch (touch) {
         if (touch !== undefined) {
-             return dist(touch.clientX, touch.clientY, this.x + keyGridOffset.x, this.y + keyGridOffset.y);
+             return dist(touch.clientX, touch.clientY, this.x + grid.translateOffset.x, this.y + grid.translateOffset.y);
         }
     }
 }
